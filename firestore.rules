@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Sites configuration and public data
+    match /sites/{siteId} {
+      // Anyone can read the site configuration (needed for visitors to see the site)
+      allow read: if true;
+      
+      // Only super_admin can create/update/delete any site
+      // Or a specific site_admin can edit their own site
+      allow write: if request.auth != null && (
+        request.auth.token.role == 'super_admin' || 
+        request.auth.token.site_admin == siteId
+      );
+
+      // Collections inside the site (album, timeline, playlist)
+      match /{collectionName}/{docId} {
+        // Anyone can read public content
+        allow read: if true;
+        
+        // Same write rules as the parent site
+        allow write: if request.auth != null && (
+          request.auth.token.role == 'super_admin' || 
+          request.auth.token.site_admin == siteId
+        );
+      }
+    }
+  }
+}

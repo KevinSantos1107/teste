@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* =========================================================
+   Romantic Engine — Design Tokens (Tailwind v4 @theme)
+   Valores padrão injetados via JS no :root em tempo de execução.
+   Aqui definimos o mapeamento para que o Tailwind reconheça
+   as classes bg-theme-*, text-theme-*, etc.
+   ========================================================= */
+@theme {
+  --color-theme-bg: var(--theme-bg, #0d0d14);
+  --color-theme-primary: var(--theme-primary, #c084fc);
+  --color-theme-secondary: var(--theme-secondary, #f472b6);
+  --color-theme-accent: var(--theme-accent, #818cf8);
+  --color-theme-text: var(--theme-text, #f1f0fb);
+  --color-theme-text-secondary: var(--theme-text-secondary, #a9a9c8);
+  --color-theme-card-bg: var(--theme-card-bg, #1a1a2e);
+  --color-theme-card-border: var(--theme-card-border, #2d2d4a);
+
+  --font-family-sans: 'Poppins', sans-serif;
+  --font-family-serif: 'Playfair Display', serif;
+  --font-family-script: 'Dancing Script', cursive;
+  --font-family-display: 'Raleway', sans-serif;
+}
+
+/* Base styles */
+body {
+  background-color: var(--theme-bg, #0d0d14);
+  color: var(--theme-text, #f1f0fb);
+  font-family: var(--font-family-sans, 'Poppins', sans-serif);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--theme-card-border, #2d2d4a);
+  border-radius: 3px;
+}

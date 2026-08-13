@@ -1,0 +1,52 @@
+{
+  "name": "romantic-engine",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "seed": "node scripts/seed.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@cloudinary/react": "^1.14.4",
+    "@cloudinary/url-gen": "^1.22.0",
+    "@types/jsmediatags": "^3.9.6",
+    "@types/leaflet": "^1.9.22",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "firebase": "^12.17.1",
+    "jsmediatags": "^3.9.7",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.31.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.18.2",
+    "swiper": "^14.1.0",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "autoprefixer": "^10.5.4",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "firebase-admin": "^14.2.0",
+    "oxlint": "^1.75.0",
+    "postcss": "^8.5.26",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}
