@@ -11,7 +11,7 @@ import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
 import { cn } from '../../shared/utils/cn';
 import {
-  Plus, Trash2, GripVertical, ArrowLeft, Upload, X, Image as ImageIcon, ChevronRight, Pencil, Save
+  Plus, Trash2, GripVertical, ArrowLeft, Upload, X, Image as ImageIcon, Pencil, Save
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
