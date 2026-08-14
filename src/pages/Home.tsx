@@ -269,9 +269,10 @@ export default function Home() {
 
             <button
               onClick={() => setMsgIndex(i => (i + 1) % LOVE_MESSAGES.length)}
-              className="inline-flex items-center gap-2 text-sm text-rose-400/70 hover:text-rose-400 transition-colors"
+              className="inline-flex items-center justify-center gap-2 text-sm text-rose-400/70 hover:text-rose-400 transition-colors px-4 py-3 rounded-xl hover:bg-rose-500/10 active:bg-rose-500/20"
+              style={{ touchAction: 'manipulation' }}
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Nova mensagem
+              <RefreshCw className="w-4 h-4" /> Nova mensagem
             </button>
           </div>
         </div>
@@ -291,9 +292,10 @@ export default function Home() {
                 key={index}
                 onClick={() => setOpenAcrostic(openAcrostic === index ? null : index)}
                 className="w-full text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/8 hover:border-rose-500/30 transition-all duration-300 overflow-hidden"
+                style={{ touchAction: 'manipulation' }}
               >
-                <div className="flex items-center gap-5 p-5">
-                  <span className={`text-5xl font-bold font-serif shrink-0 ${line.color}`}
+                <div className="flex items-center gap-4 md:gap-5 p-4 md:p-5">
+                  <span className={`text-4xl md:text-5xl font-bold font-serif shrink-0 ${line.color}`}
                     style={{ textShadow: '0 0 20px currentColor', opacity: 0.9 }}>
                     {line.letter}
                   </span>

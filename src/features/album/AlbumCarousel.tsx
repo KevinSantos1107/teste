@@ -200,9 +200,10 @@ export function AlbumCarousel() {
           <div className="relative w-full max-w-sm mx-auto px-4">
             <button
               onClick={() => setSelectedAlbum(null)}
-              className="absolute -top-12 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20 z-10"
+              className="absolute -top-14 right-2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20 z-10"
+              style={{ touchAction: 'manipulation' }}
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
             
             <div className="text-center mb-6">

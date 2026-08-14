@@ -34,7 +34,7 @@ export function FloatingNav() {
       )}
 
       {/* Container fixo no canto inferior esquerdo */}
-      <div className="fixed bottom-6 left-6 z-50">
+      <div className="fixed bottom-8 left-4 md:bottom-10 md:left-10 z-50">
 
         {/* Itens em arco — renderizados antes do botão para ficarem atrás */}
         {NAV_ITEMS.map((item, i) => {
@@ -92,7 +92,7 @@ export function FloatingNav() {
           )}
           aria-label="Navegação"
         >
-          {open ? <X className="w-5 h-5" /> : <Heart className="w-5 h-5 fill-current" />}
+          {open ? <X className="w-6 h-6" /> : <Heart className="w-6 h-6 fill-current" />}
 
           {/* Pulse ring quando fechado */}
           {!open && (
