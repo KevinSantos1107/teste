@@ -167,7 +167,7 @@ export function PlaylistTabs() {
   const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSeekValue(Number(e.target.value));
   };
-  const handleSeekCommit = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeekCommit = (e: any) => {
     isSeeking.current = false;
     seek(Number(e.target.value));
   };

@@ -8,7 +8,6 @@ import { X, Clock } from 'lucide-react';
 import { Spinner } from '../../shared/ui/Spinner';
 
 export function TimelineModal() {
-  const { config } = useSiteConfigStore();
   const [isOpen, setIsOpen] = useState(false);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);

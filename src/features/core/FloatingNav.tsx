@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, Gamepad2, Heart, X, Menu } from 'lucide-react';
+import { Home, Map, Gamepad2, Heart, X } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
 
 const NAV_ITEMS = [
