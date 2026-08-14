@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
-import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { Timeline } from './Timeline';
 import type { TimelineEvent } from './Timeline';
 import { X, Clock } from 'lucide-react';
