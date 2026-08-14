@@ -559,28 +559,31 @@ export default function AlbumEditor() {
                   onDragOver={e => e.preventDefault()}
                   className="flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors group cursor-grab active:cursor-grabbing"
                 >
-                  <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0" />
-                  {album.coverPublicId ? (
-                    <img src={cloudinaryUrl(album.coverPublicId, { w: 80, h: 80, c: 'fill', q: 70 })} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                  ) : album.coverUrl ? (
-                    <img src={album.coverUrl} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
-                      <ImageIcon className="w-6 h-6 text-slate-500" />
+                  <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0 hover:text-slate-400 cursor-grab active:cursor-grabbing" />
+                  
+                  {/* Área clicável para abrir o álbum */}
+                  <div 
+                    className="flex-1 min-w-0 flex items-center gap-4 cursor-pointer group/click"
+                    onClick={() => setActiveAlbum(album)}
+                  >
+                    {album.coverPublicId ? (
+                      <img src={cloudinaryUrl(album.coverPublicId, { w: 80, h: 80, c: 'fill', q: 70 })} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity" />
+                    ) : album.coverUrl ? (
+                      <img src={album.coverUrl} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 group-hover/click:bg-slate-600 transition-colors">
+                        <ImageIcon className="w-6 h-6 text-slate-500" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white truncate group-hover/click:text-rose-400 transition-colors">{album.title}</p>
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">{album.date}</p>
+                      {album.description && <p className="text-sm text-slate-400 truncate mt-0.5">{album.description}</p>}
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white truncate">{album.title}</p>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">{album.date}</p>
-                    {album.description && <p className="text-sm text-slate-400 truncate mt-0.5">{album.description}</p>}
                   </div>
+
+                  {/* Ações (Editar e Deletar) */}
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setActiveAlbum(album)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-                    >
-                      Ver Fotos <ChevronRight className="w-4 h-4" />
-                    </button>
                     <button onClick={() => openEdit(album)} className="p-2 text-slate-500 hover:text-blue-400 transition-colors opacity-50 group-hover:opacity-100">
                       <Pencil className="w-4 h-4" />
                     </button>
