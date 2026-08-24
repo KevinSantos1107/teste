@@ -86,10 +86,12 @@ const ACROSTIC = [
   },
 ];
 
+import type { Variants } from 'framer-motion';
+
 // ─── Animations ──────────────────────────────────────────────────────────────
-const fadeUpVariant = {
+const fadeUpVariant: Variants = {
   hidden: { opacity: 0, y: 50 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0, 0, 0.2, 1] } },
 };
 
 // ─── Meteor Shower ──────────────────────────────────────────────────────────
