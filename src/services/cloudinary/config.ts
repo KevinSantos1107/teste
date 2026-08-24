@@ -7,6 +7,6 @@ export const cloudinaryConfig = {
 
 export const cld = new Cloudinary({
   cloud: {
-    cloudName: cloudinaryConfig.cloudName
-  }
+    cloudName: cloudinaryConfig.cloudName,
+  },
 });

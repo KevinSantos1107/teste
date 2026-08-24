@@ -31,12 +31,12 @@ export default function GamesPage() {
 
         {/* Tab selector */}
         <div className="flex justify-center gap-3 mt-6">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all",
+                'flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all',
                 activeTab === tab.id
                   ? 'bg-theme-primary text-white shadow-lg shadow-theme-primary/20 scale-105'
                   : 'bg-theme-card-bg border border-theme-card-border text-theme-text hover:bg-theme-card-border'
@@ -54,9 +54,7 @@ export default function GamesPage() {
             <WordGame />
           </div>
         )}
-        {activeTab === 'snake' && (
-          <SnakeGame />
-        )}
+        {activeTab === 'snake' && <SnakeGame />}
       </section>
     </div>
   );

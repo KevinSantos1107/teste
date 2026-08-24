@@ -25,7 +25,13 @@ const StarMapEditor = lazy(() => import('../pages/admin/StarMapEditor'));
 const RetrospectiveEditor = lazy(() => import('../pages/admin/RetrospectiveEditor'));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<div className="flex h-full items-center justify-center p-8"><Spinner size="lg" /></div>}>
+  <Suspense
+    fallback={
+      <div className="flex h-full items-center justify-center p-8">
+        <Spinner size="lg" />
+      </div>
+    }
+  >
     {children}
   </Suspense>
 );
@@ -37,33 +43,57 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <SuspenseWrapper><Home /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <Home />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'album',
-        element: <SuspenseWrapper><AlbumPage /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <AlbumPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'timeline',
-        element: <SuspenseWrapper><TimelinePage /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <TimelinePage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'mapa',
-        element: <SuspenseWrapper><MapPage /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <MapPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'jogos',
-        element: <SuspenseWrapper><GamesPage /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <GamesPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: '*',
         element: <div className="p-8 text-center text-red-500">Página não encontrada</div>,
-      }
+      },
     ],
   },
   {
     path: '/admin/login',
-    element: <SuspenseWrapper><LoginPage /></SuspenseWrapper>,
+    element: (
+      <SuspenseWrapper>
+        <LoginPage />
+      </SuspenseWrapper>
+    ),
   },
   {
     path: '/admin',
@@ -75,40 +105,76 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <SuspenseWrapper><AdminDashboard /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <AdminDashboard />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'config',
-        element: <SuspenseWrapper><ConfigPage /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <ConfigPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'album',
-        element: <SuspenseWrapper><AlbumEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <AlbumEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'timeline',
-        element: <SuspenseWrapper><TimelineEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <TimelineEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'playlist',
-        element: <SuspenseWrapper><PlaylistEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <PlaylistEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'roulette',
-        element: <SuspenseWrapper><RouletteEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <RouletteEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'map',
-        element: <SuspenseWrapper><MapEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <MapEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'starmap',
-        element: <SuspenseWrapper><StarMapEditor /></SuspenseWrapper>,
+        element: (
+          <SuspenseWrapper>
+            <StarMapEditor />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: 'retrospective',
-        element: <SuspenseWrapper><RetrospectiveEditor /></SuspenseWrapper>,
-      }
-    ]
-  }
+        element: (
+          <SuspenseWrapper>
+            <RetrospectiveEditor />
+          </SuspenseWrapper>
+        ),
+      },
+    ],
+  },
 ]);

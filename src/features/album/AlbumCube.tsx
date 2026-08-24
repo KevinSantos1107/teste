@@ -50,29 +50,32 @@ export function AlbumCube({ photos }: AlbumCubeProps) {
           const imgSrc = photo.src || photo.url;
           const caption = photo.caption || photo.description;
           return (
-          <SwiperSlide key={photo.id || idx} className="w-full h-full bg-theme-bg rounded-xl overflow-hidden">
-            {imgSrc ? (
-              <img
-                src={imgSrc}
-                alt={caption}
-                loading="lazy"
-                className="w-full h-full object-cover"
-              />
-            ) : photo.publicId ? (
-              <CloudinaryImage 
-                publicId={photo.publicId} 
-                alt={caption} 
-                className="w-full h-full"
-              />
-            ) : null}
-            {caption && (
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
-                <p className="text-white text-sm font-medium text-center drop-shadow-md">
-                  {caption}
-                </p>
-              </div>
-            )}
-          </SwiperSlide>
+            <SwiperSlide
+              key={photo.id || idx}
+              className="w-full h-full bg-theme-bg rounded-xl overflow-hidden"
+            >
+              {imgSrc ? (
+                <img
+                  src={imgSrc}
+                  alt={caption}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+              ) : photo.publicId ? (
+                <CloudinaryImage
+                  publicId={photo.publicId}
+                  alt={caption}
+                  className="w-full h-full"
+                />
+              ) : null}
+              {caption && (
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                  <p className="text-white text-sm font-medium text-center drop-shadow-md">
+                    {caption}
+                  </p>
+                </div>
+              )}
+            </SwiperSlide>
           );
         })}
       </Swiper>

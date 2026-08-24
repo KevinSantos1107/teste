@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import './no-scrollbar.css';
+@import './falling-hearts.css';
+@import './meteors.css';
 
 /* =========================================================
    Romantic Engine — Design Tokens (Tailwind v4 @theme)

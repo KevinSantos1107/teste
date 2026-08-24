@@ -8,7 +8,7 @@ const INITIAL_SNAKE = [{ x: 10, y: 10 }];
 const INITIAL_DIRECTION = { x: 0, y: -1 };
 const INITIAL_SPEED = 150;
 
-type Point = { x: number, y: number };
+type Point = { x: number; y: number };
 
 export function SnakeGame() {
   const [snake, setSnake] = useState<Point[]>(INITIAL_SNAKE);
@@ -41,7 +41,7 @@ export function SnakeGame() {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (!isPlaying) return;
-      
+
       const { x, y } = directionRef.current;
       switch (e.key) {
         case 'ArrowUp':
@@ -75,7 +75,7 @@ export function SnakeGame() {
         };
 
         // Check collision with self
-        if (prev.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+        if (prev.some((segment) => segment.x === newHead.x && segment.y === newHead.y)) {
           setIsGameOver(true);
           setIsPlaying(false);
           if (score > highScore) setHighScore(score);
@@ -86,7 +86,7 @@ export function SnakeGame() {
 
         // Check food collision
         if (newHead.x === food.x && newHead.y === food.y) {
-          setScore(s => s + 10);
+          setScore((s) => s + 10);
           setFood(generateFood());
           // Don't pop tail if food eaten
         } else {
@@ -97,7 +97,7 @@ export function SnakeGame() {
       });
     };
 
-    const interval = setInterval(moveSnake, Math.max(50, INITIAL_SPEED - (score * 2)));
+    const interval = setInterval(moveSnake, Math.max(50, INITIAL_SPEED - score * 2));
     return () => clearInterval(interval);
   }, [isPlaying, isGameOver, food, score, highScore, generateFood]);
 
@@ -117,12 +117,12 @@ export function SnakeGame() {
           </div>
         </div>
 
-        <div 
+        <div
           className="relative bg-theme-card-bg border border-theme-card-border rounded-xl w-full aspect-square"
-          style={{ 
-            display: 'grid', 
+          style={{
+            display: 'grid',
             gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
-            gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)` 
+            gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`,
           }}
         >
           {/* Render Snake */}
@@ -134,7 +134,7 @@ export function SnakeGame() {
                 gridColumnStart: segment.x + 1,
                 gridRowStart: segment.y + 1,
                 opacity: index === 0 ? 1 : 0.8,
-                transform: index === 0 ? 'scale(1.1)' : 'scale(0.9)'
+                transform: index === 0 ? 'scale(1.1)' : 'scale(0.9)',
               }}
             />
           ))}
@@ -145,7 +145,7 @@ export function SnakeGame() {
             style={{
               gridColumnStart: food.x + 1,
               gridRowStart: food.y + 1,
-              transform: 'scale(0.8)'
+              transform: 'scale(0.8)',
             }}
           />
 
@@ -174,15 +174,39 @@ export function SnakeGame() {
             </div>
           )}
         </div>
-        
+
         {/* Mobile Controls */}
         <div className="grid grid-cols-3 gap-2 mt-6 md:hidden">
           <div />
-          <Button variant="secondary" onClick={() => directionRef.current = { x: 0, y: -1 }} disabled={!isPlaying}>↑</Button>
+          <Button
+            variant="secondary"
+            onClick={() => (directionRef.current = { x: 0, y: -1 })}
+            disabled={!isPlaying}
+          >
+            ↑
+          </Button>
           <div />
-          <Button variant="secondary" onClick={() => directionRef.current = { x: -1, y: 0 }} disabled={!isPlaying}>←</Button>
-          <Button variant="secondary" onClick={() => directionRef.current = { x: 0, y: 1 }} disabled={!isPlaying}>↓</Button>
-          <Button variant="secondary" onClick={() => directionRef.current = { x: 1, y: 0 }} disabled={!isPlaying}>→</Button>
+          <Button
+            variant="secondary"
+            onClick={() => (directionRef.current = { x: -1, y: 0 })}
+            disabled={!isPlaying}
+          >
+            ←
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => (directionRef.current = { x: 0, y: 1 })}
+            disabled={!isPlaying}
+          >
+            ↓
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => (directionRef.current = { x: 1, y: 0 })}
+            disabled={!isPlaying}
+          >
+            →
+          </Button>
         </div>
       </CardContent>
     </Card>

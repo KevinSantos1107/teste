@@ -16,7 +16,9 @@ export function IntroSlide({ onStart, isReady }: { onStart: () => void; isReady:
 
   const startDate = config?.relationship?.startDate
     ? new Date(config.relationship.startDate).toLocaleDateString('pt-BR', {
-        day: '2-digit', month: 'long', year: 'numeric',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
       })
     : '27 de outubro de 2025';
 
@@ -29,15 +31,13 @@ export function IntroSlide({ onStart, isReady }: { onStart: () => void; isReady:
       <div
         className="absolute inset-0 -z-0"
         style={{
-          background:
-            'radial-gradient(ellipse at top, #4f1787 0%, #1a0533 40%, #09090b 100%)',
+          background: 'radial-gradient(ellipse at top, #4f1787 0%, #1a0533 40%, #09090b 100%)',
         }}
       />
       <div
         className="absolute inset-0 -z-0 opacity-30"
         style={{
-          background:
-            'radial-gradient(ellipse at 80% 80%, #be185d 0%, transparent 60%)',
+          background: 'radial-gradient(ellipse at 80% 80%, #be185d 0%, transparent 60%)',
         }}
       />
 

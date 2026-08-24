@@ -40,7 +40,9 @@ export function MapSlide() {
       <div className="flex-1 bg-[#121212] flex flex-col items-center justify-center text-center p-8 text-white">
         <span className="text-5xl mb-4">🗺️</span>
         <h2 className="text-2xl font-bold mb-2">Nossa Jornada</h2>
-        <p className="text-white/50 text-sm">Adicione localizações às suas fotos para gerar este mapa.</p>
+        <p className="text-white/50 text-sm">
+          Adicione localizações às suas fotos para gerar este mapa.
+        </p>
       </div>
     );
   }
@@ -57,25 +59,23 @@ export function MapSlide() {
 
       {/* Leaflet Map (Dark Theme) */}
       <div className="flex-1 w-full h-full relative z-0">
-        <MapContainer 
-          center={[activePin.lat, activePin.lng]} 
-          zoom={4} 
+        <MapContainer
+          center={[activePin.lat, activePin.lng]}
+          zoom={4}
           zoomControl={false}
           attributionControl={false}
           style={{ width: '100%', height: '100%', background: '#09090b' }}
         >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
+          <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
           <MapController center={[activePin.lat, activePin.lng]} />
-          
+
           {mapPins.map((pin, i) => (
-            <Marker 
-              key={i} 
-              position={[pin.lat, pin.lng]} 
+            <Marker
+              key={i}
+              position={[pin.lat, pin.lng]}
               icon={heartIcon}
               eventHandlers={{
-                click: () => setActivePinIndex(i)
+                click: () => setActivePinIndex(i),
               }}
             />
           ))}
@@ -84,16 +84,22 @@ export function MapSlide() {
 
       {/* Floating Polaroid Photo (Over map) */}
       <div className="absolute inset-0 z-[1000] flex items-center justify-center pointer-events-none">
-        <div className="bg-white p-3 pb-8 rounded shadow-2xl retro-v2-polaroid transform scale-110 md:scale-125" style={{ width: '220px' }}>
+        <div
+          className="bg-white p-3 pb-8 rounded shadow-2xl retro-v2-polaroid transform scale-110 md:scale-125"
+          style={{ width: '220px' }}
+        >
           <div className="w-full h-[220px] bg-zinc-200 overflow-hidden mb-3">
-            <img 
-              src={activePin.photoUrl} 
-              alt={activePin.title} 
+            <img
+              src={activePin.photoUrl}
+              alt={activePin.title}
               className="w-full h-full object-cover"
             />
           </div>
           <div className="text-center">
-            <p className="text-zinc-800 font-medium text-lg leading-tight" style={{ fontFamily: "'Dancing Script', cursive" }}>
+            <p
+              className="text-zinc-800 font-medium text-lg leading-tight"
+              style={{ fontFamily: "'Dancing Script', cursive" }}
+            >
               {activePin.title || 'Nosso momento'}
             </p>
             <p className="text-zinc-400 text-[10px] mt-1">
@@ -110,23 +116,29 @@ export function MapSlide() {
             <span className="text-emerald-500">📍</span>
           </div>
           <div>
-            <p className="text-white font-semibold text-sm leading-tight">{activePin.title || 'Local'}</p>
+            <p className="text-white font-semibold text-sm leading-tight">
+              {activePin.title || 'Local'}
+            </p>
             <p className="text-white/50 text-xs">
               {activePin.date ? formatDate(activePin.date) : ''}
             </p>
           </div>
         </div>
-        
+
         {mapPins.length > 1 && (
           <div className="flex gap-2">
-            <button 
-              onClick={() => setActivePinIndex(prev => (prev === 0 ? mapPins.length - 1 : prev - 1))}
+            <button
+              onClick={() =>
+                setActivePinIndex((prev) => (prev === 0 ? mapPins.length - 1 : prev - 1))
+              }
               className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-xs transition-colors"
             >
               Anterior
             </button>
-            <button 
-              onClick={() => setActivePinIndex(prev => (prev === mapPins.length - 1 ? 0 : prev + 1))}
+            <button
+              onClick={() =>
+                setActivePinIndex((prev) => (prev === mapPins.length - 1 ? 0 : prev + 1))
+              }
               className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-xs font-semibold hover:bg-emerald-400 transition-colors"
             >
               Próximo

@@ -20,13 +20,13 @@ const _durListeners = new Set<DurListener>();
 
 if (_audio) {
   _audio.addEventListener('timeupdate', () => {
-    _timeListeners.forEach(fn => fn(_audio!.currentTime));
+    _timeListeners.forEach((fn) => fn(_audio!.currentTime));
   });
   _audio.addEventListener('durationchange', () => {
-    _durListeners.forEach(fn => fn(_audio!.duration));
+    _durListeners.forEach((fn) => fn(_audio!.duration));
   });
   _audio.addEventListener('loadedmetadata', () => {
-    _durListeners.forEach(fn => fn(_audio!.duration));
+    _durListeners.forEach((fn) => fn(_audio!.duration));
   });
   _audio.addEventListener('ended', () => {
     usePlayerStore.getState().nextTrack();
@@ -35,13 +35,7 @@ if (_audio) {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useAudio() {
-  const {
-    playlist,
-    currentTrackIndex,
-    isPlaying,
-    volume,
-    isMuted,
-  } = usePlayerStore();
+  const { playlist, currentTrackIndex, isPlaying, volume, isMuted } = usePlayerStore();
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -84,7 +78,7 @@ export function useAudio() {
         }
 
         if (isPlaying) {
-          _audio.play().catch(e => {
+          _audio.play().catch((e) => {
             console.error('Autoplay prevented:', e);
             if (e.name === 'NotAllowedError') {
               usePlayerStore.getState().togglePlayPause();
@@ -113,7 +107,7 @@ export function useAudio() {
   useEffect(() => {
     if (!_audio || !_audio.src) return;
     if (isPlaying && _audio.paused) {
-      _audio.play().catch(e => console.error(e));
+      _audio.play().catch((e) => console.error(e));
     } else if (!isPlaying && !_audio.paused) {
       _audio.pause();
     }

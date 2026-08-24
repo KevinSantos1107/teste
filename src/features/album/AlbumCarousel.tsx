@@ -27,10 +27,10 @@ interface Album {
   title: string;
   description?: string;
   date?: string;
-  cover?: string;          // campo raiz "cover" = URL completa (site antigo)
+  cover?: string; // campo raiz "cover" = URL completa (site antigo)
   coverThumb?: string;
   coverLarge?: string;
-  coverPublicId?: string;  // campo novo (admin v2)
+  coverPublicId?: string; // campo novo (admin v2)
   photos: Photo[];
 }
 
@@ -54,10 +54,10 @@ export function AlbumCarousel() {
           return;
         }
 
-        const albumIds = snapshot.docs.map(d => d.id);
+        const albumIds = snapshot.docs.map((d) => d.id);
 
         // Buscar fotos de album_photos em paralelo (igual ao site antigo)
-        const photoPromises = albumIds.map(id =>
+        const photoPromises = albumIds.map((id) =>
           getDocs(
             query(
               collection(db, 'album_photos'),
@@ -71,7 +71,7 @@ export function AlbumCarousel() {
         const loaded: Album[] = snapshot.docs.map((doc, index) => {
           const d = doc.data();
           const allPhotos: Photo[] = [];
-          photoSnapshots[index].forEach(pageDoc => {
+          photoSnapshots[index].forEach((pageDoc) => {
             const pageData = pageDoc.data();
             if (Array.isArray(pageData.photos)) {
               allPhotos.push(...pageData.photos);
@@ -102,7 +102,11 @@ export function AlbumCarousel() {
   }, [config?.id]);
 
   if (loading) {
-    return <div className="h-64 flex items-center justify-center text-rose-300/50 animate-pulse">Revelando memórias...</div>;
+    return (
+      <div className="h-64 flex items-center justify-center text-rose-300/50 animate-pulse">
+        Revelando memórias...
+      </div>
+    );
   }
 
   if (albums.length === 0) return null;
@@ -146,8 +150,10 @@ export function AlbumCarousel() {
                   <button
                     onClick={() => isActive && setSelectedAlbum(album)}
                     className={cn(
-                      "group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300",
-                      isActive ? "hover:border-rose-500/50 hover:shadow-[0_0_30px_rgba(225,29,72,0.3)]" : "opacity-80"
+                      'group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300',
+                      isActive
+                        ? 'hover:border-rose-500/50 hover:shadow-[0_0_30px_rgba(225,29,72,0.3)]'
+                        : 'opacity-80'
                     )}
                   >
                     {coverSrc ? (
@@ -155,8 +161,8 @@ export function AlbumCarousel() {
                         src={coverSrc}
                         alt={album.title}
                         className={cn(
-                          "w-full h-full object-cover transition-transform duration-700",
-                          isActive ? "group-hover:scale-105" : ""
+                          'w-full h-full object-cover transition-transform duration-700',
+                          isActive ? 'group-hover:scale-105' : ''
                         )}
                       />
                     ) : (
@@ -164,17 +170,19 @@ export function AlbumCarousel() {
                         <Images className="w-16 h-16 text-white/20" />
                       </div>
                     )}
-                    
+
                     {/* Overlay gradiente */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
-                    
+
                     {/* Informações do álbum */}
                     <div className="absolute bottom-0 inset-x-0 p-6 pointer-events-none">
-                      <h3 className="text-white font-bold text-xl drop-shadow-lg mb-1">{album.title}</h3>
+                      <h3 className="text-white font-bold text-xl drop-shadow-lg mb-1">
+                        {album.title}
+                      </h3>
                       {album.date && <p className="text-rose-300 text-sm">{album.date}</p>}
                       <p className="text-slate-300 text-xs mt-2">{album.photos.length} fotos</p>
                     </div>
-                    
+
                     {/* Hover "Abrir" apenas se for o slide central */}
                     {isActive && (
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-[2px]">
@@ -195,7 +203,9 @@ export function AlbumCarousel() {
       {selectedAlbum && (
         <div
           className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300"
-          onClick={e => { if (e.target === e.currentTarget) setSelectedAlbum(null); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedAlbum(null);
+          }}
         >
           <div className="relative w-full max-w-sm mx-auto px-4">
             <button
@@ -205,16 +215,16 @@ export function AlbumCarousel() {
             >
               <X className="w-6 h-6" />
             </button>
-            
+
             <div className="text-center mb-6">
               <h3 className="text-2xl font-serif font-bold text-white">{selectedAlbum.title}</h3>
               {selectedAlbum.description && (
                 <p className="text-slate-400 text-sm mt-1">{selectedAlbum.description}</p>
               )}
             </div>
-            
+
             <AlbumCube photos={selectedAlbum.photos} />
-            
+
             <p className="text-center text-slate-500 text-xs mt-10">Deslize o cubo para girar</p>
           </div>
         </div>

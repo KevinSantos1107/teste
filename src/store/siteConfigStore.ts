@@ -12,16 +12,24 @@ interface SiteConfigState {
   updateConfig: (siteId: string, updates: Partial<SiteConfig>) => Promise<void>;
 }
 
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+    : '255, 0, 85';
+}
+
 function applyThemeVars(colors: SiteConfig['theme']['colors']) {
   const root = document.documentElement;
   root.style.setProperty('--theme-primary', colors.primary);
+  root.style.setProperty('--theme-primary-rgb', hexToRgb(colors.primary));
   root.style.setProperty('--theme-secondary', colors.secondary);
   root.style.setProperty('--theme-bg', colors.bg);
   root.style.setProperty('--theme-text', colors.text);
   root.style.setProperty('--theme-text-secondary', colors.textSecondary);
+  root.style.setProperty('--theme-accent', colors.accent);
   root.style.setProperty('--theme-card-bg', colors.cardBg);
   root.style.setProperty('--theme-card-border', colors.cardBorder);
-  root.style.setProperty('--theme-accent', colors.accent);
 }
 
 export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({

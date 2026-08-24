@@ -5,7 +5,7 @@ export interface Track {
   title: string;
   artist: string;
   url: string; // The full URL from Firestore migration or Cloudinary
-  coverUrl?: string; 
+  coverUrl?: string;
   duration?: number;
 }
 
@@ -17,7 +17,7 @@ interface PlayerState {
   isMuted: boolean;
   isShuffle: boolean;
   isRepeat: boolean;
-  
+
   // Actions
   setPlaylist: (tracks: Track[]) => void;
   playTrack: (index: number) => void;
@@ -40,7 +40,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isRepeat: false,
 
   setPlaylist: (tracks) => set({ playlist: tracks, currentTrackIndex: tracks.length > 0 ? 0 : -1 }),
-  
+
   playTrack: (index) => {
     const { playlist } = get();
     if (index >= 0 && index < playlist.length) {

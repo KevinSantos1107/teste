@@ -17,7 +17,9 @@ export function TimeSlide() {
   useEffect(() => {
     // Calculate hours together
     const startStr = siteConfig?.relationship?.startDate;
-    const startMs = startStr ? new Date(startStr).getTime() : new Date('2025-10-27T00:00:00').getTime();
+    const startMs = startStr
+      ? new Date(startStr).getTime()
+      : new Date('2025-10-27T00:00:00').getTime();
     const diffHours = Math.floor((Date.now() - startMs) / (1000 * 60 * 60));
     const targetHours = isNaN(diffHours) || diffHours < 0 ? 0 : diffHours;
 
@@ -49,19 +51,19 @@ export function TimeSlide() {
       {/* Background Echoes */}
       <div className="absolute inset-0 flex flex-col">
         {echoColors.map((color, i) => (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className="flex-1 flex items-center justify-center overflow-hidden"
             style={{ backgroundColor: color.bg }}
           >
-            <span 
+            <span
               className="font-black text-center whitespace-nowrap opacity-90"
               style={{
                 fontSize: 'clamp(4rem, 25vw, 12rem)',
                 lineHeight: 1,
                 color: color.text,
                 letterSpacing: '-0.05em',
-                transform: 'scaleY(1.2)' // Stretch effect like in the screenshot
+                transform: 'scaleY(1.2)', // Stretch effect like in the screenshot
               }}
             >
               {formattedNumber}
@@ -72,8 +74,10 @@ export function TimeSlide() {
 
       {/* Main Overlay (similar to the second screenshot of the hours) */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none bg-black/60">
-        <span className="text-white/80 text-sm md:text-lg font-medium mb-2 tracking-widest uppercase">Horas Juntos</span>
-        <span 
+        <span className="text-white/80 text-sm md:text-lg font-medium mb-2 tracking-widest uppercase">
+          Horas Juntos
+        </span>
+        <span
           className="text-white font-black drop-shadow-2xl"
           style={{ fontSize: 'clamp(4rem, 18vw, 10rem)', lineHeight: 1, letterSpacing: '-0.03em' }}
         >

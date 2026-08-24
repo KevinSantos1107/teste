@@ -37,7 +37,6 @@ export function RetroShell() {
         audioRef.current.crossOrigin = 'anonymous';
       }
       await audioRef.current.play();
-
     } catch (e) {
       console.warn('Audio playback failed', e);
     }
@@ -49,7 +48,6 @@ export function RetroShell() {
       audioRef.current = null;
     }
     setCurrentSlide(0);
-
   }, []);
 
   useEffect(() => {
@@ -60,15 +58,17 @@ export function RetroShell() {
       document.body.style.overflow = '';
       stopMusic();
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen, stopMusic]);
 
   const nextSlide = useCallback((max: number) => {
-    setCurrentSlide(prev => Math.min(prev + 1, max - 1));
+    setCurrentSlide((prev) => Math.min(prev + 1, max - 1));
   }, []);
 
   const prevSlide = useCallback(() => {
-    setCurrentSlide(prev => Math.max(prev - 1, 0));
+    setCurrentSlide((prev) => Math.max(prev - 1, 0));
   }, []);
 
   const handleStart = () => {
@@ -112,7 +112,7 @@ export function RetroShell() {
   const hasRoulette = config.rouletteOptions && config.rouletteOptions.length > 0;
   const TOTAL_SLIDES = hasRoulette ? 8 : 7;
   const isInteractive = INTERACTIVE_SLIDES.has(currentSlide);
-  
+
   // Safe wrapper for nextSlide with the actual total
   const goNext = () => nextSlide(TOTAL_SLIDES);
 
@@ -151,30 +151,50 @@ export function RetroShell() {
             onClick={toggleMute}
             className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center pointer-events-auto active:scale-95 transition-transform border border-white/10"
           >
-            {isMuted ? <VolumeX className="w-4 h-4 text-white" /> : <Volume2 className="w-4 h-4 text-white" />}
+            {isMuted ? (
+              <VolumeX className="w-4 h-4 text-white" />
+            ) : (
+              <Volume2 className="w-4 h-4 text-white" />
+            )}
           </button>
         )}
       </div>
 
       {/* Slides */}
-      <div
-        className="retro-v2-slider"
-        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-      >
-        <div className="retro-v2-slide"><IntroSlide onStart={handleStart} isReady={isReady} /></div>
-        <div className="retro-v2-slide"><TimeSlide /></div>
-        <div className="retro-v2-slide"><MapSlide /></div>
-        <div className="retro-v2-slide"><ErasSlide /></div>
-        {config.rouletteOptions && config.rouletteOptions.length > 0 && (
-          <div className="retro-v2-slide"><RouletteSlide /></div>
-        )}
-        <div className="retro-v2-slide"><WordGameSlide onNext={goNext} /></div>
-        <div className="retro-v2-slide"><SummarySlide /></div>
+      <div className="retro-v2-slider" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
         <div className="retro-v2-slide">
-          <OutroSlide onReplay={() => {
-            setCurrentSlide(0);
-            if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => {}); }
-          }} />
+          <IntroSlide onStart={handleStart} isReady={isReady} />
+        </div>
+        <div className="retro-v2-slide">
+          <TimeSlide />
+        </div>
+        <div className="retro-v2-slide">
+          <MapSlide />
+        </div>
+        <div className="retro-v2-slide">
+          <ErasSlide />
+        </div>
+        {config.rouletteOptions && config.rouletteOptions.length > 0 && (
+          <div className="retro-v2-slide">
+            <RouletteSlide />
+          </div>
+        )}
+        <div className="retro-v2-slide">
+          <WordGameSlide onNext={goNext} />
+        </div>
+        <div className="retro-v2-slide">
+          <SummarySlide />
+        </div>
+        <div className="retro-v2-slide">
+          <OutroSlide
+            onReplay={() => {
+              setCurrentSlide(0);
+              if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(() => {});
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -207,13 +227,19 @@ export function RetroShell() {
       {currentSlide > 0 && isInteractive && (
         <div className="absolute bottom-4 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
           <button
-            onClick={e => { e.stopPropagation(); prevSlide(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              prevSlide();
+            }}
             className="pointer-events-auto flex items-center gap-1 px-4 py-2 bg-black/50 backdrop-blur-md rounded-full text-white text-xs border border-white/10 active:scale-95 transition-transform"
           >
             <ChevronLeft className="w-3 h-3" /> Voltar
           </button>
           <button
-            onClick={e => { e.stopPropagation(); goNext(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
             className="pointer-events-auto flex items-center gap-1 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white text-xs border border-white/10 active:scale-95 transition-transform"
           >
             Pular <ChevronRight className="w-3 h-3" />

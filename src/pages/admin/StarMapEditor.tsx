@@ -25,9 +25,14 @@ function useToast() {
     setTimeout(() => setMsg(null), 3500);
   };
   const Toast = msg ? (
-    <div className={cn('fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-medium text-sm animate-in slide-in-from-bottom-4 duration-300',
-      msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-    )}>{msg.text}</div>
+    <div
+      className={cn(
+        'fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-medium text-sm animate-in slide-in-from-bottom-4 duration-300',
+        msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
+      )}
+    >
+      {msg.text}
+    </div>
   ) : null;
   return { show, Toast };
 }
@@ -42,7 +47,7 @@ export default function StarMapEditor() {
   const [form, setForm] = useState<StarMapConfig>({
     specialDate: '',
     customLocation: { lat: -23.5505, lng: -46.6333, name: '' },
-    romanticQuote: ''
+    romanticQuote: '',
   });
 
   useEffect(() => {
@@ -58,9 +63,9 @@ export default function StarMapEditor() {
             customLocation: {
               lat: data.customLocation?.lat ?? -23.5505,
               lng: data.customLocation?.lng ?? -46.6333,
-              name: data.customLocation?.name || ''
+              name: data.customLocation?.name || '',
             },
-            romanticQuote: data.romanticQuote || ''
+            romanticQuote: data.romanticQuote || '',
           });
         }
       } catch {
@@ -80,7 +85,7 @@ export default function StarMapEditor() {
     try {
       await setDoc(doc(db, 'sites', siteId, 'config', 'star_map'), {
         ...form,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
       show('Configurações salvas com sucesso!');
     } catch (e: any) {
@@ -90,7 +95,11 @@ export default function StarMapEditor() {
   };
 
   if (loading) {
-    return <div className="flex justify-center p-12"><Spinner /></div>;
+    return (
+      <div className="flex justify-center p-12">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
@@ -99,7 +108,9 @@ export default function StarMapEditor() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Mapa de Estrelas</h1>
-          <p className="text-slate-400 mt-1">Configure a data e local exatos para gerar o mapa estelar.</p>
+          <p className="text-slate-400 mt-1">
+            Configure a data e local exatos para gerar o mapa estelar.
+          </p>
         </div>
         <Button onClick={handleSave} isLoading={saving} className="gap-2 shrink-0">
           <Save className="w-4 h-4" /> Salvar Alterações
@@ -117,58 +128,75 @@ export default function StarMapEditor() {
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Data Especial *</label>
-            <Input 
-              type="date" 
-              value={form.specialDate} 
-              onChange={e => setForm(f => ({ ...f, specialDate: e.target.value }))}
-              className="bg-slate-900 border-slate-700 text-slate-200" 
+            <Input
+              type="date"
+              value={form.specialDate}
+              onChange={(e) => setForm((f) => ({ ...f, specialDate: e.target.value }))}
+              className="bg-slate-900 border-slate-700 text-slate-200"
             />
-            <p className="text-xs text-slate-500">A data que o mapa de estrelas deve representar.</p>
+            <p className="text-xs text-slate-500">
+              A data que o mapa de estrelas deve representar.
+            </p>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Nome do Local *</label>
-            <Input 
-              value={form.customLocation.name} 
-              onChange={e => setForm(f => ({ ...f, customLocation: { ...f.customLocation, name: e.target.value } }))}
-              className="bg-slate-900 border-slate-700 text-slate-200" 
-              placeholder="Ex: Paris, França" 
+            <Input
+              value={form.customLocation.name}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  customLocation: { ...f.customLocation, name: e.target.value },
+                }))
+              }
+              className="bg-slate-900 border-slate-700 text-slate-200"
+              placeholder="Ex: Paris, França"
             />
             <p className="text-xs text-slate-500">Como o nome do local vai aparecer no mapa.</p>
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Latitude *</label>
-            <Input 
-              type="number" 
+            <Input
+              type="number"
               step="any"
-              value={form.customLocation.lat} 
-              onChange={e => setForm(f => ({ ...f, customLocation: { ...f.customLocation, lat: parseFloat(e.target.value) } }))}
-              className="bg-slate-900 border-slate-700 text-slate-200 font-mono" 
-              placeholder="-23.5505" 
+              value={form.customLocation.lat}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  customLocation: { ...f.customLocation, lat: parseFloat(e.target.value) },
+                }))
+              }
+              className="bg-slate-900 border-slate-700 text-slate-200 font-mono"
+              placeholder="-23.5505"
             />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Longitude *</label>
-            <Input 
-              type="number" 
+            <Input
+              type="number"
               step="any"
-              value={form.customLocation.lng} 
-              onChange={e => setForm(f => ({ ...f, customLocation: { ...f.customLocation, lng: parseFloat(e.target.value) } }))}
-              className="bg-slate-900 border-slate-700 text-slate-200 font-mono" 
-              placeholder="-46.6333" 
+              value={form.customLocation.lng}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  customLocation: { ...f.customLocation, lng: parseFloat(e.target.value) },
+                }))
+              }
+              className="bg-slate-900 border-slate-700 text-slate-200 font-mono"
+              placeholder="-46.6333"
             />
           </div>
         </div>
-        
+
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-300">Frase Romântica</label>
-          <Input 
-            value={form.romanticQuote} 
-            onChange={e => setForm(f => ({ ...f, romanticQuote: e.target.value }))}
-            className="bg-slate-900 border-slate-700 text-slate-200" 
-            placeholder="Ex: O céu quando nossos mundos colidiram..." 
+          <Input
+            value={form.romanticQuote}
+            onChange={(e) => setForm((f) => ({ ...f, romanticQuote: e.target.value }))}
+            className="bg-slate-900 border-slate-700 text-slate-200"
+            placeholder="Ex: O céu quando nossos mundos colidiram..."
           />
         </div>
       </div>

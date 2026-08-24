@@ -35,15 +35,15 @@ export function StarMap() {
           y: Math.random() * canvas.height,
           radius: Math.random() * 1.5,
           alpha: Math.random(),
-          velocity: (Math.random() * 0.02) + 0.005,
-          color: Math.random() > 0.8 ? '#fbd38d' : Math.random() > 0.5 ? '#90cdf4' : '#ffffff'
+          velocity: Math.random() * 0.02 + 0.005,
+          color: Math.random() > 0.8 ? '#fbd38d' : Math.random() > 0.5 ? '#90cdf4' : '#ffffff',
         });
       }
     };
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
+
       // Draw background gradient (Night sky)
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gradient.addColorStop(0, '#0a0a2a');
@@ -52,10 +52,12 @@ export function StarMap() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Draw stars
-      stars.forEach(star => {
+      stars.forEach((star) => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `${star.color}${Math.floor(star.alpha * 255).toString(16).padStart(2, '0')}`;
+        ctx.fillStyle = `${star.color}${Math.floor(star.alpha * 255)
+          .toString(16)
+          .padStart(2, '0')}`;
         ctx.fill();
 
         // Twinkle effect
@@ -69,8 +71,8 @@ export function StarMap() {
       if (stars.length > 50) {
         ctx.beginPath();
         ctx.moveTo(stars[0].x, stars[0].y);
-        for(let i = 1; i < 7; i++) {
-           ctx.lineTo(stars[i].x, stars[i].y);
+        for (let i = 1; i < 7; i++) {
+          ctx.lineTo(stars[i].x, stars[i].y);
         }
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         ctx.lineWidth = 1;

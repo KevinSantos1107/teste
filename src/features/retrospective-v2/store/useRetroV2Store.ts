@@ -48,7 +48,7 @@ interface RetroState {
   events: RetroEvent[];
   mapPins: MapPin[];
   config: RetroConfig;
-  
+
   openRetro: (siteId: string) => Promise<void>;
   closeRetro: () => void;
 }
@@ -69,13 +69,13 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
 
   openRetro: async (siteId: string) => {
     set({ isOpen: true, isReady: false });
-    
+
     try {
       // 1. Fetch Timeline Events
       const tlRef = collection(db, 'sites', siteId, 'timeline');
       const tlSnap = await getDocs(query(tlRef, orderBy('createdAt', 'asc')));
       const events: RetroEvent[] = [];
-      tlSnap.forEach(d => {
+      tlSnap.forEach((d) => {
         if (d.id === '_placeholder') return;
         const data = d.data();
         if (data.date || data.createdAt) {
@@ -92,11 +92,11 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
       const allPhotosRaw: RetroPhoto[] = [];
       const mapPins: MapPin[] = [];
 
-      albumSnap.forEach(albumDoc => {
+      albumSnap.forEach((albumDoc) => {
         if (albumDoc.id === '_placeholder') return;
         const d = albumDoc.data();
         const albumPhotos: any[] = d.photos || [];
-        
+
         albumPhotos.forEach((p, idx) => {
           if (p.publicId) {
             const photoDate = toDate(p.date || d.createdAt);
@@ -127,7 +127,7 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
         photos = allPhotosRaw;
       } else {
         const byEpoch = new Map<string, RetroPhoto[]>();
-        allPhotosRaw.forEach(p => {
+        allPhotosRaw.forEach((p) => {
           const key = `${p.date.getFullYear()}-${String(p.date.getMonth() + 1).padStart(2, '0')}`;
           if (!byEpoch.has(key)) byEpoch.set(key, []);
           byEpoch.get(key)!.push(p);
@@ -136,7 +136,7 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
         const TARGET = 25;
         const perEpoch = Math.max(1, Math.floor(TARGET / epochs.length));
         const selected: RetroPhoto[] = [];
-        epochs.forEach(epochKey => {
+        epochs.forEach((epochKey) => {
           const pool = byEpoch.get(epochKey)!;
           const count = Math.min(perEpoch + 1, pool.length);
           const step = pool.length / count;
@@ -155,19 +155,24 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
         if (configSnap.exists()) {
           mergedConfig = { ...mergedConfig, ...configSnap.data() } as RetroConfig;
         }
-        
+
         // Fetch wheels collection to sync with Admin
         const wheelSnap = await getDocs(query(collection(db, 'sites', siteId, 'wheels')));
         if (!wheelSnap.empty) {
           const firstWheel = wheelSnap.docs[0].data();
           if (firstWheel.options && typeof firstWheel.options === 'string') {
-            mergedConfig.rouletteOptions = firstWheel.options.split(',').map((s: string) => s.trim()).filter(Boolean);
+            mergedConfig.rouletteOptions = firstWheel.options
+              .split(',')
+              .map((s: string) => s.trim())
+              .filter(Boolean);
           }
         } else {
           // If no wheels are registered, empty the options so it doesn't show default
           mergedConfig.rouletteOptions = [];
         }
-      } catch (e) { console.warn('No custom retro v2 config found', e); }
+      } catch (e) {
+        console.warn('No custom retro v2 config found', e);
+      }
 
       set({
         events,
@@ -177,7 +182,6 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
         config: mergedConfig,
         isReady: true,
       });
-
     } catch (error) {
       console.error('Failed to load retrospective data', error);
       // Fallback ready state even if error
@@ -187,5 +191,5 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
 
   closeRetro: () => {
     set({ isOpen: false });
-  }
+  },
 }));

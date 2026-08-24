@@ -34,8 +34,12 @@ export function SummarySlide() {
       <div className="flex flex-col gap-8 w-full max-w-xs">
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-xl flex items-center justify-between">
           <div className="text-left">
-            <p className="text-white/70 text-sm font-semibold uppercase tracking-wider mb-1">Fotos Salvas</p>
-            <p className="text-white text-5xl font-black"><Counter target={totalPhotos} /></p>
+            <p className="text-white/70 text-sm font-semibold uppercase tracking-wider mb-1">
+              Fotos Salvas
+            </p>
+            <p className="text-white text-5xl font-black">
+              <Counter target={totalPhotos} />
+            </p>
           </div>
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl shadow-inner">
             📸
@@ -44,8 +48,12 @@ export function SummarySlide() {
 
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-xl flex items-center justify-between">
           <div className="text-left">
-            <p className="text-white/70 text-sm font-semibold uppercase tracking-wider mb-1">Momentos</p>
-            <p className="text-white text-5xl font-black"><Counter target={events.length} /></p>
+            <p className="text-white/70 text-sm font-semibold uppercase tracking-wider mb-1">
+              Momentos
+            </p>
+            <p className="text-white text-5xl font-black">
+              <Counter target={events.length} />
+            </p>
           </div>
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl shadow-inner">
             🌟
@@ -53,9 +61,7 @@ export function SummarySlide() {
         </div>
       </div>
 
-      <p className="mt-12 text-white/80 font-medium text-lg">
-        E o melhor ainda está por vir...
-      </p>
+      <p className="mt-12 text-white/80 font-medium text-lg">E o melhor ainda está por vir...</p>
     </div>
   );
 }

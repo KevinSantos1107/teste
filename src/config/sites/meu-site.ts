@@ -11,15 +11,15 @@ export const meuSiteConfig: SiteConfig = {
   },
   theme: {
     colors: {
-      bg: '#0f172a', // slate-900 (dark mode default)
-      primary: '#e11d48', // rose-600
-      secondary: '#f43f5e', // rose-500
-      accent: '#fb7185', // rose-400
-      text: '#f8fafc', // slate-50
-      textSecondary: '#94a3b8', // slate-400
-      cardBg: '#1e293b', // slate-800
-      cardBorder: '#334155', // slate-700
-    }
+      bg: '#07050f',                     // Roxo noturno profundo
+      primary: '#9d4edd',                // Roxo neon (tema meteoro = padrão)
+      secondary: '#e0aaff',              // Lilás claro
+      accent: '#c77dff',                 // Violeta médio
+      text: '#ffffff',                   // Branco puro
+      textSecondary: '#a1a1aa',          // Cinza claro
+      cardBg: 'rgba(15, 10, 30, 0.4)',   // Vidro roxo escuro
+      cardBorder: 'rgba(157, 78, 221, 0.4)', // Borda roxa translúcida
+    },
   },
   features: {
     enableTimeline: true,
@@ -27,5 +27,5 @@ export const meuSiteConfig: SiteConfig = {
     enableGames: true,
     enableMusic: true,
     enableAlbum: true,
-  }
+  },
 };

@@ -22,22 +22,22 @@ export default function MapPage() {
         </p>
 
         <div className="flex justify-center gap-4 mt-8">
-          <button 
+          <button
             onClick={() => setActiveTab('travel')}
             className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
-              activeTab === 'travel' 
-                ? 'bg-theme-primary text-white shadow-lg scale-105' 
+              activeTab === 'travel'
+                ? 'bg-theme-primary text-white shadow-lg scale-105'
                 : 'bg-theme-card-bg border border-theme-card-border text-theme-text hover:bg-theme-card-border'
             }`}
           >
             <Plane className="w-5 h-5" /> Nossas Viagens
           </button>
-          
-          <button 
+
+          <button
             onClick={() => setActiveTab('stars')}
             className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
-              activeTab === 'stars' 
-                ? 'bg-theme-primary text-white shadow-lg scale-105' 
+              activeTab === 'stars'
+                ? 'bg-theme-primary text-white shadow-lg scale-105'
                 : 'bg-theme-card-bg border border-theme-card-border text-theme-text hover:bg-theme-card-border'
             }`}
           >
@@ -45,7 +45,7 @@ export default function MapPage() {
           </button>
         </div>
       </section>
-      
+
       <section className="py-2 px-4">
         {activeTab === 'stars' && <StarMap />}
         {activeTab === 'travel' && <VisitedMap />}

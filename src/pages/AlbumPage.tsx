@@ -30,13 +30,13 @@ export default function AlbumPage() {
             description: data.description,
             date: data.date,
             coverPublicId: data.coverPublicId,
-            photos: data.photos || []
+            photos: data.photos || [],
           });
         });
 
         setAlbums(loadedAlbums);
       } catch (error) {
-        console.error("Erro ao carregar álbuns:", error);
+        console.error('Erro ao carregar álbuns:', error);
       } finally {
         setLoading(false);
       }
@@ -59,17 +59,23 @@ export default function AlbumPage() {
 
       <div className="container mx-auto px-4 space-y-16">
         {loading ? (
-          <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
         ) : albums.length > 0 ? (
-          albums.map(album => (
+          albums.map((album) => (
             <div key={album.id} className="text-center">
               <h3 className="text-2xl font-bold text-theme-text mb-2">{album.title}</h3>
-              {album.description && <p className="text-theme-text-secondary mb-6">{album.description}</p>}
+              {album.description && (
+                <p className="text-theme-text-secondary mb-6">{album.description}</p>
+              )}
               <AlbumCube photos={album.photos} />
             </div>
           ))
         ) : (
-          <div className="text-center py-12 text-theme-text-secondary">Nenhum álbum encontrado.</div>
+          <div className="text-center py-12 text-theme-text-secondary">
+            Nenhum álbum encontrado.
+          </div>
         )}
       </div>
     </div>

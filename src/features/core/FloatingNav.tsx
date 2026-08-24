@@ -8,9 +8,9 @@ import { Home, Map, Gamepad2, Heart, X } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
 
 const NAV_ITEMS = [
-  { to: '/',        icon: Home,     label: 'Início',      angle: 90  },
-  { to: '/mapa',   icon: Map,      label: 'Nosso Mundo', angle: 52  },
-  { to: '/jogos',  icon: Gamepad2, label: 'Jogos',       angle: 14  },
+  { to: '/', icon: Home, label: 'Início', angle: 90 },
+  { to: '/mapa', icon: Map, label: 'Nosso Mundo', angle: 52 },
+  { to: '/jogos', icon: Gamepad2, label: 'Jogos', angle: 14 },
 ];
 
 const RADIUS = 72; // px — raio do arco
@@ -26,21 +26,15 @@ export function FloatingNav() {
   return (
     <>
       {/* Backdrop translúcido ao abrir */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />}
 
       {/* Container fixo no canto inferior esquerdo */}
       <div className="fixed bottom-8 left-4 md:bottom-10 md:left-10 z-50">
-
         {/* Itens em arco — renderizados antes do botão para ficarem atrás */}
         {NAV_ITEMS.map((item, i) => {
           const rad = deg2rad(item.angle);
-          const x = Math.cos(rad) * RADIUS;   // positivo = para a direita
-          const y = -Math.sin(rad) * RADIUS;  // negativo = para cima
+          const x = Math.cos(rad) * RADIUS; // positivo = para a direita
+          const y = -Math.sin(rad) * RADIUS; // negativo = para cima
           const isActive = location.pathname === item.to;
 
           return (
@@ -48,9 +42,7 @@ export function FloatingNav() {
               key={item.to}
               className="absolute bottom-0 left-0"
               style={{
-                transform: open
-                  ? `translate(${x}px, ${y}px)`
-                  : 'translate(0px, 0px)',
+                transform: open ? `translate(${x}px, ${y}px)` : 'translate(0px, 0px)',
                 opacity: open ? 1 : 0,
                 transition: `transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 50}ms, opacity 200ms ease ${i * 50}ms`,
                 pointerEvents: open ? 'auto' : 'none',

@@ -1,0 +1,49 @@
+/* ═══════════════ Meteor Shower Animation ═══════════════ */
+.meteor-shower {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.meteor {
+  position: absolute;
+  width: 150px;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--meteor-color, rgba(157, 78, 221, 0.6)), #fff);
+  border-radius: 999px;
+  opacity: 0; /* Ensures they are invisible while delayed */
+  transform: rotate(45deg); /* Pre-rotate so they don't appear horizontal if a glitch happens */
+  animation: meteorFall linear infinite;
+}
+
+.meteor::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 15px 3px #fff, 0 0 30px 6px var(--meteor-color, #9d4edd);
+}
+
+@keyframes meteorFall {
+  0% {
+    transform: rotate(45deg) translateX(-30vw);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(45deg) translateX(150vw);
+    opacity: 0;
+  }
+}

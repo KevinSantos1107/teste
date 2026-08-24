@@ -33,13 +33,13 @@ export default function TimelinePage() {
             title: data.title,
             description: data.description,
             location: data.location,
-            publicId: data.publicId
+            publicId: data.publicId,
           });
         });
 
         setEvents(loadedEvents);
       } catch (error) {
-        console.error("Erro ao carregar timeline:", error);
+        console.error('Erro ao carregar timeline:', error);
       } finally {
         setLoading(false);
       }
@@ -64,7 +64,6 @@ export default function TimelinePage() {
         </div>
       </section>
 
-
       <section>
         <div className="text-center mb-12">
           <h2 className="text-4xl font-serif font-bold text-theme-text mb-4">Nossa História</h2>
@@ -72,9 +71,11 @@ export default function TimelinePage() {
             Cada momento ao seu lado é um capítulo que merece ser lembrado para sempre.
           </p>
         </div>
-        
+
         {loading ? (
-          <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
         ) : (
           <Timeline events={events} />
         )}

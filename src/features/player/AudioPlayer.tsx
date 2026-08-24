@@ -1,4 +1,18 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, ListMusic, Home, Map, Gamepad2, Heart } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Shuffle,
+  Repeat,
+  ListMusic,
+  Home,
+  Map,
+  Gamepad2,
+  Heart,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
@@ -30,9 +44,9 @@ function NavLink({ to, icon: Icon, label }: { to: string; icon: any; label: stri
 
 export function AudioPlayer() {
   const location = useLocation();
-  const { 
-    playlist, 
-    currentTrackIndex, 
+  const {
+    playlist,
+    currentTrackIndex,
     isPlaying,
     volume,
     isMuted,
@@ -44,12 +58,12 @@ export function AudioPlayer() {
     setVolume,
     toggleMute,
     toggleShuffle,
-    toggleRepeat
+    toggleRepeat,
   } = usePlayerStore();
-  
+
   const { currentTime, duration, isLoading, error, seek } = useAudio();
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
-  
+
   const currentTrack = playlist[currentTrackIndex];
 
   if (!currentTrack) {
@@ -81,17 +95,20 @@ export function AudioPlayer() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-theme-bg/95 backdrop-blur border-t border-theme-card-border p-3 px-4 z-50 animate-in slide-in-from-bottom-full duration-500 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+    <div className="fixed bottom-0 left-0 w-full bg-[#05050A]/70 backdrop-blur-2xl border-t border-[var(--theme-primary)]/30 p-3 px-4 z-50 animate-in slide-in-from-bottom-full duration-500 shadow-[0_-10px_40px_rgba(var(--theme-primary-rgb),0.15)]">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        
         {/* Track Info + Mobile Nav */}
         <div className="flex items-center gap-3 w-full md:w-1/3 overflow-hidden">
           {currentTrack.coverUrl ? (
-             <img src={currentTrack.coverUrl} alt="Capa" className="w-10 h-10 rounded-md object-cover flex-shrink-0 bg-theme-card-bg border border-theme-card-border" />
+            <img
+              src={currentTrack.coverUrl}
+              alt="Capa"
+              className="w-10 h-10 rounded-md object-cover flex-shrink-0 bg-theme-card-bg border border-theme-card-border"
+            />
           ) : (
-             <div className="w-10 h-10 rounded-md bg-theme-primary/20 flex items-center justify-center flex-shrink-0 text-base">
-               🎵
-             </div>
+            <div className="w-10 h-10 rounded-md bg-theme-primary/20 flex items-center justify-center flex-shrink-0 text-base">
+              🎵
+            </div>
           )}
           <div className="truncate flex-1 min-w-0">
             <h4 className="text-theme-text font-medium text-sm truncate">{currentTrack.title}</h4>
@@ -108,15 +125,24 @@ export function AudioPlayer() {
         {/* Controls & Progress */}
         <div className="flex flex-col items-center gap-2 w-full md:w-1/3">
           <div className="flex items-center gap-4">
-            <button onClick={toggleShuffle} className={cn("text-theme-text-secondary hover:text-theme-text transition", isShuffle && "text-theme-primary")}>
+            <button
+              onClick={toggleShuffle}
+              className={cn(
+                'text-theme-text-secondary hover:text-theme-text transition',
+                isShuffle && 'text-theme-primary'
+              )}
+            >
               <Shuffle className="w-4 h-4" />
             </button>
-            <button onClick={previousTrack} className="text-theme-text-secondary hover:text-theme-text transition">
+            <button
+              onClick={previousTrack}
+              className="text-theme-text-secondary hover:text-theme-text transition"
+            >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
-            <button 
-              onClick={togglePlayPause} 
-              className="w-10 h-10 rounded-full bg-theme-primary text-white flex items-center justify-center hover:bg-theme-secondary transition-transform hover:scale-105 active:scale-95"
+            <button
+              onClick={togglePlayPause}
+              className="w-10 h-10 rounded-full bg-[var(--theme-primary)] text-white flex items-center justify-center hover:bg-[var(--theme-secondary)] transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_var(--theme-primary)]"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -127,27 +153,36 @@ export function AudioPlayer() {
                 <Play className="w-5 h-5 fill-current ml-0.5" />
               )}
             </button>
-            <button onClick={nextTrack} className="text-theme-text-secondary hover:text-theme-text transition">
+            <button
+              onClick={nextTrack}
+              className="text-theme-text-secondary hover:text-theme-text transition"
+            >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
-            <button onClick={toggleRepeat} className={cn("text-theme-text-secondary hover:text-theme-text transition", isRepeat && "text-theme-primary")}>
+            <button
+              onClick={toggleRepeat}
+              className={cn(
+                'text-theme-text-secondary hover:text-theme-text transition',
+                isRepeat && 'text-theme-primary'
+              )}
+            >
               <Repeat className="w-4 h-4" />
             </button>
           </div>
-          
+
           <div className="flex items-center gap-2 w-full text-xs text-theme-text-secondary font-mono">
             <span>{formatTime(currentTime)}</span>
-            <input 
-              type="range" 
-              min={0} 
-              max={duration || 100} 
-              value={currentTime} 
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              value={currentTime}
               onChange={handleProgressChange}
               className="flex-1 h-1.5 bg-theme-card-border rounded-lg appearance-none cursor-pointer accent-theme-primary"
             />
             <span>{formatTime(duration)}</span>
           </div>
-          
+
           {error && <span className="text-red-500 text-xs absolute -top-6">{error}</span>}
         </div>
 
@@ -155,39 +190,75 @@ export function AudioPlayer() {
         <div className="flex items-center justify-end gap-2 w-full md:w-1/3">
           {/* Nav icons — desktop */}
           <div className="hidden md:flex items-center gap-1 mr-2 border-r border-theme-card-border pr-3">
-            <Link to="/" title="Início" className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", location.pathname === '/' ? 'bg-theme-primary/20 text-theme-primary' : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5')}>
+            <Link
+              to="/"
+              title="Início"
+              className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                location.pathname === '/'
+                  ? 'bg-theme-primary/20 text-theme-primary'
+                  : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5'
+              )}
+            >
               <Home className="w-4 h-4" />
             </Link>
-            <Link to="/mapa" title="Nosso Mundo" className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", location.pathname === '/mapa' ? 'bg-theme-primary/20 text-theme-primary' : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5')}>
+            <Link
+              to="/mapa"
+              title="Nosso Mundo"
+              className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                location.pathname === '/mapa'
+                  ? 'bg-theme-primary/20 text-theme-primary'
+                  : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5'
+              )}
+            >
               <Map className="w-4 h-4" />
             </Link>
-            <Link to="/jogos" title="Jogos" className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-colors", location.pathname === '/jogos' ? 'bg-theme-primary/20 text-theme-primary' : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5')}>
+            <Link
+              to="/jogos"
+              title="Jogos"
+              className={cn(
+                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                location.pathname === '/jogos'
+                  ? 'bg-theme-primary/20 text-theme-primary'
+                  : 'text-theme-text-secondary hover:text-theme-text hover:bg-white/5'
+              )}
+            >
               <Gamepad2 className="w-4 h-4" />
             </Link>
           </div>
 
-          <button onClick={() => setIsPlaylistOpen(true)} className="text-theme-text-secondary hover:text-theme-text transition">
+          <button
+            onClick={() => setIsPlaylistOpen(true)}
+            className="text-theme-text-secondary hover:text-theme-text transition"
+          >
             <ListMusic className="w-5 h-5" />
           </button>
-          <button onClick={toggleMute} className="text-theme-text-secondary hover:text-theme-text transition">
-            {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          <button
+            onClick={toggleMute}
+            className="text-theme-text-secondary hover:text-theme-text transition"
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="w-5 h-5" />
+            ) : (
+              <Volume2 className="w-5 h-5" />
+            )}
           </button>
-          <input 
-            type="range" 
-            min={0} 
-            max={1} 
-            step={0.01} 
-            value={isMuted ? 0 : volume} 
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
             className="w-20 h-1.5 bg-theme-card-border rounded-lg appearance-none cursor-pointer accent-theme-primary hidden md:block"
           />
         </div>
-        
       </div>
 
-      <Modal 
-        isOpen={isPlaylistOpen} 
-        onClose={() => setIsPlaylistOpen(false)} 
+      <Modal
+        isOpen={isPlaylistOpen}
+        onClose={() => setIsPlaylistOpen(false)}
         title="Fila de Reprodução"
       >
         <PlaylistManager />

@@ -22,7 +22,7 @@ export function TimelineModal() {
       const q = query(ref, orderBy('createdAt', 'asc'));
       const snap = await getDocs(q);
       const loaded: TimelineEvent[] = [];
-      snap.forEach(doc => {
+      snap.forEach((doc) => {
         if (doc.id === '_placeholder') return;
         const d = doc.data();
         loaded.push({
@@ -41,7 +41,7 @@ export function TimelineModal() {
       setEvents(loaded);
       setFetched(true);
     } catch (e) {
-      console.error("Erro ao carregar timeline:", e);
+      console.error('Erro ao carregar timeline:', e);
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,9 @@ export function TimelineModal() {
 
   // Fechar com ESC
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
@@ -74,10 +76,12 @@ export function TimelineModal() {
         className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 hover:border-rose-500/50 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(225,29,72,0.2)]"
       >
         <div className="w-10 h-10 rounded-full bg-rose-500/10 group-hover:bg-rose-500/20 flex items-center justify-center transition-colors">
-        <Clock className="w-5 h-5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+          <Clock className="w-5 h-5 text-rose-400 group-hover:text-rose-300 transition-colors" />
         </div>
         <div className="text-left">
-          <p className="text-white font-bold text-base group-hover:text-rose-100 transition-colors">Nossa História</p>
+          <p className="text-white font-bold text-base group-hover:text-rose-100 transition-colors">
+            Nossa História
+          </p>
           <p className="text-slate-400 text-sm">Relembra nossos momentos juntos</p>
         </div>
         <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse ml-2" />
@@ -87,11 +91,12 @@ export function TimelineModal() {
       {isOpen && (
         <div
           className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col animate-in fade-in duration-300"
-          onClick={e => { if (e.target === e.currentTarget) handleClose(); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleClose();
+          }}
         >
           {/* Modal Container */}
           <div className="relative flex flex-col h-full max-w-4xl w-full mx-auto">
-            
             {/* Header fixo */}
             <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
               <div>

@@ -11,18 +11,17 @@ interface CloudinaryImageProps {
   height?: number;
 }
 
-export function CloudinaryImage({ publicId, alt = 'Imagem do Álbum', className }: CloudinaryImageProps) {
+export function CloudinaryImage({
+  publicId,
+  alt = 'Imagem do Álbum',
+  className,
+}: CloudinaryImageProps) {
   if (!publicId) return null;
 
   // If publicId is a full HTTP URL (fallback/demo), render a standard img tag
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
     return (
-      <img 
-        src={publicId} 
-        alt={alt}
-        loading="lazy"
-        className={cn('object-cover', className)}
-      />
+      <img src={publicId} alt={alt} loading="lazy" className={cn('object-cover', className)} />
     );
   }
 
@@ -31,7 +30,7 @@ export function CloudinaryImage({ publicId, alt = 'Imagem do Álbum', className 
 
   // Apply optimizations
   myImage.format('auto').quality('auto');
-  
+
   // se houver width/height, pode-se aplicar transforms aqui futuramente
 
   return (

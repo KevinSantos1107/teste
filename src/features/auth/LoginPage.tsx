@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/admin';
@@ -37,7 +37,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md bg-theme-card-bg shadow-xl border-theme-card-border animate-in fade-in zoom-in-95 duration-500">
         <CardHeader className="text-center space-y-2">
           <Heart className="w-12 h-12 mx-auto text-theme-primary" />
-          <CardTitle className="text-2xl font-bold text-theme-text font-serif">Área do Casal</CardTitle>
+          <CardTitle className="text-2xl font-bold text-theme-text font-serif">
+            Área do Casal
+          </CardTitle>
           <p className="text-sm text-theme-text-secondary">Faça login para editar seu site.</p>
         </CardHeader>
         <CardContent>
@@ -49,23 +51,23 @@ export default function LoginPage() {
             )}
             <div className="space-y-2">
               <label className="text-sm font-medium text-theme-text-secondary">E-mail</label>
-              <Input 
-                type="email" 
-                required 
+              <Input
+                type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com" 
+                placeholder="seu@email.com"
                 className="w-full"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-theme-text-secondary">Senha</label>
-              <Input 
-                type="password" 
-                required 
+              <Input
+                type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" 
+                placeholder="••••••••"
                 className="w-full"
               />
             </div>
