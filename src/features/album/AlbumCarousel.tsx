@@ -13,7 +13,6 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 
-// Estrutura exatamente igual ao site antigo (firebase-config.js)
 interface Photo {
   src?: string;
   url?: string;
@@ -27,10 +26,10 @@ interface Album {
   title: string;
   description?: string;
   date?: string;
-  cover?: string; // campo raiz "cover" = URL completa (site antigo)
+  cover?: string;
   coverThumb?: string;
   coverLarge?: string;
-  coverPublicId?: string; // campo novo (admin v2)
+  coverPublicId?: string;
   photos: Photo[];
 }
 
@@ -40,8 +39,26 @@ export function AlbumCarousel() {
   const [loading, setLoading] = useState(true);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
 
+  // Lock body scroll when modal is open
   useEffect(() => {
-    // Carrega EXATAMENTE igual ao site antigo: coleção raiz "albums" + "album_photos"
+    if (selectedAlbum) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [selectedAlbum]);
+
+  // Close on ESC
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedAlbum(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  useEffect(() => {
     const fetchAlbums = async () => {
       try {
         const snapshot = await getDocs(
@@ -56,7 +73,6 @@ export function AlbumCarousel() {
 
         const albumIds = snapshot.docs.map((d) => d.id);
 
-        // Buscar fotos de album_photos em paralelo (igual ao site antigo)
         const photoPromises = albumIds.map((id) =>
           getDocs(
             query(
@@ -103,7 +119,7 @@ export function AlbumCarousel() {
 
   if (loading) {
     return (
-      <div className="h-64 flex items-center justify-center text-rose-300/50 animate-pulse">
+      <div className="h-64 flex items-center justify-center text-white/50 animate-pulse">
         Revelando memórias...
       </div>
     );
@@ -111,7 +127,6 @@ export function AlbumCarousel() {
 
   if (albums.length === 0) return null;
 
-  // Monta URL de capa: usa "cover" (site antigo) ou "coverPublicId" (admin novo)
   const getCover = (album: Album): string | null => {
     if (album.cover || album.coverThumb || album.coverLarge) {
       return album.cover || album.coverThumb || album.coverLarge || null;
@@ -152,7 +167,7 @@ export function AlbumCarousel() {
                     className={cn(
                       'group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300',
                       isActive
-                        ? 'hover:border-rose-500/50 hover:shadow-[0_0_30px_rgba(225,29,72,0.3)]'
+                        ? 'hover:border-[var(--theme-primary)]/50 hover:shadow-[0_0_30px_rgba(var(--theme-primary-rgb),0.3)]'
                         : 'opacity-80'
                     )}
                   >
@@ -166,7 +181,7 @@ export function AlbumCarousel() {
                         )}
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-800 to-rose-950 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center">
                         <Images className="w-16 h-16 text-white/20" />
                       </div>
                     )}
@@ -179,7 +194,9 @@ export function AlbumCarousel() {
                       <h3 className="text-white font-bold text-xl drop-shadow-lg mb-1">
                         {album.title}
                       </h3>
-                      {album.date && <p className="text-rose-300 text-sm">{album.date}</p>}
+                      {album.date && (
+                        <p className="text-[var(--theme-secondary)] text-sm">{album.date}</p>
+                      )}
                       <p className="text-slate-300 text-xs mt-2">{album.photos.length} fotos</p>
                     </div>
 
@@ -199,38 +216,49 @@ export function AlbumCarousel() {
         </Swiper>
       </div>
 
-      {/* Modal fullscreen para o AlbumCube */}
+      {/* Modal fullscreen */}
       {selectedAlbum && (
         <div
-          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-300"
+          className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex flex-col"
+          style={{ animation: 'fadeInModal 0.25s ease-out' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedAlbum(null);
           }}
         >
-          <div className="relative w-full max-w-sm mx-auto px-4">
-            <button
-              onClick={() => setSelectedAlbum(null)}
-              className="absolute -top-14 right-2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20 z-10"
-              style={{ touchAction: 'manipulation' }}
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            <div className="text-center mb-6">
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
+            <div>
               <h3 className="text-2xl font-serif font-bold text-white">{selectedAlbum.title}</h3>
               {selectedAlbum.description && (
-                <p className="text-slate-400 text-sm mt-1">{selectedAlbum.description}</p>
+                <p className="text-slate-400 text-sm mt-0.5">{selectedAlbum.description}</p>
               )}
+              <p className="text-[var(--theme-secondary)] text-xs mt-0.5">
+                {selectedAlbum.photos.length} fotos · {selectedAlbum.date}
+              </p>
             </div>
+            <button
+              onClick={() => setSelectedAlbum(null)}
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/20 flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            <AlbumCube photos={selectedAlbum.photos} />
-
-            <p className="text-center text-slate-500 text-xs mt-10">Deslize o cubo para girar</p>
+          {/* Conteúdo com scroll */}
+          <div className="flex-1 overflow-y-auto flex items-center justify-center px-4 py-8">
+            <div className="w-full max-w-md mx-auto">
+              <AlbumCube photos={selectedAlbum.photos} />
+              <p className="text-center text-slate-500 text-xs mt-6">Deslize o cubo para girar</p>
+            </div>
           </div>
         </div>
       )}
 
       <style>{`
+        @keyframes fadeInModal {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
         .album-coverflow-swiper .swiper-button-next,
         .album-coverflow-swiper .swiper-button-prev {
           color: rgba(255, 255, 255, 0.9);
@@ -244,8 +272,8 @@ export function AlbumCarousel() {
         }
         .album-coverflow-swiper .swiper-button-next:hover,
         .album-coverflow-swiper .swiper-button-prev:hover {
-          background: rgba(225, 29, 72, 0.4);
-          border-color: rgba(225, 29, 72, 0.8);
+          background: rgba(var(--theme-primary-rgb), 0.4);
+          border-color: var(--theme-primary);
           transform: scale(1.1);
         }
         .album-coverflow-swiper .swiper-button-next:after,

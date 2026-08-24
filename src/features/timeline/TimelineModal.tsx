@@ -17,7 +17,6 @@ export function TimelineModal() {
     if (fetched) return;
     setLoading(true);
     try {
-      // MESMO caminho do site antigo: coleção raiz "timeline"
       const ref = collection(db, 'timeline');
       const q = query(ref, orderBy('createdAt', 'asc'));
       const snap = await getDocs(q);
@@ -31,12 +30,10 @@ export function TimelineModal() {
           title: d.title,
           description: d.caption || d.description || '',
           location: d.location,
-          // site antigo usa "photo" e "photoLarge"
           photoUrl: d.photoLarge || d.photo,
           publicId: d.publicId,
         });
       });
-      // Sort por orderIndex (igual ao site antigo)
       loaded.sort((a: any, b: any) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
       setEvents(loaded);
       setFetched(true);
@@ -50,7 +47,6 @@ export function TimelineModal() {
   const handleOpen = () => {
     setIsOpen(true);
     fetchEvents();
-    // Prevent body scroll
     document.body.style.overflow = 'hidden';
   };
 
@@ -59,13 +55,19 @@ export function TimelineModal() {
     document.body.style.overflow = '';
   };
 
-  // Fechar com ESC
+  // ESC to close
   useEffect(() => {
+    if (!isOpen) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { document.body.style.overflow = ''; };
   }, []);
 
   return (
@@ -73,24 +75,35 @@ export function TimelineModal() {
       {/* Botão de abertura */}
       <button
         onClick={handleOpen}
-        className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 hover:border-rose-500/50 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(225,29,72,0.2)]"
+        className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border border-[var(--theme-primary)]/30 bg-[var(--theme-primary)]/5 hover:bg-[var(--theme-primary)]/10 hover:border-[var(--theme-primary)]/50 transition-all duration-300 hover:scale-105"
+        style={{ boxShadow: 'none' }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(var(--theme-primary-rgb), 0.2)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+        }}
       >
-        <div className="w-10 h-10 rounded-full bg-rose-500/10 group-hover:bg-rose-500/20 flex items-center justify-center transition-colors">
-          <Clock className="w-5 h-5 text-rose-400 group-hover:text-rose-300 transition-colors" />
+        <div className="w-10 h-10 rounded-full bg-[var(--theme-primary)]/10 group-hover:bg-[var(--theme-primary)]/20 flex items-center justify-center transition-colors">
+          <Clock className="w-5 h-5 text-[var(--theme-secondary)] group-hover:text-[var(--theme-accent)] transition-colors" />
         </div>
         <div className="text-left">
-          <p className="text-white font-bold text-base group-hover:text-rose-100 transition-colors">
+          <p className="text-white font-bold text-base group-hover:text-[var(--theme-secondary)] transition-colors">
             Nossa História
           </p>
           <p className="text-slate-400 text-sm">Relembra nossos momentos juntos</p>
         </div>
-        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse ml-2" />
+        <div
+          className="w-2 h-2 rounded-full animate-pulse ml-2"
+          style={{ backgroundColor: 'var(--theme-primary)' }}
+        />
       </button>
 
       {/* Modal Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col animate-in fade-in duration-300"
+          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col"
+          style={{ animation: 'fadeInModal 0.25s ease-out' }}
           onClick={(e) => {
             if (e.target === e.currentTarget) handleClose();
           }}
@@ -105,14 +118,14 @@ export function TimelineModal() {
               </div>
               <button
                 onClick={handleClose}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/10"
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/10 flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Conteúdo com scroll */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto">
               {loading ? (
                 <div className="flex justify-center items-center h-64">
                   <Spinner size="lg" />
@@ -124,6 +137,13 @@ export function TimelineModal() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes fadeInModal {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </>
   );
 }
