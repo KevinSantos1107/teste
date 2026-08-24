@@ -28,6 +28,7 @@ interface TimelineEvent {
   publicId?: string;
   photoUrl?: string;
   isSecret?: boolean;
+  secretMessage?: string;
   side?: 'left' | 'right';
   orderIndex: number;
 }
