@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { Timeline } from './Timeline';
@@ -6,20 +7,107 @@ import type { TimelineEvent } from './Timeline';
 import { X, Clock } from 'lucide-react';
 import { Spinner } from '../../shared/ui/Spinner';
 
+// ─── Modal via Portal (bypasses overflow-x-hidden stacking context) ────────────
+function TimelineModalContent({
+  events,
+  loading,
+  onClose,
+}: {
+  events: TimelineEvent[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const modal = (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0,0,0,0.88)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '20px 24px',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        flexShrink: 0,
+      }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#fff', fontFamily: 'serif' }}>
+            Nossa História
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#94a3b8' }}>
+            Cada momento juntos é um capítulo especial
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            color: '#fff', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <X style={{ width: 22, height: 22 }} />
+        </button>
+      </div>
+
+      {/* Body com scroll */}
+      <div
+        ref={scrollRef}
+        style={{ flex: 1, overflowY: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 256 }}>
+            <Spinner size="lg" />
+          </div>
+        ) : (
+          <Timeline events={events} />
+        )}
+      </div>
+    </div>
+  );
+
+  return createPortal(modal, document.body);
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────────
 export function TimelineModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchEvents = async () => {
     if (fetched) return;
     setLoading(true);
     try {
-      const ref = collection(db, 'timeline');
-      const q = query(ref, orderBy('createdAt', 'asc'));
-      const snap = await getDocs(q);
+      const snap = await getDocs(query(collection(db, 'timeline'), orderBy('createdAt', 'asc')));
       const loaded: TimelineEvent[] = [];
       snap.forEach((doc) => {
         if (doc.id === '_placeholder') return;
@@ -32,6 +120,7 @@ export function TimelineModal() {
           location: d.location,
           photoUrl: d.photoLarge || d.photo,
           publicId: d.publicId,
+          secretMessage: typeof d.secret === 'string' ? d.secret : (d.secretMessage || ''),
         });
       });
       loaded.sort((a: any, b: any) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
@@ -47,103 +136,53 @@ export function TimelineModal() {
   const handleOpen = () => {
     setIsOpen(true);
     fetchEvents();
-    document.body.style.overflow = 'hidden';
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-    document.body.style.overflow = '';
-  };
-
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [isOpen]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => { document.body.style.overflow = ''; };
-  }, []);
+  const handleClose = () => setIsOpen(false);
 
   return (
     <>
       {/* Botão de abertura */}
       <button
         onClick={handleOpen}
-        className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border border-[var(--theme-primary)]/30 bg-[var(--theme-primary)]/5 hover:bg-[var(--theme-primary)]/10 hover:border-[var(--theme-primary)]/50 transition-all duration-300 hover:scale-105"
-        style={{ boxShadow: 'none' }}
+        className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border transition-all duration-300 hover:scale-105"
+        style={{
+          borderColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.3)',
+          backgroundColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.05)',
+        }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 30px rgba(var(--theme-primary-rgb), 0.2)';
+          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.1)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.5)';
         }}
         onMouseLeave={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+          (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.05)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.3)';
         }}
       >
-        <div className="w-10 h-10 rounded-full bg-[var(--theme-primary)]/10 group-hover:bg-[var(--theme-primary)]/20 flex items-center justify-center transition-colors">
-          <Clock className="w-5 h-5 text-[var(--theme-secondary)] group-hover:text-[var(--theme-accent)] transition-colors" />
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+          style={{ backgroundColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.1)' }}
+        >
+          <Clock className="w-5 h-5" style={{ color: 'var(--theme-secondary, #e0aaff)' }} />
         </div>
         <div className="text-left">
-          <p className="text-white font-bold text-base group-hover:text-[var(--theme-secondary)] transition-colors">
-            Nossa História
-          </p>
+          <p className="text-white font-bold text-base">Nossa História</p>
           <p className="text-slate-400 text-sm">Relembra nossos momentos juntos</p>
         </div>
         <div
           className="w-2 h-2 rounded-full animate-pulse ml-2"
-          style={{ backgroundColor: 'var(--theme-primary)' }}
+          style={{ backgroundColor: 'var(--theme-primary, #9d4edd)' }}
         />
       </button>
 
-      {/* Modal Overlay */}
+      {/* Modal via Portal — renderizado direto no document.body */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col"
-          style={{ animation: 'fadeInModal 0.25s ease-out' }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClose();
-          }}
-        >
-          {/* Modal Container */}
-          <div className="relative flex flex-col h-full max-w-4xl w-full mx-auto">
-            {/* Header fixo */}
-            <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/40 backdrop-blur-sm">
-              <div>
-                <h2 className="text-2xl font-serif font-bold text-white">Nossa História</h2>
-                <p className="text-slate-400 text-sm">Cada momento juntos é um capítulo especial</p>
-              </div>
-              <button
-                onClick={handleClose}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors border border-white/10 flex-shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Conteúdo com scroll */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto">
-              {loading ? (
-                <div className="flex justify-center items-center h-64">
-                  <Spinner size="lg" />
-                </div>
-              ) : (
-                <Timeline events={events} />
-              )}
-            </div>
-          </div>
-        </div>
+        <TimelineModalContent
+          events={events}
+          loading={loading}
+          onClose={handleClose}
+        />
       )}
-
-      <style>{`
-        @keyframes fadeInModal {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </>
   );
 }

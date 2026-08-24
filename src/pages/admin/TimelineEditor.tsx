@@ -117,7 +117,8 @@ export default function TimelineEditor() {
           publicId: data.publicId,
           // site antigo usa campo "photo" e "photoLarge" = URL completa
           photoUrl: data.photoLarge || data.photo || data.photoUrl,
-          isSecret: data.secret || data.isSecret,
+          isSecret: !!(data.secret || data.isSecret),
+          secretMessage: typeof data.secret === 'string' ? data.secret : (data.secretMessage || ''),
           side: data.side || 'left',
           orderIndex: data.orderIndex ?? 0,
         });
@@ -186,7 +187,8 @@ export default function TimelineEditor() {
         date: form.date,
         caption: form.description, // site antigo usa "caption"
         location: form.location || '',
-        secret: form.isSecret || false,
+        // Se houver texto na secretMessage, salva como string (site antigo), senão salva o boolean
+        secret: form.secretMessage ? form.secretMessage : (form.isSecret || false),
         side: form.side || 'left',
         photo: photoUrl || null, // campo do site antigo
         publicId: publicId || null,
@@ -330,25 +332,42 @@ export default function TimelineEditor() {
         />
       </div>
       {/* Secret toggle */}
-      <label className="flex items-center gap-3 cursor-pointer">
-        <div
-          onClick={() => setForm({ ...form, isSecret: !form.isSecret })}
-          className={cn(
-            'w-11 h-6 rounded-full transition-colors relative',
-            form.isSecret ? 'bg-rose-500' : 'bg-slate-700'
-          )}
-        >
+      <div className="space-y-4">
+        <label className="flex items-center gap-3 cursor-pointer">
           <div
+            onClick={() => setForm({ ...form, isSecret: !form.isSecret })}
             className={cn(
-              'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform',
-              form.isSecret ? 'translate-x-5' : 'translate-x-0'
+              'w-11 h-6 rounded-full transition-colors relative',
+              form.isSecret ? 'bg-[var(--theme-primary)]' : 'bg-slate-700'
             )}
-          />
-        </div>
-        <span className="text-sm text-slate-300">
-          Evento secreto (não aparece na timeline pública)
-        </span>
-      </label>
+          >
+            <div
+              className={cn(
+                'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform',
+                form.isSecret ? 'translate-x-5' : 'translate-x-0'
+              )}
+            />
+          </div>
+          <span className="text-sm text-slate-300">
+            Adicionar mensagem secreta
+          </span>
+        </label>
+        
+        {form.isSecret && (
+          <div className="space-y-2 pl-14">
+            <label className="text-sm font-medium text-slate-300">Mensagem Secreta</label>
+            <textarea
+              value={form.secretMessage || ''}
+              onChange={(e) => setForm({ ...form, secretMessage: e.target.value })}
+              className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-3 min-h-[100px] outline-none focus:border-[var(--theme-primary)] transition-colors"
+              placeholder="Digite uma mensagem romântica que ficará escondida..."
+            />
+            <p className="text-xs text-slate-500">
+              Esta mensagem só será revelada quando clicarem nela na timeline.
+            </p>
+          </div>
+        )}
+      </div>
       <div className="flex gap-3 pt-2">
         <Button onClick={handleSave} isLoading={saving} className="gap-2">
           <CheckCircle className="w-4 h-4" /> Salvar Evento

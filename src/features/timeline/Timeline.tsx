@@ -10,6 +10,7 @@ export interface TimelineEvent {
   location?: string;
   publicId?: string; // For Cloudinary Image
   photoUrl?: string; // Legacy fallback
+  secretMessage?: string;
 }
 
 interface TimelineProps {
@@ -101,6 +102,21 @@ export function Timeline({ events }: TimelineProps) {
                           alt={event.title}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
+                      </div>
+                    )}
+
+                    {event.secretMessage && (
+                      <div className="w-full mt-2">
+                        <details className="group/secret bg-theme-primary/5 border border-theme-primary/20 rounded-xl overflow-hidden cursor-pointer transition-all duration-300">
+                          <summary className="flex items-center gap-2 p-3 font-medium text-theme-primary text-sm hover:bg-theme-primary/10 transition-colors list-none outline-none">
+                            <span className="flex-1">💌 Mensagem Secreta</span>
+                            <span className="text-xs px-2 py-0.5 bg-theme-primary/20 rounded-full group-open/secret:hidden">Toque para revelar</span>
+                            <span className="text-xs px-2 py-0.5 bg-theme-primary/20 rounded-full hidden group-open/secret:block">Ocultar</span>
+                          </summary>
+                          <div className="p-4 pt-1 text-sm text-theme-text-secondary italic border-t border-theme-primary/10 bg-theme-primary/5">
+                            {event.secretMessage}
+                          </div>
+                        </details>
                       </div>
                     )}
                   </div>
