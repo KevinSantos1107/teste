@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Heart, ChevronDown, RefreshCw, Sparkles, Palette } from 'lucide-react';
+import { Heart, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSiteConfigStore } from '../store/siteConfigStore';
+import { useThemeStore } from '../store/useThemeStore';
 import { PlaylistTabs } from '../features/playlist/PlaylistTabs';
 import { AlbumCarousel } from '../features/album/AlbumCarousel';
 import { TimelineModal } from '../features/timeline/TimelineModal';
@@ -276,31 +277,29 @@ function SectionLabel({ emoji, text }: { emoji: string; text: string }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { config } = useSiteConfigStore();
+  const { activeTheme } = useThemeStore();
   const [time, setTime] = useState<TimeLeft | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
   const [openAcrostic, setOpenAcrostic] = useState<number | null>(null);
-  
-  // ─── Theme state ───────────────────────────────────────────────────────────
-  const THEMES = {
-    meteors: {
-      primary: '#9d4edd',
-      primaryRgb: '157, 78, 221',
-      secondary: '#e0aaff',
-      accent: '#c77dff',
-    },
-    hearts: {
-      primary: '#ff0055',
-      primaryRgb: '255, 0, 85',
-      secondary: '#ff4d94',
-      accent: '#ff2a7a',
-    },
-  } as const;
-
-  const [activeTheme, setActiveTheme] = useState<'meteors' | 'hearts'>('meteors');
 
   // Force the correct CSS variables whenever activeTheme changes (or on first mount),
   // overriding anything that the store/Firestore may have applied.
   useEffect(() => {
+    const THEMES = {
+      meteors: {
+        primary: '#9d4edd',
+        primaryRgb: '157, 78, 221',
+        secondary: '#e0aaff',
+        accent: '#c77dff',
+      },
+      hearts: {
+        primary: '#ff0055',
+        primaryRgb: '255, 0, 85',
+        secondary: '#ff4d94',
+        accent: '#ff2a7a',
+      },
+    };
+    
     const t = THEMES[activeTheme];
     const root = document.documentElement;
     root.style.setProperty('--theme-primary', t.primary);
@@ -308,10 +307,6 @@ export default function Home() {
     root.style.setProperty('--theme-secondary', t.secondary);
     root.style.setProperty('--theme-accent', t.accent);
   }, [activeTheme]);
-
-  const toggleTheme = () => {
-    setActiveTheme((prev) => (prev === 'meteors' ? 'hearts' : 'meteors'));
-  };
 
   useEffect(() => {
     if (!config?.relationship.startDate) return;
@@ -337,15 +332,6 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--theme-accent)]/5 blur-[150px] rounded-full" />
         <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
       </div>
-
-      {/* ══════════════════════════ THEME TOGGLE BUTTON ══════════════════════════ */}
-      <button
-        onClick={toggleTheme}
-        className="fixed top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--theme-primary)]/40 bg-black/40 backdrop-blur-md text-white font-medium hover:bg-[var(--theme-primary)]/20 hover:scale-105 transition-all shadow-[0_0_15px_rgba(var(--theme-primary-rgb),0.3)] group cursor-pointer"
-      >
-        <Palette className="w-4 h-4 text-[var(--theme-primary)] group-hover:animate-spin" />
-        <span className="text-sm">Tema: {activeTheme === 'meteors' ? 'Meteoro' : 'Coração'}</span>
-      </button>
 
       {/* ══════════════════════════ PARTICLES (SITE-WIDE) ══════════════════════════ */}
       <ParticleCanvas theme={activeTheme} />

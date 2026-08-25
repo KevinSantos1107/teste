@@ -4,16 +4,13 @@
  */
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Map, Gamepad2, Heart, X } from 'lucide-react';
+import { Home, Map, Gamepad2, Heart, X, Palette, PlayCircle } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
+import { useThemeStore } from '../../store/useThemeStore';
+import { useRetroV2Store } from '../../features/retrospective-v2/store/useRetroV2Store';
+import { useSiteConfigStore } from '../../store/siteConfigStore';
 
-const NAV_ITEMS = [
-  { to: '/', icon: Home, label: 'Início', angle: 90 },
-  { to: '/mapa', icon: Map, label: 'Nosso Mundo', angle: 52 },
-  { to: '/jogos', icon: Gamepad2, label: 'Jogos', angle: 14 },
-];
-
-const RADIUS = 72; // px — raio do arco
+const RADIUS = 88; // px — raio do arco aumentado para caber 5 itens
 
 function deg2rad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -22,6 +19,17 @@ function deg2rad(deg: number) {
 export function FloatingNav() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { toggleTheme } = useThemeStore();
+  const { openRetro } = useRetroV2Store();
+  const { config } = useSiteConfigStore();
+
+  const NAV_ITEMS = [
+    { type: 'link', to: '/', icon: Home, label: 'Início', angle: 90 },
+    { type: 'link', to: '/mapa', icon: Map, label: 'O Mundo', angle: 67.5 },
+    { type: 'link', to: '/jogos', icon: Gamepad2, label: 'Jogos', angle: 45 },
+    { type: 'action', action: toggleTheme, icon: Palette, label: 'Tema', angle: 22.5 },
+    { type: 'action', action: () => openRetro(config?.id || 'meu-site'), icon: PlayCircle, label: 'Retro', angle: 0 },
+  ];
 
   return (
     <>
@@ -35,40 +43,61 @@ export function FloatingNav() {
           const rad = deg2rad(item.angle);
           const x = Math.cos(rad) * RADIUS; // positivo = para a direita
           const y = -Math.sin(rad) * RADIUS; // negativo = para cima
-          const isActive = location.pathname === item.to;
+          const isActive = item.type === 'link' && location.pathname === item.to;
+
+          const baseClass = cn(
+            'flex flex-col items-center justify-center w-12 h-12 rounded-full border shadow-xl transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-md',
+            isActive
+              ? 'bg-rose-500 border-rose-400 text-white shadow-rose-500/40'
+              : 'bg-black/60 border-white/15 text-white/80 hover:bg-black/80 hover:text-white'
+          );
+
+          const content = (
+            <>
+              <item.icon className="w-5 h-5" />
+              <span
+                className={cn(
+                  'text-[9px] font-medium leading-none mt-0.5 transition-all duration-200',
+                  isActive ? 'text-white' : 'text-white/60'
+                )}
+              >
+                {item.label}
+              </span>
+            </>
+          );
 
           return (
             <div
-              key={item.to}
+              key={item.label}
               className="absolute bottom-0 left-0"
               style={{
                 transform: open ? `translate(${x}px, ${y}px)` : 'translate(0px, 0px)',
                 opacity: open ? 1 : 0,
-                transition: `transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 50}ms, opacity 200ms ease ${i * 50}ms`,
+                transition: `transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 40}ms, opacity 200ms ease ${i * 40}ms`,
                 pointerEvents: open ? 'auto' : 'none',
               }}
             >
-              <Link
-                to={item.to}
-                onClick={() => setOpen(false)}
-                title={item.label}
-                className={cn(
-                  'flex flex-col items-center justify-center w-12 h-12 rounded-full border shadow-xl transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-md',
-                  isActive
-                    ? 'bg-rose-500 border-rose-400 text-white shadow-rose-500/40'
-                    : 'bg-black/60 border-white/15 text-white/80 hover:bg-black/80 hover:text-white'
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span
-                  className={cn(
-                    'text-[9px] font-medium leading-none mt-0.5 transition-all duration-200',
-                    isActive ? 'text-white' : 'text-white/60'
-                  )}
+              {item.type === 'link' ? (
+                <Link
+                  to={item.to!}
+                  onClick={() => setOpen(false)}
+                  title={item.label}
+                  className={baseClass}
                 >
-                  {item.label}
-                </span>
-              </Link>
+                  {content}
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    item.action!();
+                    setOpen(false);
+                  }}
+                  title={item.label}
+                  className={baseClass}
+                >
+                  {content}
+                </button>
+              )}
             </div>
           );
         })}

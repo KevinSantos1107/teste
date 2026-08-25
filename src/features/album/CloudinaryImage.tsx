@@ -1,4 +1,4 @@
-import { AdvancedImage, placeholder, lazyload } from '@cloudinary/react';
+import { useState } from 'react';
 import { cld } from '../../services/cloudinary/config';
 import { cn } from '../../shared/utils/cn';
 
@@ -6,7 +6,6 @@ interface CloudinaryImageProps {
   publicId: string;
   alt?: string;
   className?: string;
-  // Options for cropping/resizing on the fly
   width?: number;
   height?: number;
 }
@@ -16,29 +15,33 @@ export function CloudinaryImage({
   alt = 'Imagem do Álbum',
   className,
 }: CloudinaryImageProps) {
+  const [loaded, setLoaded] = useState(false);
+
   if (!publicId) return null;
 
-  // If publicId is a full HTTP URL (fallback/demo), render a standard img tag
+  // Se for URL completa (fallback/legado), usa img padrão
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
     return (
-      <img src={publicId} alt={alt} loading="lazy" className={cn('object-cover', className)} />
+      <img
+        src={publicId}
+        alt={alt}
+        className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
+        onLoad={() => setLoaded(true)}
+      />
     );
   }
 
-  // Generate the Cloudinary URL object
+  // Cloudinary publicId → gera URL otimizada
   const myImage = cld.image(publicId);
-
-  // Apply optimizations
   myImage.format('auto').quality('auto');
-
-  // se houver width/height, pode-se aplicar transforms aqui futuramente
+  const url = myImage.toURL();
 
   return (
-    <AdvancedImage
-      cldImg={myImage}
+    <img
+      src={url}
       alt={alt}
-      className={cn('object-cover', className)}
-      plugins={[lazyload(), placeholder({ mode: 'blur' })]}
+      className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
+      onLoad={() => setLoaded(true)}
     />
   );
 }
