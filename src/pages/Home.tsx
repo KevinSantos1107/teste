@@ -164,7 +164,7 @@ function generateHeart(id: number, layer: HeartLayer): HeartDef {
   const variant = HEART_VARIANTS[Math.floor(Math.random() * HEART_VARIANTS.length)];
   // Camadas: front = grande/rápido, mid = médio, back = pequeno/lento
   const scaleMap  = { front: Math.random() * 0.5 + 1.0,  mid: Math.random() * 0.4 + 0.5,  back: Math.random() * 0.3 + 0.25 };
-  const speedMap  = { front: Math.random() * 8  + 12,    mid: Math.random() * 12 + 18,     back: Math.random() * 15 + 28   };
+  const speedMap  = { front: Math.random() * 8  + 18,    mid: Math.random() * 12 + 24,     back: Math.random() * 15 + 34   };
   const swayMap   = { front: (Math.random() - 0.5) * 180, mid: (Math.random() - 0.5) * 130, back: (Math.random() - 0.5) * 80 };
 
   return {
