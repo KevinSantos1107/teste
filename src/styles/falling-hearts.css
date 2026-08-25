@@ -1,24 +1,4 @@
-/* ═══════════════ Falling Hearts Animation ═══════════════ */
-@keyframes heartFall {
-  0% {
-    transform: translateY(-5vh) translateX(0) scale(1);
-    opacity: 0;
-  }
-  5% {
-    opacity: 1;
-  }
-  50% {
-    transform: translateY(50vh) translateX(30px) scale(1.05);
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(105vh) translateX(-20px) scale(0.95);
-    opacity: 0;
-  }
-}
-
+/* ═══════════════ Falling Hearts Animation (Otimizado) ═══════════════ */
 .falling-hearts {
   position: fixed;
   top: 0;
@@ -28,11 +8,55 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
+  perspective: 800px;
 }
 
 .falling-heart {
   position: absolute;
-  top: -5vh;
-  animation: heartFall linear infinite;
+  top: -10vh;
+  animation: heartDrop linear infinite;
   animation-fill-mode: backwards;
+  will-change: transform, opacity;
+  --base-scale: var(--original-scale, 1);
+}
+
+@media (max-width: 768px) {
+  .falling-heart {
+    --base-scale: calc(var(--original-scale, 1) * 0.6);
+  }
+}
+
+.heart-wobble {
+  animation: heartWobble ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.heart-pulse {
+  animation: pulseSubtle ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes pulseSubtle {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.35); } /* Aumentado para 35% para ficar visível de verdade */
+}
+
+/* Controla o X e Y - Animação mais leve sem muitos cálculos no meio */
+@keyframes heartDrop {
+  0%   { transform: translate3d(0, -10vh, 0); opacity: 0; }
+  10%  { opacity: var(--heart-opacity, 0.8); }
+  33%  { transform: translate3d(var(--sway-x), 30vh, 0); }
+  66%  { transform: translate3d(calc(var(--sway-x) * -0.5), 70vh, 0); }
+  90%  { opacity: var(--heart-opacity, 0.8); }
+  100% { transform: translate3d(0, 115vh, 0); opacity: 0; }
+}
+
+/* Mantém o ângulo inicial sorteado e faz um leve balanço pendular (+/- 15 graus) sem capotar */
+@keyframes heartWobble {
+  0% {
+    transform: rotate(calc(var(--start-rot) - 15deg)) scale(var(--base-scale, 1));
+  }
+  100% {
+    transform: rotate(calc(var(--start-rot) + 15deg)) scale(var(--base-scale, 1));
+  }
 }

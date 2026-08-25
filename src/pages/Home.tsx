@@ -134,35 +134,83 @@ function MeteorShower() {
 }
 
 // ─── Falling Hearts ──────────────────────────────────────────────────────────
-const HEARTS = Array.from({ length: 12 }, (_, i) => ({
-  id: i,
-  left: `${Math.random() * 100}%`,
-  size: Math.random() * 25 + 20, 
-  fallDuration: `${Math.random() * 12 + 12}s`, 
-  delay: `${Math.random() * 15}s`, 
-  opacity: Math.random() * 0.2 + 0.1, 
-}));
+const HEART_COLORS = ['#ff0055', '#ff4d94', '#ffb3c6', '#ff2a7a', '#ffffff', 'var(--theme-primary)'];
+const HEART_VARIANTS = ['solid', 'solid', 'outline', 'glass'];
+
+const HEARTS = Array.from({ length: 15 }, (_, i) => {
+  const color = HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)];
+  const variant = HEART_VARIANTS[Math.floor(Math.random() * HEART_VARIANTS.length)];
+  
+  const startRot = Math.random() * 360; 
+  const shouldPulse = Math.random() > 0.25; // 75% dos corações vão pulsar para ficar evidente
+  
+  return {
+    id: i,
+    left: `${Math.random() * 100}%`,
+    size: Math.random() * 0.7 + 0.4, 
+    fallDuration: `${Math.random() * 25 + 20}s`, // Queda MUITO mais lenta (20s a 45s)
+    delay: `-${Math.random() * 20}s`, // Delay maior para não nascerem todos juntos na tela inicial
+    opacity: variant === 'glass' ? 0.8 : Math.random() * 0.4 + 0.4, 
+    sway: `${(Math.random() - 0.5) * 150}px`,
+    startRot: `${startRot}deg`,
+    wobbleDuration: `${Math.random() * 2 + 2}s`, 
+    pulseDuration: `${Math.random() * 0.8 + 0.6}s`, // Batida mais rápida (0.6s a 1.4s)
+    shouldPulse,
+    color,
+    variant,
+  };
+});
 
 function FallingHearts() {
   return (
-    <div className="falling-hearts">
-      {HEARTS.map((h) => (
-        <div
-          key={h.id}
-          className="falling-heart"
-          style={{
-            left: h.left,
-            fontSize: `${h.size}px`,
-            animationDuration: h.fallDuration,
-            animationDelay: h.delay,
-            color: 'var(--theme-primary)',
-            opacity: h.opacity,
-            filter: `drop-shadow(0 0 ${h.size / 2}px var(--theme-primary))`,
-          }}
-        >
-          ♥
-        </div>
-      ))}
+    <div className="falling-hearts pointer-events-none">
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="glass-heart" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+            <stop offset="30%" stopColor="#ff4d94" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#ff0055" stopOpacity="0.1" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {HEARTS.map((h) => {
+        const isOutline = h.variant === 'outline';
+        const isGlass = h.variant === 'glass';
+        
+        return (
+          <div
+            key={h.id}
+            className="falling-heart"
+            style={{
+              left: h.left,
+              animationDuration: h.fallDuration,
+              animationDelay: h.delay,
+              '--sway-x': h.sway,
+              '--heart-opacity': h.opacity,
+              '--original-scale': h.size, 
+            } as React.CSSProperties}
+          >
+            <div 
+              className={h.shouldPulse ? 'heart-pulse inline-flex items-center justify-center' : 'inline-flex items-center justify-center'}
+              style={h.shouldPulse ? { animationDuration: h.pulseDuration, animationDelay: h.delay } : undefined}
+            >
+              <Heart
+                className="w-6 h-6 heart-wobble"
+                style={{
+                  color: h.color,
+                  fill: isOutline ? 'transparent' : isGlass ? 'url(#glass-heart)' : h.color,
+                  strokeWidth: isOutline ? 2.5 : 1,
+                  animationDuration: h.wobbleDuration,
+                  animationDelay: h.delay,
+                  '--start-rot': h.startRot,
+                  filter: `drop-shadow(0 4px 6px rgba(0,0,0,0.3))`,
+                } as React.CSSProperties}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
