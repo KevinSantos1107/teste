@@ -1,4 +1,4 @@
-/* ═══════════════ Falling Hearts Animation (Otimizado) ═══════════════ */
+/* ═══════════════ Falling Hearts Animation (Otimizado + Depth) ═══════════════ */
 .falling-hearts {
   position: fixed;
   top: 0;
@@ -8,23 +8,29 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
-  perspective: 800px;
 }
 
 .falling-heart {
   position: absolute;
-  top: -10vh;
+  top: -15vh;
   animation: heartDrop linear infinite;
   animation-fill-mode: backwards;
   will-change: transform, opacity;
-  --base-scale: var(--original-scale, 1);
 }
 
 @media (max-width: 768px) {
   .falling-heart {
-    --base-scale: calc(var(--original-scale, 1) * 0.6);
+    /* No mobile as camadas distantes ficam ainda menores */
+    --depth-scale: calc(var(--depth-scale, 1) * 0.8);
   }
 }
+
+/* Camada próxima: grande, rápido, levemente transparente (bokeh) */
+.heart-layer-front { opacity: 0.35; filter: blur(1px); }
+/* Camada do meio: nítido, visibilidade total */
+.heart-layer-mid   { opacity: 0.75; }
+/* Camada distante: pequeno, lento, discreto */
+.heart-layer-back  { opacity: 0.4; }
 
 .heart-wobble {
   animation: heartWobble ease-in-out infinite alternate;
@@ -37,26 +43,22 @@
 }
 
 @keyframes pulseSubtle {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.35); } /* Aumentado para 35% para ficar visível de verdade */
+  0%   { transform: scale(1); }
+  100% { transform: scale(1.35); }
 }
 
-/* Controla o X e Y - Animação mais leve sem muitos cálculos no meio */
+/* Queda + balanço lateral */
 @keyframes heartDrop {
-  0%   { transform: translate3d(0, -10vh, 0); opacity: 0; }
-  10%  { opacity: var(--heart-opacity, 0.8); }
-  33%  { transform: translate3d(var(--sway-x), 30vh, 0); }
-  66%  { transform: translate3d(calc(var(--sway-x) * -0.5), 70vh, 0); }
-  90%  { opacity: var(--heart-opacity, 0.8); }
-  100% { transform: translate3d(0, 115vh, 0); opacity: 0; }
+  0%   { transform: translate3d(0, -15vh, 0); opacity: 0; }
+  8%   { opacity: 1; }
+  40%  { transform: translate3d(var(--sway-x), 35vh, 0); }
+  70%  { transform: translate3d(calc(var(--sway-x) * -0.6), 72vh, 0); }
+  92%  { opacity: 1; }
+  100% { transform: translate3d(0, 118vh, 0); opacity: 0; }
 }
 
-/* Mantém o ângulo inicial sorteado e faz um leve balanço pendular (+/- 15 graus) sem capotar */
+/* Balanço pendular no ângulo inicial — SEM rotação no eixo */
 @keyframes heartWobble {
-  0% {
-    transform: rotate(calc(var(--start-rot) - 15deg)) scale(var(--base-scale, 1));
-  }
-  100% {
-    transform: rotate(calc(var(--start-rot) + 15deg)) scale(var(--base-scale, 1));
-  }
+  0%   { transform: rotate(calc(var(--start-rot) - 10deg)) scale(var(--base-scale, 1)); }
+  100% { transform: rotate(calc(var(--start-rot) + 10deg)) scale(var(--base-scale, 1)); }
 }

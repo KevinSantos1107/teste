@@ -137,29 +137,59 @@ function MeteorShower() {
 const HEART_COLORS = ['#ff0055', '#ff4d94', '#ffb3c6', '#ff2a7a', '#ffffff', 'var(--theme-primary)'];
 const HEART_VARIANTS = ['solid', 'solid', 'outline', 'glass'];
 
-const HEARTS = Array.from({ length: 15 }, (_, i) => {
+// ── Sistema de reciclagem por camadas (depth/profundidade) ──
+// 3 camadas: front (perto), mid (meio), back (longe)
+// CSS animation: infinite já recicla automaticamente. Só precisamos de um
+// pool fixo e bem dimensionado por camada.
+type HeartLayer = 'front' | 'mid' | 'back';
+
+interface HeartDef {
+  id: number;
+  layer: HeartLayer;
+  left: string;
+  baseScale: number;
+  fallDuration: string;
+  delay: string;
+  sway: string;
+  startRot: string;
+  wobbleDuration: string;
+  pulseDuration: string;
+  shouldPulse: boolean;
+  color: string;
+  variant: string;
+}
+
+function generateHeart(id: number, layer: HeartLayer): HeartDef {
   const color = HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)];
   const variant = HEART_VARIANTS[Math.floor(Math.random() * HEART_VARIANTS.length)];
-  
-  const startRot = Math.random() * 360; 
-  const shouldPulse = Math.random() > 0.25; // 75% dos corações vão pulsar para ficar evidente
-  
+  // Camadas: front = grande/rápido, mid = médio, back = pequeno/lento
+  const scaleMap  = { front: Math.random() * 0.5 + 1.0,  mid: Math.random() * 0.4 + 0.5,  back: Math.random() * 0.3 + 0.25 };
+  const speedMap  = { front: Math.random() * 8  + 12,    mid: Math.random() * 12 + 18,     back: Math.random() * 15 + 28   };
+  const swayMap   = { front: (Math.random() - 0.5) * 180, mid: (Math.random() - 0.5) * 130, back: (Math.random() - 0.5) * 80 };
+
   return {
-    id: i,
+    id,
+    layer,
     left: `${Math.random() * 100}%`,
-    size: Math.random() * 0.7 + 0.4, 
-    fallDuration: `${Math.random() * 25 + 20}s`, // Queda MUITO mais lenta (20s a 45s)
-    delay: `-${Math.random() * 20}s`, // Delay maior para não nascerem todos juntos na tela inicial
-    opacity: variant === 'glass' ? 0.8 : Math.random() * 0.4 + 0.4, 
-    sway: `${(Math.random() - 0.5) * 150}px`,
-    startRot: `${startRot}deg`,
-    wobbleDuration: `${Math.random() * 2 + 2}s`, 
-    pulseDuration: `${Math.random() * 0.8 + 0.6}s`, // Batida mais rápida (0.6s a 1.4s)
-    shouldPulse,
+    baseScale: scaleMap[layer],
+    fallDuration: `${speedMap[layer]}s`,
+    delay: `-${Math.random() * speedMap[layer]}s`, // Delay dentro da própria duração = distribuição perfeita na tela
+    sway: `${swayMap[layer]}px`,
+    startRot: `${Math.random() * 360}deg`,
+    wobbleDuration: `${Math.random() * 2 + 1.5}s`,
+    pulseDuration: `${Math.random() * 0.8 + 0.6}s`,
+    shouldPulse: layer === 'mid' && Math.random() > 0.4, // Só o plano do meio pulsa
     color,
     variant,
   };
-});
+}
+
+// Pool: 5 front + 14 mid + 9 back = 28 corações, mas com pesos diferentes
+const HEARTS: HeartDef[] = [
+  ...Array.from({ length: 5  }, (_, i) => generateHeart(i,      'front')),
+  ...Array.from({ length: 14 }, (_, i) => generateHeart(i + 5,  'mid')),
+  ...Array.from({ length: 9  }, (_, i) => generateHeart(i + 19, 'back')),
+];
 
 function FallingHearts() {
   return (
@@ -176,27 +206,29 @@ function FallingHearts() {
 
       {HEARTS.map((h) => {
         const isOutline = h.variant === 'outline';
-        const isGlass = h.variant === 'glass';
-        
+        const isGlass   = h.variant === 'glass';
+        const layerClass = `heart-layer-${h.layer}`;
+        // Ícone: front=grande, mid=médio, back=pequeno
+        const iconClass = h.layer === 'front' ? 'w-10 h-10' : h.layer === 'mid' ? 'w-7 h-7' : 'w-4 h-4';
+
         return (
           <div
             key={h.id}
-            className="falling-heart"
+            className={`falling-heart ${layerClass}`}
             style={{
               left: h.left,
               animationDuration: h.fallDuration,
               animationDelay: h.delay,
               '--sway-x': h.sway,
-              '--heart-opacity': h.opacity,
-              '--original-scale': h.size, 
+              '--base-scale': h.baseScale,
             } as React.CSSProperties}
           >
-            <div 
+            <div
               className={h.shouldPulse ? 'heart-pulse inline-flex items-center justify-center' : 'inline-flex items-center justify-center'}
               style={h.shouldPulse ? { animationDuration: h.pulseDuration, animationDelay: h.delay } : undefined}
             >
               <Heart
-                className="w-6 h-6 heart-wobble"
+                className={`${iconClass} heart-wobble`}
                 style={{
                   color: h.color,
                   fill: isOutline ? 'transparent' : isGlass ? 'url(#glass-heart)' : h.color,
@@ -204,7 +236,8 @@ function FallingHearts() {
                   animationDuration: h.wobbleDuration,
                   animationDelay: h.delay,
                   '--start-rot': h.startRot,
-                  filter: `drop-shadow(0 4px 6px rgba(0,0,0,0.3))`,
+                  '--base-scale': h.baseScale,
+                  filter: `drop-shadow(0 4px 8px rgba(0,0,0,0.25))`,
                 } as React.CSSProperties}
               />
             </div>
