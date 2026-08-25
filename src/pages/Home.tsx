@@ -280,6 +280,10 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
     if (!ctx) return;
     let animId: number;
 
+    // Guarda tamanho anterior da janela
+    let lastWidth = window.innerWidth;
+    let lastHeight = window.innerHeight;
+
     if (theme === 'aurora') {
       // ── Estrelas cintilantes para o tema aurora (Otimizado) ──
       const stars: {
@@ -315,6 +319,13 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
       };
 
       const resize = () => {
+        // Ignora saltos verticais pequenos típicos da barra de endereço no mobile
+        if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) {
+          return;
+        }
+        lastWidth = window.innerWidth;
+        lastHeight = window.innerHeight;
+        
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         init(); // Repopula cobrindo o novo tamanho
@@ -370,6 +381,13 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
     };
 
     const resize = () => {
+      // Ignora saltos verticais pequenos (barra de endereço)
+      if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) {
+        return;
+      }
+      lastWidth = window.innerWidth;
+      lastHeight = window.innerHeight;
+      
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       init();
@@ -401,7 +419,7 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
       cancelAnimationFrame(animId);
     };
   }, [theme]);
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-60" />;
+  return <canvas ref={canvasRef} className="fixed top-0 left-0 w-screen h-[100lvh] pointer-events-none z-0 opacity-60" />;
 }
 
 // ─── Counter Box ──────────────────────────────────────────────────────────────
@@ -496,7 +514,7 @@ export default function Home() {
 
   return (
     <div
-      className="relative -mt-0 min-h-screen text-slate-200 selection:bg-[var(--theme-primary)]/40 selection:text-white overflow-x-hidden"
+      className="relative -mt-0 min-h-[100lvh] text-slate-200 selection:bg-[var(--theme-primary)]/40 selection:text-white overflow-x-hidden"
       style={{
         background:
           activeTheme === 'meteors'
@@ -507,7 +525,7 @@ export default function Home() {
       }}
     >
       {/* ══════════════════════════ BACKGROUND NEON LIGHTS ══════════════════════════ */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      <div className="fixed top-0 left-0 w-screen h-[100lvh] z-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[600px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--theme-accent)]/5 blur-[150px] rounded-full" />
         <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
