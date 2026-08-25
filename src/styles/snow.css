@@ -1,0 +1,30 @@
+/* ═══════════════ Magic Winter (Snow) Animation ═══════════════ */
+
+/* ── Borda Congelada (Frost Vignette) ── */
+.frost-vignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100lvh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  /* Sombra interna para criar a sensação de gelo nos cantos */
+  box-shadow: inset 0 0 80px rgba(0, 240, 255, 0.1),
+              inset 0 0 200px rgba(2, 4, 18, 0.6);
+  /* Leve gradiente cobrindo a tela */
+  background: radial-gradient(circle at center, transparent 30%, rgba(2, 4, 18, 0.25) 100%);
+  transform: translateZ(0); /* Força aceleração de hardware */
+  backface-visibility: hidden;
+  opacity: 0.9; /* Opacidade estática, removemos o pulse infinito que travava o mobile */
+}
+
+/* ── Responsividade Mobile/Tablet ── */
+@media (max-width: 768px) {
+  .frost-vignette {
+    /* No mobile reduzimos a intensidade para não sujar muito o centro apertado da tela */
+    box-shadow: inset 0 0 40px rgba(0, 240, 255, 0.05),
+                inset 0 0 100px rgba(2, 4, 18, 0.5);
+  }
+}

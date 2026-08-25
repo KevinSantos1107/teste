@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface ThemeState {
-  activeTheme: 'meteors' | 'hearts' | 'aurora';
+  activeTheme: 'meteors' | 'hearts' | 'aurora' | 'snow';
   toggleTheme: () => void;
 }
 
@@ -24,9 +24,15 @@ const THEMES = {
     secondary: '#a855f7',
     accent: '#22d3ee',
   },
+  snow: {
+    primary: '#00f0ff',
+    primaryRgb: '0, 240, 255',
+    secondary: '#ffffff',
+    accent: '#4a90e2',
+  },
 } as const;
 
-const THEME_ORDER: Array<keyof typeof THEMES> = ['meteors', 'hearts', 'aurora'];
+const THEME_ORDER: Array<keyof typeof THEMES> = ['meteors', 'hearts', 'aurora', 'snow'];
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   activeTheme: 'meteors',

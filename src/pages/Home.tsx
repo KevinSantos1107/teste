@@ -270,8 +270,13 @@ function AuroraBorealis() {
   );
 }
 
+// ─── Magic Winter ─────────────────────────────────────────────────────────────
+function FrostVignette() {
+  return <div className="frost-vignette" />;
+}
+
 // ─── Particles ───────────────────────────────────────────────────────────────
-function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
+function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 'snow' }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -280,9 +285,148 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
     if (!ctx) return;
     let animId: number;
 
-    // Guarda tamanho anterior da janela
-    let lastWidth = window.innerWidth;
-    let lastHeight = window.innerHeight;
+    // Guarda tamanho anterior da janela (iniciado negativo para forçar o primeiro resize)
+    let lastWidth = -1;
+    let lastHeight = -1;
+
+    if (theme === 'snow') {
+      // ── Neve Mágica com Sprites Pre-renderizados e Física (Mouse Repulsion) ──
+      const snowFlakes: {
+        x: number; y: number; r: number;
+        speedY: number; speedX: number;
+        sway: number; phase: number;
+        type: 'orb' | 'flake' | 'dot';
+      }[] = [];
+
+      let mouseX = -1000;
+      let mouseY = -1000;
+      const onMouseMove = (e: MouseEvent) => { mouseX = e.clientX; mouseY = e.clientY; };
+      const onTouchMove = (e: TouchEvent) => { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; };
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+      // Otimização Extrema: Pré-renderizar os designs em mini-canvas (Sprites)
+      // Evita recalcular arcos e gradientes milhares de vezes por segundo na GPU.
+      const createSprite = (type: 'orb' | 'flake' | 'dot') => {
+        const c = document.createElement('canvas');
+        const cCtx = c.getContext('2d')!;
+        if (type === 'orb') {
+          // Esfera grande e desfocada (Bokeh para primeiro plano)
+          c.width = 40; c.height = 40;
+          const grad = cCtx.createRadialGradient(20, 20, 0, 20, 20, 20);
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+          grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.2)');
+          grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          cCtx.fillStyle = grad;
+          cCtx.fillRect(0, 0, 40, 40);
+        } else if (type === 'flake') {
+          // Cristal de Neve clássico com 6 pontas (Meio plano)
+          c.width = 24; c.height = 24;
+          cCtx.translate(12, 12);
+          cCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+          cCtx.lineWidth = 1.5;
+          cCtx.lineCap = 'round';
+          for (let i = 0; i < 6; i++) {
+            cCtx.beginPath();
+            cCtx.moveTo(0, 0);
+            cCtx.lineTo(0, -9);
+            cCtx.moveTo(0, -4);
+            cCtx.lineTo(-3, -7);
+            cCtx.moveTo(0, -4);
+            cCtx.lineTo(3, -7);
+            cCtx.stroke();
+            cCtx.rotate(Math.PI / 3);
+          }
+        } else {
+          // Ponto simples (Plano de fundo distante)
+          c.width = 4; c.height = 4;
+          cCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          cCtx.beginPath(); cCtx.arc(2, 2, 2, 0, Math.PI * 2); cCtx.fill();
+        }
+        return c;
+      };
+
+      const sprites = {
+        orb: createSprite('orb'),
+        flake: createSprite('flake'),
+        dot: createSprite('dot'),
+      };
+
+      const init = () => {
+        snowFlakes.length = 0;
+        // 110 flocos variados e super leves (quantidade reduzida para max FPS)
+        for (let i = 0; i < 110; i++) {
+          const type = i < 12 ? 'orb' : i < 40 ? 'flake' : 'dot';
+          const r = type === 'orb' ? Math.random() * 6 + 10 : type === 'flake' ? Math.random() * 4 + 4 : Math.random() * 1.5 + 0.5;
+          snowFlakes.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r,
+            speedY: type === 'orb' ? Math.random() * 1.2 + 1.2 : type === 'flake' ? Math.random() * 0.8 + 0.6 : Math.random() * 0.4 + 0.2,
+            speedX: 0,
+            sway: Math.random() * 0.5 + 0.2,
+            phase: Math.random() * Math.PI * 2,
+            type,
+          });
+        }
+      };
+
+      const resize = () => {
+        if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) return;
+        lastWidth = window.innerWidth;
+        lastHeight = window.innerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        init();
+      };
+
+      const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        snowFlakes.forEach((f) => {
+          f.phase += 0.01;
+          
+          let targetSpeedX = Math.sin(f.phase) * f.sway;
+
+          // Física de Repulsão (Super Otimizada sem Math.sqrt em todos os frames)
+          const dx = f.x - mouseX;
+          const dy = f.y - mouseY;
+          const distSq = dx * dx + dy * dy;
+          const pushRadiusSq = 14400; // Equivalente a 120px * 120px
+          
+          if (distSq < pushRadiusSq) {
+            const dist = Math.sqrt(distSq) || 1;
+            const force = (120 - dist) / 120;
+            targetSpeedX += (dx / dist) * force * 4; 
+            f.y += (dy / dist) * force * 1.5; 
+          }
+
+          f.speedX += (targetSpeedX - f.speedX) * 0.05;
+          f.x += f.speedX;
+          f.y += f.speedY;
+
+          // Reposiciona se sair da tela
+          if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
+          if (f.x > canvas.width + f.r) f.x = -f.r;
+          if (f.x < -f.r) f.x = canvas.width + f.r;
+
+          // Desenho ultra rápido com drawImage (Sprites)
+          const sprite = sprites[f.type];
+          ctx.drawImage(sprite, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+        });
+        animId = requestAnimationFrame(draw);
+      };
+      
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+      
+      return () => {
+        window.removeEventListener('resize', resize);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('touchmove', onTouchMove);
+        cancelAnimationFrame(animId);
+      };
+    }
 
     if (theme === 'aurora') {
       // ── Estrelas cintilantes para o tema aurora (Otimizado) ──
@@ -489,6 +633,12 @@ export default function Home() {
         secondary: '#a855f7',
         accent: '#22d3ee',
       },
+      snow: {
+        primary: '#00f0ff',
+        primaryRgb: '0, 240, 255',
+        secondary: '#ffffff',
+        accent: '#4a90e2',
+      },
     };
 
     const t = THEMES[activeTheme];
@@ -521,7 +671,9 @@ export default function Home() {
             ? 'linear-gradient(135deg, #090314 0%, #1a0636 50%, #05010a 100%)'
             : activeTheme === 'hearts'
             ? '#05050A'
-            : 'linear-gradient(180deg, #000a0f 0%, #00110d 35%, #001a14 65%, #000508 100%)',
+            : activeTheme === 'aurora'
+            ? 'linear-gradient(180deg, #000a0f 0%, #00110d 35%, #001a14 65%, #000508 100%)'
+            : 'linear-gradient(180deg, #020412 0%, #0a1526 50%, #07192f 100%)', // snow background
       }}
     >
       {/* ══════════════════════════ BACKGROUND NEON LIGHTS ══════════════════════════ */}
@@ -539,8 +691,10 @@ export default function Home() {
         <MeteorShower />
       ) : activeTheme === 'hearts' ? (
         <FallingHearts />
-      ) : (
+      ) : activeTheme === 'aurora' ? (
         <AuroraBorealis />
+      ) : (
+        <FrostVignette />
       )}
 
       {/* ══════════════════════════ HERO ══════════════════════════ */}
