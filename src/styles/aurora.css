@@ -1,0 +1,133 @@
+/* ═══════════════ Aurora Borealis Animation ═══════════════ */
+
+/* ── Cortina principal: oscila como a aurora real ── */
+@keyframes auroraCurtain {
+  0% {
+    transform: skewX(-10deg) scaleY(0.55) translate3d(-2%, 0, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--aurora-opacity, 0.45);
+  }
+  40% {
+    transform: skewX(6deg) scaleY(1) translate3d(1%, 0, 0);
+    opacity: var(--aurora-opacity, 0.65);
+  }
+  65% {
+    transform: skewX(-4deg) scaleY(0.85) translate3d(-1%, 0, 0);
+    opacity: var(--aurora-opacity, 0.5);
+  }
+  85% {
+    opacity: var(--aurora-opacity, 0.2);
+  }
+  100% {
+    transform: skewX(-10deg) scaleY(0.55) translate3d(-2%, 0, 0);
+    opacity: 0;
+  }
+}
+
+/* ── Raio fino vertical: sobe suavemente ── */
+@keyframes auroraRay {
+  0% {
+    transform: translate3d(0, 0, 0) scaleX(1);
+    opacity: 0;
+  }
+  20% {
+    opacity: var(--ray-opacity, 0.6);
+  }
+  50% {
+    transform: translate3d(0, -8%, 0) scaleX(1.4);
+    opacity: var(--ray-opacity, 0.8);
+  }
+  80% {
+    opacity: var(--ray-opacity, 0.4);
+  }
+  100% {
+    transform: translate3d(0, -16%, 0) scaleX(0.8);
+    opacity: 0;
+  }
+}
+
+/* ── Pulso suave do brilho base ── */
+@keyframes auroraGlow {
+  0%, 100% {
+    opacity: 0.15;
+    transform: translate3d(0, 0, 0) scaleY(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: translate3d(0, 0, 0) scaleY(1.08);
+  }
+}
+
+/* ── Container de fundo ── */
+.aurora-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  transform: translateZ(0); /* Força criação de layer e aceleração de hardware */
+  backface-visibility: hidden;
+}
+
+/* ── Brilho base rastejando no horizonte ── */
+.aurora-glow-base {
+  position: absolute;
+  bottom: 0;
+  left: -20%;
+  width: 140%;
+  height: 35%;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 100%,
+    rgba(0, 255, 160, 0.12) 0%,
+    rgba(0, 200, 220, 0.06) 40%,
+    transparent 70%
+  );
+  animation: auroraGlow 8s ease-in-out infinite;
+  /* Sem blur pesado: o radial-gradient já faz a borda esfumaçada e é muito mais leve */
+  will-change: transform, opacity;
+}
+
+/* ── Cortinas largas ── */
+.aurora-curtain {
+  position: absolute;
+  bottom: 0;
+  transform-origin: bottom center;
+  border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+  animation: auroraCurtain ease-in-out infinite;
+  animation-fill-mode: both;
+  will-change: transform, opacity; /* Aviso de animação */
+}
+
+/* ── Raios finos ── */
+.aurora-ray {
+  position: absolute;
+  bottom: 0;
+  transform-origin: bottom center;
+  border-radius: 50% 50% 0 0;
+  animation: auroraRay ease-in-out infinite;
+  animation-fill-mode: both;
+  will-change: transform, opacity; /* Aviso de animação */
+}
+
+/* ── Responsividade Mobile/Tablet ── */
+@media (max-width: 768px) {
+  .aurora-curtain {
+    /* No mobile (tela vertical), as cortinas não devem ficar finas demais e nem preencher até o topo */
+    min-width: 140px; 
+    max-height: 40vh; 
+  }
+  
+  .aurora-ray {
+    min-width: 8px;
+    max-height: 50vh;
+  }
+  
+  .aurora-glow-base {
+    /* Brilho base deve ficar mais rasteiro para não ocupar muito da tela vertical */
+    height: 25%; 
+    left: -10%;
+    width: 120%;
+  }
+}

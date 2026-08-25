@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 interface ThemeState {
-  activeTheme: 'meteors' | 'hearts';
+  activeTheme: 'meteors' | 'hearts' | 'aurora';
   toggleTheme: () => void;
 }
 
@@ -18,13 +18,23 @@ const THEMES = {
     secondary: '#ff4d94',
     accent: '#ff2a7a',
   },
+  aurora: {
+    primary: '#00ffc8',
+    primaryRgb: '0, 255, 200',
+    secondary: '#a855f7',
+    accent: '#22d3ee',
+  },
 } as const;
+
+const THEME_ORDER: Array<keyof typeof THEMES> = ['meteors', 'hearts', 'aurora'];
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   activeTheme: 'meteors',
   toggleTheme: () => {
-    const nextTheme = get().activeTheme === 'meteors' ? 'hearts' : 'meteors';
-    
+    const current = get().activeTheme;
+    const idx = THEME_ORDER.indexOf(current);
+    const nextTheme = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
+
     // Apply CSS variables
     const t = THEMES[nextTheme];
     const root = document.documentElement;
@@ -32,7 +42,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     root.style.setProperty('--theme-primary-rgb', t.primaryRgb);
     root.style.setProperty('--theme-secondary', t.secondary);
     root.style.setProperty('--theme-accent', t.accent);
-    
+
     set({ activeTheme: nextTheme });
   },
 }));

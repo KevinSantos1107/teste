@@ -167,8 +167,111 @@ function FallingHearts() {
   );
 }
 
+// ─── Aurora Borealis ──────────────────────────────────────────────────────────
+
+// Paleta de cores completas para as cortinas (rgba fechado)
+const AURORA_PALETTE = [
+  { r: 0,   g: 255, b: 180 }, // Verde-teal brilhante
+  { r: 0,   g: 220, b: 255 }, // Ciano ártico
+  { r: 168, g: 85,  b: 247 }, // Violeta profundo
+  { r: 0,   g: 255, b: 150 }, // Verde esmeralda
+  { r: 100, g: 200, b: 255 }, // Azul-gelo
+  { r: 220, g: 80,  b: 255 }, // Rosa polar
+  { r: 0,   g: 255, b: 200 }, // Teal puro (aurora central)
+  { r: 50,  g: 180, b: 255 }, // Azul celeste
+];
+
+const AURORA_CURTAINS = Array.from({ length: 5 }, (_, i) => { // Reduzido de 8 para 5
+  const { r, g, b } = AURORA_PALETTE[i % AURORA_PALETTE.length];
+  const op = [0.55, 0.45, 0.4, 0.5, 0.35][i];
+  const bl = [25, 20, 30, 15, 35][i]; // Blur substancialmente reduzido (era 40-70)
+  return {
+    id: i,
+    left: `${5 + i * 18 + (Math.random() * 8 - 4)}%`, // Espalhamento ajustado para menos elementos
+    width: `${25 + Math.random() * 20}%`, // Levemente mais largas para compensar menos elementos
+    height: `${38 + Math.random() * 32}%`,
+    // Gradiente: bottom = cor viva, topo = transparente
+    background: `linear-gradient(to top, rgba(${r},${g},${b},${op}) 0%, rgba(${r},${g},${b},${(op * 0.5).toFixed(2)}) 45%, transparent 100%)`,
+    filter: `blur(${bl}px)`,
+    duration: `${7 + Math.random() * 8}s`,
+    delay: `${Math.random() * 10}s`,
+    opacity: op,
+  };
+});
+
+const AURORA_RAY_PALETTE = [
+  { r: 0,   g: 255, b: 180 },
+  { r: 0,   g: 220, b: 255 },
+  { r: 168, g: 85,  b: 247 },
+  { r: 0,   g: 255, b: 150 },
+  { r: 100, g: 200, b: 255 },
+  { r: 220, g: 80,  b: 255 },
+];
+
+const AURORA_RAYS = Array.from({ length: 6 }, (_, i) => { // Reduzido de 12 para 6
+  const { r, g, b } = AURORA_RAY_PALETTE[i % AURORA_RAY_PALETTE.length];
+  const op = parseFloat((0.55 + Math.random() * 0.3).toFixed(2));
+  const bl = parseFloat((4 + Math.random() * 5).toFixed(1)); // Blur reduzido
+  return {
+    id: i,
+    left: `${8 + i * 15 + Math.random() * 5}%`, // Ajustado
+    width: `${0.8 + Math.random() * 1.5}%`,
+    height: `${25 + Math.random() * 45}%`,
+    background: `linear-gradient(to top, rgba(${r},${g},${b},${op}) 0%, rgba(${r},${g},${b},${(op * 0.35).toFixed(2)}) 55%, transparent 100%)`,
+    filter: `blur(${bl}px)`,
+    duration: `${5 + Math.random() * 7}s`,
+    delay: `${Math.random() * 12}s`,
+    opacity: op,
+  };
+});
+
+function AuroraBorealis() {
+  return (
+    <div className="aurora-bg">
+      {/* Base horizon glow */}
+      <div className="aurora-glow-base" />
+
+      {/* Cortinas largas — efeito principal */}
+      {AURORA_CURTAINS.map((c) => (
+        <div
+          key={c.id}
+          className="aurora-curtain"
+          style={{
+            left: c.left,
+            width: c.width,
+            height: c.height,
+            background: c.background,
+            filter: c.filter,
+            animationDuration: c.duration,
+            animationDelay: c.delay,
+            '--aurora-opacity': c.opacity,
+          } as React.CSSProperties}
+        />
+      ))}
+
+      {/* Raios finos — filamentos de luz */}
+      {AURORA_RAYS.map((r) => (
+        <div
+          key={r.id}
+          className="aurora-ray"
+          style={{
+            left: r.left,
+            width: r.width,
+            height: r.height,
+            background: r.background,
+            filter: r.filter,
+            animationDuration: r.duration,
+            animationDelay: r.delay,
+            '--ray-opacity': r.opacity,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ─── Particles ───────────────────────────────────────────────────────────────
-function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' }) {
+function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -176,6 +279,67 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     let animId: number;
+
+    if (theme === 'aurora') {
+      // ── Estrelas cintilantes para o tema aurora (Otimizado) ──
+      const stars: {
+        x: number;
+        y: number;
+        r: number;
+        baseAlpha: number;
+        speed: number;
+        phase: number;
+        color: string;
+      }[] = [];
+      const starColors = [
+        'rgba(255, 255, 255,',
+        'rgba(200, 240, 255,',
+        'rgba(180, 255, 220,',
+        'rgba(220, 220, 255,',
+      ];
+      let time = 0;
+
+      const init = () => {
+        stars.length = 0; // Limpa ao redimensionar
+        for (let i = 0; i < 80; i++) {
+          stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.75,
+            r: Math.random() * 1.5 + 0.3,
+            baseAlpha: Math.random() * 0.5 + 0.2,
+            speed: Math.random() * 0.6 + 0.2,
+            phase: Math.random() * Math.PI * 2,
+            color: starColors[Math.floor(Math.random() * starColors.length)],
+          });
+        }
+      };
+
+      const resize = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        init(); // Repopula cobrindo o novo tamanho
+      };
+
+      const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        time += 0.016;
+        stars.forEach((s) => {
+          const alpha = s.baseAlpha * (0.4 + 0.6 * Math.abs(Math.sin(time * s.speed + s.phase)));
+          ctx.fillStyle = `${s.color}${alpha})`;
+          ctx.fillRect(s.x, s.y, s.r * 2, s.r * 2);
+        });
+        animId = requestAnimationFrame(draw);
+      };
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+      return () => {
+        window.removeEventListener('resize', resize);
+        cancelAnimationFrame(animId);
+      };
+    }
+
+    // ── Partículas flutuantes para meteoros e corações ──
     const particles: {
       x: number;
       y: number;
@@ -185,16 +349,13 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' }) {
       alpha: number;
       color: string;
     }[] = [];
-    
-    // Choose particle colors based on active theme
-    const colors = theme === 'meteors' 
+
+    const colors = theme === 'meteors'
       ? ['rgba(255, 255, 255,', 'rgba(224, 170, 255,', 'rgba(199, 125, 255,', 'rgba(157, 78, 221,']
       : ['rgba(255, 0, 85,', 'rgba(255, 42, 122,', 'rgba(255, 77, 148,'];
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+
     const init = () => {
+      particles.length = 0;
       for (let i = 0; i < 80; i++) {
         particles.push({
           x: Math.random() * canvas.width,
@@ -207,6 +368,13 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' }) {
         });
       }
     };
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      init();
+    };
+
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach((p) => {
@@ -227,7 +395,6 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' }) {
     };
     window.addEventListener('resize', resize);
     resize();
-    init();
     draw();
     return () => {
       window.removeEventListener('resize', resize);
@@ -298,8 +465,14 @@ export default function Home() {
         secondary: '#ff4d94',
         accent: '#ff2a7a',
       },
+      aurora: {
+        primary: '#00ffc8',
+        primaryRgb: '0, 255, 200',
+        secondary: '#a855f7',
+        accent: '#22d3ee',
+      },
     };
-    
+
     const t = THEMES[activeTheme];
     const root = document.documentElement;
     root.style.setProperty('--theme-primary', t.primary);
@@ -324,7 +497,14 @@ export default function Home() {
   return (
     <div
       className="relative -mt-0 min-h-screen text-slate-200 selection:bg-[var(--theme-primary)]/40 selection:text-white overflow-x-hidden"
-      style={{ background: activeTheme === 'meteors' ? 'linear-gradient(135deg, #090314 0%, #1a0636 50%, #05010a 100%)' : '#05050A' }}
+      style={{
+        background:
+          activeTheme === 'meteors'
+            ? 'linear-gradient(135deg, #090314 0%, #1a0636 50%, #05010a 100%)'
+            : activeTheme === 'hearts'
+            ? '#05050A'
+            : 'linear-gradient(180deg, #000a0f 0%, #00110d 35%, #001a14 65%, #000508 100%)',
+      }}
     >
       {/* ══════════════════════════ BACKGROUND NEON LIGHTS ══════════════════════════ */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -337,7 +517,13 @@ export default function Home() {
       <ParticleCanvas theme={activeTheme} />
 
       {/* ══════════════════════════ DYNAMIC EFFECTS ══════════════════════════ */}
-      {activeTheme === 'meteors' ? <MeteorShower /> : <FallingHearts />}
+      {activeTheme === 'meteors' ? (
+        <MeteorShower />
+      ) : activeTheme === 'hearts' ? (
+        <FallingHearts />
+      ) : (
+        <AuroraBorealis />
+      )}
 
       {/* ══════════════════════════ HERO ══════════════════════════ */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4">
