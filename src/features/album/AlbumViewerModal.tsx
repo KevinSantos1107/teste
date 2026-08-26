@@ -40,6 +40,179 @@ function getPhotoUrl(photo: Photo): string {
   return '';
 }
 
+// ─── Foto com Pinch to Zoom e Pan ─────────────────────────────────────────────
+function ZoomableImage({ src, alt }: { src: string; alt: string }) {
+  const [scale, setScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  
+  const initialGesto = useRef<{
+    scale: number;
+    panX: number;
+    panY: number;
+    distance: number;
+    centerX: number;
+    centerY: number;
+  } | null>(null);
+
+  const getDistance = (p1: { x: number; y: number }, p2: { x: number; y: number }) => Math.hypot(p2.x - p1.x, p2.y - p1.y);
+  const getCenter = (p1: { x: number; y: number }, p2: { x: number; y: number }) => ({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 });
+
+  useEffect(() => {
+    setScale(1);
+    setPan({ x: 0, y: 0 });
+    pointers.current.clear();
+    initialGesto.current = null;
+  }, [src]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = Array.from(pointers.current.values());
+
+    if (scale > 1 || pts.length >= 2) {
+      e.stopPropagation();
+      
+      const target = e.currentTarget as HTMLDivElement;
+      
+      // Se o modal pai estava acompanhando um swipe (1 dedo) e de repente o usuário colocou o segundo dedo,
+      // nós enviamos um evento de cancelamento falso para o modal abortar o swipe e limpar seus estados.
+      if (pts.length === 2 && scale === 1) {
+        target.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }));
+      }
+
+      // Rouba o controle absoluto do ponteiro para a imagem
+      pointers.current.forEach((_, id) => {
+        try { target.setPointerCapture(id); } catch(err) {}
+      });
+
+      if (pts.length === 2) {
+        initialGesto.current = {
+          scale, panX: pan.x, panY: pan.y,
+          distance: getDistance(pts[0], pts[1]),
+          centerX: getCenter(pts[0], pts[1]).x,
+          centerY: getCenter(pts[0], pts[1]).y,
+        };
+      } else if (pts.length === 1 && scale > 1) {
+        initialGesto.current = {
+          scale, panX: pan.x, panY: pan.y, distance: 1,
+          centerX: pts[0].x, centerY: pts[0].y,
+        };
+      }
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+
+    if (scale > 1 || pointers.current.size >= 2) {
+      e.stopPropagation(); // Bloqueia propagação pro modal pai
+    } else {
+      return; // Deixa vazar (1 dedo, scale 1 -> swipe normal do modal)
+    }
+
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = Array.from(pointers.current.values());
+
+    if (pts.length === 2 && initialGesto.current) {
+      // ── Pinch to Zoom ──
+      const { distance: startDist, scale: startScale, panX, panY, centerX: startCx, centerY: startCy } = initialGesto.current;
+      const curDist = getDistance(pts[0], pts[1]);
+      const curCenter = getCenter(pts[0], pts[1]);
+      
+      let newScale = startScale * (curDist / startDist);
+      if (newScale < 1) newScale = 1;
+      if (newScale > 4) newScale = 4;
+
+      const dx = curCenter.x - startCx;
+      const dy = curCenter.y - startCy;
+
+      // Ilusão de origin-transform no centro do pinch
+      const rect = containerRef.current!.getBoundingClientRect();
+      const originX = startCx - (rect.left + rect.width / 2);
+      const originY = startCy - (rect.top + rect.height / 2);
+      
+      const scaleRatio = newScale / startScale;
+      let newPanX = panX + dx - originX * (scaleRatio - 1);
+      let newPanY = panY + dy - originY * (scaleRatio - 1);
+
+      // Clamp (limites da imagem)
+      const maxTx = Math.max(0, (rect.width * newScale - window.innerWidth) / 2);
+      const maxTy = Math.max(0, (rect.height * newScale - window.innerHeight) / 2);
+
+      newPanX = Math.max(-maxTx, Math.min(newPanX, maxTx));
+      newPanY = Math.max(-maxTy, Math.min(newPanY, maxTy));
+
+      setScale(newScale);
+      setPan({ x: newPanX, y: newPanY });
+
+    } else if (pts.length === 1 && initialGesto.current && scale > 1) {
+      // ── Pan ──
+      const dx = pts[0].x - initialGesto.current.centerX;
+      const dy = pts[0].y - initialGesto.current.centerY;
+
+      const rect = containerRef.current!.getBoundingClientRect();
+      const maxTx = Math.max(0, (rect.width * scale - window.innerWidth) / 2);
+      const maxTy = Math.max(0, (rect.height * scale - window.innerHeight) / 2);
+
+      let newPanX = initialGesto.current.panX + dx;
+      let newPanY = initialGesto.current.panY + dy;
+
+      newPanX = Math.max(-maxTx, Math.min(newPanX, maxTx));
+      newPanY = Math.max(-maxTy, Math.min(newPanY, maxTy));
+
+      setPan({ x: newPanX, y: newPanY });
+    }
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.delete(e.pointerId);
+    
+    if (scale > 1) e.stopPropagation();
+
+    if (pointers.current.size === 1 && scale > 1) {
+      const remainingPt = Array.from(pointers.current.values())[0];
+      initialGesto.current = {
+        scale, panX: pan.x, panY: pan.y, distance: 1,
+        centerX: remainingPt.x, centerY: remainingPt.y,
+      };
+      return;
+    }
+
+    if (pointers.current.size === 0) {
+      initialGesto.current = null;
+    }
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full flex items-center justify-center relative select-none overflow-hidden touch-none"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onPointerLeave={onPointerUp}
+    >
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        className="max-w-full max-h-full object-contain pointer-events-none"
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+          transition: pointers.current.size === 0 ? 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)' : 'none',
+          willChange: 'transform'
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Painel de um álbum ───────────────────────────────────────────────────────
 function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoIndex: number }) {
   if (!album) return <div className="w-full h-full bg-black" />;
@@ -50,7 +223,7 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
   return (
     <div className="w-full h-full relative bg-black flex items-center justify-center">
       {/* Barras de progresso */}
-      <div className="absolute top-4 inset-x-0 z-50 flex gap-[3px] px-4 drop-shadow-md">
+      <div className="absolute top-4 inset-x-0 z-50 flex gap-[3px] px-4 drop-shadow-md pointer-events-none">
         {album.photos.map((_, i) => (
           <div key={i} className="flex-1 h-[3px] bg-white/25 rounded-full overflow-hidden">
             <div className={cn('h-full bg-white rounded-full transition-all duration-200', i <= photoIndex ? 'w-full' : 'w-0')} />
@@ -63,20 +236,13 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
         <p className="text-white/90 font-semibold text-sm drop-shadow">{album.title}</p>
       </div>
 
-      {/* Foto - renderização instantânea (sem fade, puxa direto do cache) */}
-      {url && (
-        <img
-          src={url}
-          alt={caption || `Foto ${photoIndex + 1}`}
-          draggable={false}
-          className="w-full h-full object-contain select-none pointer-events-none"
-        />
-      )}
+      {/* Foto customizada com Zoom & Pan isolados */}
+      {url && <ZoomableImage src={url} alt={caption || `Foto ${photoIndex + 1}`} />}
 
       {/* Legenda */}
       {caption && (
         <div className="absolute bottom-8 inset-x-0 flex justify-center px-6 pointer-events-none">
-          <div className="bg-black/55 backdrop-blur-md text-white text-sm px-4 py-2 rounded-xl text-center max-w-sm shadow-lg">
+          <div className="bg-black/55 backdrop-blur-md text-white text-sm px-4 py-2 rounded-xl text-center max-w-sm shadow-lg pointer-events-auto">
             {caption}
           </div>
         </div>
