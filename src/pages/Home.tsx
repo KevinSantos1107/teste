@@ -789,20 +789,17 @@ export default function Home() {
       {/* ══════════════════════════ NEBULA BACKGROUND (METEORS) ══════════════════════════ */}
       {activeTheme === 'meteors' && (
         <>
-          {/* Imagem de fundo — estica por todo o conteúdo da página */}
+          {/* Imagem de fundo — fixada com viewport máximo para evitar resize jumps no mobile */}
           <div
-            className="nebula-bg-mobile absolute inset-0 z-0 pointer-events-none"
+            className="nebula-bg-mobile fixed top-0 left-0 w-full h-[100lvh] z-0 pointer-events-none"
             style={{
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              backgroundAttachment: 'fixed',
               opacity: 0.9,
             }}
           />
-          {/* Overlay escuro nas extremidades para legibilidade */}
+          {/* Overlay escuro fixo nas extremidades do viewport para legibilidade contínua */}
           <div
-            className="absolute inset-0 z-0 pointer-events-none"
+            className="fixed top-0 left-0 w-full h-[100lvh] z-0 pointer-events-none"
             style={{
               background: 'linear-gradient(to bottom, rgba(3,0,13,0.4) 0%, transparent 20%, transparent 80%, rgba(3,0,13,0.5) 100%)',
             }}
