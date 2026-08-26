@@ -66,7 +66,6 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
       {/* Foto - renderização instantânea (sem fade, puxa direto do cache) */}
       {url && (
         <img
-          key={url} // Garante que a tag atualize sem flickering de estado anterior
           src={url}
           alt={caption || `Foto ${photoIndex + 1}`}
           draggable={false}
@@ -96,9 +95,6 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
   const photoIndexesRef = useRef<Record<string, number>>({});
   const transitioning = useRef(false);
 
-  // Largura da janela (capturada uma vez)
-  const W = useRef(window.innerWidth);
-
   // ── Motion values ─────────────────────────────────────────────────────────
   const y = useMotionValue(0);
   const bgOpacity = useTransform(y, [-300, 0, 300], [0, 1, 0]);
@@ -106,7 +102,7 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
   const bgColor = useTransform(bgOpacity, (o) => `rgba(0,0,0,${Number(o) * 0.97})`);
 
   const dragX = useMotionValue(0);
-  const stripX = useTransform(dragX, (v) => v - W.current);
+  const stripX = useTransform(dragX, (v) => `calc(-100vw + ${v}px)`);
 
   const gesture = useRef<{
     startX: number;
@@ -186,7 +182,7 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
       setPhotoIndexes({ ...updated });
     } else {
       const newIdx = albumIndexRef.current + dir;
-      const targetX = dir > 0 ? -W.current : W.current;
+      const targetX = dir > 0 ? -window.innerWidth : window.innerWidth;
       transitioning.current = true;
       animate(dragX, targetX, { type: 'tween', duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] })
         .then(() => {
@@ -255,7 +251,7 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
     gesture.current.direction = 'idle';
 
     if (direction === 'idle' || (absDx < 12 && absDy < 12)) {
-      navigatePhoto(e.clientX > W.current / 2 ? +1 : -1);
+      navigatePhoto(e.clientX > window.innerWidth / 2 ? +1 : -1);
     } else if (direction === 'h') {
       const swipeDir = dx < 0 ? +1 : -1;
       const newIdx = albumIndexRef.current + swipeDir;
@@ -263,7 +259,7 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
 
       if (shouldSwipe) {
         transitioning.current = true;
-        const targetX = dx < 0 ? -W.current : W.current;
+        const targetX = dx < 0 ? -window.innerWidth : window.innerWidth;
         animate(dragX, targetX, { type: 'tween', duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] })
           .then(() => {
             goToAlbum(newIdx);
@@ -314,15 +310,15 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
           style={{ x: stripX }}
           className="flex h-full"
         >
-          <div style={{ width: W.current, flexShrink: 0 }}>
+          <div className="w-[100vw] shrink-0">
             <AlbumPanel key={prevAlbum?.id || 'prev-none'} album={prevAlbum} photoIndex={getPhotoIdx(prevAlbum)} />
           </div>
 
-          <div style={{ width: W.current, flexShrink: 0 }}>
+          <div className="w-[100vw] shrink-0">
             <AlbumPanel key={curAlbum?.id || 'cur-none'} album={curAlbum} photoIndex={getPhotoIdx(curAlbum)} />
           </div>
 
-          <div style={{ width: W.current, flexShrink: 0 }}>
+          <div className="w-[100vw] shrink-0">
             <AlbumPanel key={nextAlbum?.id || 'next-none'} album={nextAlbum} photoIndex={getPhotoIdx(nextAlbum)} />
           </div>
         </motion.div>

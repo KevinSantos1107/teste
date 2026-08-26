@@ -11,7 +11,6 @@ import { cn } from '../../shared/utils/cn';
 import { cloudinaryUrl } from '../../services/cloudinary/upload';
 
 import 'swiper/css';
-import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 
 interface Photo {
@@ -102,26 +101,42 @@ export function AlbumCarousel() {
           onSwiper={setSwiperInstance}
           effect="coverflow"
           loop={true}
-          slideToClickedSlide={true}
-          grabCursor centeredSlides slidesPerView="auto"
+          grabCursor
+          centeredSlides
+          slidesPerView="auto"
+          // Desativa o recurso nativo que falha em clones do loop
+          slideToClickedSlide={false}
           coverflowEffect={{ rotate: 20, stretch: 0, depth: 200, modifier: 1, slideShadows: true }}
           modules={[EffectCoverflow]}
           className="w-full album-coverflow-swiper"
+          // O onTap distingue perfeitamente um clique/toque intencional de um arrasto
+          onTap={(swiper) => {
+            if (typeof swiper.clickedIndex !== 'number') return;
+            
+            if (swiper.clickedIndex === swiper.activeIndex) {
+              // Clique no centro: abre
+              setSelectedAlbumIndex(swiper.realIndex);
+            } else {
+              // Clique nas laterais: navega de forma forçada
+              swiper.slideTo(swiper.clickedIndex);
+            }
+          }}
         >
-          {albums.map((album, index) => {
+          {albums.map((album) => {
             const coverSrc = getCover(album);
             return (
               <SwiperSlide key={album.id} style={{ width: 280, height: 380 }}>
                 {({ isActive }) => (
-                  <button
-                    onClick={() => isActive && setSelectedAlbumIndex(index)}
+                  <div
                     className={cn(
-                      'group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300',
-                      isActive ? 'cursor-pointer' : 'opacity-80 cursor-pointer'
+                      'group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300 cursor-pointer',
+                      !isActive && 'opacity-80'
                     )}
                   >
                     {coverSrc ? (
-                      <img src={coverSrc} alt={album.title}
+                      <img
+                        src={coverSrc}
+                        alt={album.title}
                         className={cn('w-full h-full object-cover transition-transform duration-700', isActive && 'group-hover:scale-105')}
                       />
                     ) : (
@@ -142,7 +157,7 @@ export function AlbumCarousel() {
                         </span>
                       </div>
                     )}
-                  </button>
+                  </div>
                 )}
               </SwiperSlide>
             );
@@ -150,11 +165,10 @@ export function AlbumCarousel() {
         </Swiper>
       </div>
 
-      {/* Novo Modal de Álbuns */}
       {selectedAlbumIndex !== null && (
-        <AlbumViewerModal 
-          albums={albums} 
-          initialAlbumIndex={selectedAlbumIndex} 
+        <AlbumViewerModal
+          albums={albums}
+          initialAlbumIndex={selectedAlbumIndex}
           onClose={() => setSelectedAlbumIndex(null)}
           onAlbumChange={(idx) => swiperInstance?.slideToLoop?.(idx) ?? swiperInstance?.slideTo(idx)}
         />
@@ -162,4 +176,3 @@ export function AlbumCarousel() {
     </>
   );
 }
-
