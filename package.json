@@ -27,7 +27,7 @@
     "react-dom": "^19.2.8",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.2",
-    "swiper": "^14.1.0",
+    "swiper": "^14.2.0",
     "tailwind-merge": "^3.6.0",
     "zustand": "^5.0.14"
   },
