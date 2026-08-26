@@ -33,14 +33,14 @@
     opacity: 0;
   }
   20% {
-    opacity: var(--ray-opacity, 0.6);
+    opacity: var(--aurora-opacity, 0.6);
   }
   50% {
     transform: translate3d(0, -8%, 0) scaleX(1.4);
-    opacity: var(--ray-opacity, 0.8);
+    opacity: var(--aurora-opacity, 0.8);
   }
   80% {
-    opacity: var(--ray-opacity, 0.4);
+    opacity: var(--aurora-opacity, 0.4);
   }
   100% {
     transform: translate3d(0, -16%, 0) scaleX(0.8);

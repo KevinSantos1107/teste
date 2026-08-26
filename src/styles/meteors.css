@@ -1,4 +1,33 @@
-/* ═══════════════ Meteor Shower Animation ═══════════════ */
+/* ═══════════════════════════════════════════════════════
+   Meteor Shower — Sistema de Camadas com Profundidade
+   Camadas: large (grande/rápido) · mid (médio) · small (pequeno/lento)
+   Tipos de meteoro: fogo (laranja), brasa (âmbar), gelo (ciano), estelar (branco)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Nebula Background ─────────────────────────────────── */
+/* Mobile (padrão): imagem vertical 9:16 */
+.nebula-bg-mobile {
+  background-image: url('/backgrounds/nebula-mobile.webp') !important;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Tablet: imagem semi-vertical 3:4 */
+@media (min-width: 641px) {
+  .nebula-bg-mobile {
+    background-image: url('/backgrounds/nebula-tablet.webp') !important;
+  }
+}
+
+/* Desktop: imagem horizontal 16:9 */
+@media (min-width: 1025px) {
+  .nebula-bg-mobile {
+    background-image: url('/backgrounds/nebula-desktop.webp') !important;
+  }
+}
+
+/* ── Container ─────────────────────────────────────────── */
 .meteor-shower {
   position: fixed;
   top: 0;
@@ -10,43 +39,96 @@
   z-index: 1;
 }
 
+/* ── Base do meteoro ───────────────────────────────────── */
 .meteor {
   position: absolute;
-  width: 150px;
-  height: 2px;
-  background: linear-gradient(to right, transparent, var(--meteor-color, rgba(157, 78, 221, 0.6)), #fff);
-  border-radius: 999px;
-  opacity: 0; /* Ensures they are invisible while delayed */
-  transform: rotate(45deg); /* Pre-rotate so they don't appear horizontal if a glitch happens */
-  animation: meteorFall linear infinite;
+  /* Dimensões injetadas via CSS vars do React */
+  width:  var(--len, 140px);
+  height: var(--thick, 2px);
+  border-radius: 100% 0 0 100%; /* Afina pro final da cauda */
+  opacity: 0;
+  
+  /* Cauda: opaca perto da cabeça (direita), some para a esquerda */
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--tail-color, rgba(255,255,255,0.1)) 40%,
+    var(--meteor-color, rgba(255,255,255,0.8)) 100%
+  );
+
+  /* Ângulo de queda fixo em 45 graus para manter todos paralelos */
+  transform: rotate(45deg);
+  will-change: transform, opacity;
+  animation: meteorFall var(--speed, 8s) linear var(--delay, 0s) infinite;
 }
 
+/* ── Cabeça brilhante (pseudo-elemento) ─────────────────── */
 .meteor::after {
   content: '';
   position: absolute;
-  right: 0;
+  right: -2px; /* Posiciona no bico do meteoro */
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 4px;
-  background: #fff;
+
+  /* Tamanho proporcional à camada */
+  width:  var(--head, 6px);
+  height: var(--head, 6px);
   border-radius: 50%;
-  box-shadow: 0 0 15px 3px #fff, 0 0 30px 6px var(--meteor-color, #9d4edd);
+  
+  /* Cabeça brilhante sólida */
+  background: #ffffff;
+
+  /* Efeito de brilho intenso da cabeça */
+  box-shadow:
+    0 0 calc(var(--head, 6px) * 1px) 2px #ffffff,
+    0 0 calc(var(--head, 6px) * 2px) 4px var(--meteor-color),
+    0 0 calc(var(--head, 6px) * 4px) 8px var(--glow-color);
 }
 
+/* ── Keyframe de queda ──────────────────────────────────── */
 @keyframes meteorFall {
   0% {
-    transform: rotate(45deg) translateX(-30vw);
+    /* Mover apenas no eixo X (da própria rotação do meteoro de 45deg) */
+    transform: rotate(45deg) translateX(-40vw);
     opacity: 0;
   }
   5% {
     opacity: 1;
   }
-  30% {
+  70% {
     opacity: 1;
   }
   100% {
+    /* O translate X positivo faz o meteoro avançar para frente na sua própria direção */
     transform: rotate(45deg) translateX(150vw);
     opacity: 0;
+  }
+}
+
+/* ── Responsividade ─────────────────────────────────────── */
+
+/* Mobile — remove camada grande, reduz demais */
+@media (max-width: 640px) {
+  .meteor-large {
+    display: none;
+  }
+  .meteor-mid {
+    --len: 110px !important;
+    --head: 5px !important;
+  }
+  .meteor-small {
+    --len: 55px !important;
+    --head: 2px !important;
+  }
+}
+
+/* Tablet — escala leve */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .meteor-large {
+    --len: 180px !important;
+    --head: 8px !important;
+  }
+  .meteor-mid {
+    --len: 120px !important;
   }
 }

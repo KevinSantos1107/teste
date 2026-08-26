@@ -10,7 +10,8 @@
   z-index: 1;
 }
 
-.falling-heart {
+/* Container do coração — controla queda e posição */
+.heart-container {
   position: absolute;
   top: -15vh;
   animation: heartDrop linear infinite;
@@ -18,11 +19,11 @@
   will-change: transform, opacity;
 }
 
-@media (max-width: 768px) {
-  .falling-heart {
-    /* No mobile as camadas distantes ficam ainda menores */
-    --depth-scale: calc(var(--depth-scale, 1) * 0.8);
-  }
+/* Wrapper interno — controla pulso/escala separado da queda */
+.heart-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Camada próxima: grande, rápido, levemente transparente (bokeh) */
@@ -31,11 +32,6 @@
 .heart-layer-mid   { opacity: 0.75; }
 /* Camada distante: pequeno, lento, discreto */
 .heart-layer-back  { opacity: 0.4; }
-
-.heart-wobble {
-  animation: heartWobble ease-in-out infinite alternate;
-  will-change: transform;
-}
 
 .heart-pulse {
   animation: pulseSubtle ease-in-out infinite alternate;
@@ -55,10 +51,4 @@
   70%  { transform: translate3d(calc(var(--sway-x) * -0.6), 72vh, 0); }
   92%  { opacity: 1; }
   100% { transform: translate3d(0, 118vh, 0); opacity: 0; }
-}
-
-/* Balanço pendular no ângulo inicial — SEM rotação no eixo */
-@keyframes heartWobble {
-  0%   { transform: rotate(calc(var(--start-rot) - 10deg)) scale(var(--base-scale, 1)); }
-  100% { transform: rotate(calc(var(--start-rot) + 10deg)) scale(var(--base-scale, 1)); }
 }

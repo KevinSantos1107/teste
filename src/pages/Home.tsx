@@ -96,73 +96,85 @@ const fadeUpVariant: Variants = {
 };
 
 // ─── Meteor Shower ──────────────────────────────────────────────────────────
-const METEOR_COLORS = [
-  'rgba(157, 78, 221, 0.8)', // Roxo neon
-  'rgba(224, 170, 255, 0.8)', // Lilás claro
-  'rgba(0, 245, 255, 0.8)',  // Ciano/Azul claro mágico
-  'rgba(255, 255, 255, 0.9)', // Branco estrela
-  'rgba(72, 12, 168, 0.8)'   // Violeta profundo
+
+/** 4 tipos de meteoro inspirados na referência visual */
+const METEOR_TYPES = [
+  { color: 'rgba(255, 90,  30, 0.9)',   tail: 'rgba(255, 50,  0,  0.15)', glow: 'rgba(255, 100, 20, 0.6)'  }, // 🔴 Fogo
+  { color: 'rgba(255, 165,  0, 0.85)',  tail: 'rgba(255, 120,  0, 0.12)', glow: 'rgba(255, 180, 30, 0.5)'  }, // 🟠 Brasa
+  { color: 'rgba(0,   230, 255, 0.9)',  tail: 'rgba(0,   180, 255, 0.15)', glow: 'rgba(50, 200, 255, 0.6)' }, // 🩵 Gelo
+  { color: 'rgba(255, 255, 255, 0.95)', tail: 'rgba(200, 220, 255, 0.12)', glow: 'rgba(200, 220, 255, 0.5)' }, // ⭐ Estelar
 ];
 
-const METEORS = Array.from({ length: 15 }, (_, i) => ({
-  id: i,
-  top: `${Math.random() * 50}%`,
-  left: `${Math.random() * 100}%`,
-  fallDuration: `${Math.random() * 4 + 3}s`, // 3s a 7s
-  delay: `${Math.random() * 12}s`, // 0s a 12s
-  color: METEOR_COLORS[Math.floor(Math.random() * METEOR_COLORS.length)],
-}));
+type MeteorLayer = 'large' | 'mid' | 'small';
+
+const LAYER_CONFIG: Record<MeteorLayer, {
+  count: number; len: string; thick: string; head: number;
+  speedMin: number; speedMax: number;
+}> = {
+  large: { count: 8,  len: '220px', thick: '3px', head: 11, speedMin: 4,  speedMax: 8  },
+  mid:   { count: 16, len: '140px', thick: '2px', head: 6,  speedMin: 7,  speedMax: 13 },
+  small: { count: 12, len: '70px',  thick: '1px', head: 3,  speedMin: 11, speedMax: 19 },
+};
+
+function makeMeteor(layer: MeteorLayer, id: number) {
+  const cfg   = LAYER_CONFIG[layer];
+  const type  = METEOR_TYPES[Math.floor(Math.random() * METEOR_TYPES.length)];
+  const speed = cfg.speedMin + Math.random() * (cfg.speedMax - cfg.speedMin);
+  const delay = -(Math.random() * speed);
+  const angle = 45;
+  const top   = `${-20 + Math.random() * 120}%`;
+  const left  = `${-20 + Math.random() * 120}%`;
+
+  return {
+    id, layer, top, left,
+    style: {
+      '--len':          cfg.len,
+      '--thick':        cfg.thick,
+      '--head':         `${cfg.head}px`,
+      '--meteor-color': type.color,
+      '--tail-color':   type.tail,
+      '--glow-color':   type.glow,
+      '--angle':        `${angle}deg`,
+      '--speed':        `${speed}s`,
+      '--delay':        `${delay}s`,
+    } as React.CSSProperties,
+  };
+}
+
+const METEORS = (Object.keys(LAYER_CONFIG) as MeteorLayer[]).flatMap((layer) =>
+  Array.from({ length: LAYER_CONFIG[layer].count }, (_, i) => makeMeteor(layer, i))
+);
 
 function MeteorShower() {
   return (
     <div className="meteor-shower">
-      {METEORS.map((m) => (
+      {METEORS.map((m, idx) => (
         <div
-          key={m.id}
-          className="meteor"
-          style={{
-            top: m.top,
-            left: m.left,
-            animationDuration: m.fallDuration,
-            animationDelay: m.delay,
-            '--meteor-color': m.color,
-          } as React.CSSProperties}
+          key={`${m.layer}-${m.id}-${idx}`}
+          className={`meteor meteor-${m.layer}`}
+          style={{ top: m.top, left: m.left, ...m.style }}
         />
       ))}
     </div>
   );
 }
 
+
 // ─── Falling Hearts ──────────────────────────────────────────────────────────
 const HEART_COLORS = ['#ff0055', '#ff4d94', '#ffb3c6', '#ff2a7a', '#ffffff', 'var(--theme-primary)'];
-const HEART_VARIANTS = ['solid', 'solid', 'outline', 'glass'];
-
-// ── Sistema de reciclagem por camadas (depth/profundidade) ──
-// 3 camadas: front (perto), mid (meio), back (longe)
-// CSS animation: infinite já recicla automaticamente. Só precisamos de um
-// pool fixo e bem dimensionado por camada.
-type HeartLayer = 'front' | 'mid' | 'back';
+const HEART_VARIANTS = ['solid', 'solid', 'outline', 'glass'] as const;
 
 interface HeartDef {
   id: number;
-  layer: HeartLayer;
-  left: string;
-  baseScale: number;
-  fallDuration: string;
-  delay: string;
-  sway: string;
-  startRot: string;
-  wobbleDuration: string;
-  pulseDuration: string;
-  shouldPulse: boolean;
+  layer: 'front' | 'mid' | 'back';
+  style: React.CSSProperties;
+  variant: typeof HEART_VARIANTS[number];
   color: string;
-  variant: string;
 }
 
-function generateHeart(id: number, layer: HeartLayer): HeartDef {
+function generateHeart(id: number, layer: 'front' | 'mid' | 'back'): HeartDef {
   const color = HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)];
   const variant = HEART_VARIANTS[Math.floor(Math.random() * HEART_VARIANTS.length)];
-  // Camadas: front = grande/rápido, mid = médio, back = pequeno/lento
   const scaleMap  = { front: Math.random() * 0.5 + 1.0,  mid: Math.random() * 0.4 + 0.5,  back: Math.random() * 0.3 + 0.25 };
   const speedMap  = { front: Math.random() * 8  + 18,    mid: Math.random() * 12 + 24,     back: Math.random() * 15 + 34   };
   const swayMap   = { front: (Math.random() - 0.5) * 180, mid: (Math.random() - 0.5) * 130, back: (Math.random() - 0.5) * 80 };
@@ -170,76 +182,59 @@ function generateHeart(id: number, layer: HeartLayer): HeartDef {
   return {
     id,
     layer,
-    left: `${Math.random() * 100}%`,
-    baseScale: scaleMap[layer],
-    fallDuration: `${speedMap[layer]}s`,
-    delay: `-${Math.random() * speedMap[layer]}s`, // Delay dentro da própria duração = distribuição perfeita na tela
-    sway: `${swayMap[layer]}px`,
-    startRot: `${Math.random() * 360}deg`,
-    wobbleDuration: `${Math.random() * 2 + 1.5}s`,
-    pulseDuration: `${Math.random() * 0.8 + 0.6}s`,
-    shouldPulse: layer === 'mid' && Math.random() > 0.4, // Só o plano do meio pulsa
-    color,
     variant,
+    color,
+    style: {
+      left: `${Math.random() * 100}%`,
+      animationDuration: `${speedMap[layer]}s`,
+      animationDelay: `-${Math.random() * speedMap[layer]}s`,
+      '--sway-x': `${swayMap[layer]}px`,
+      '--start-rot': `${(Math.random() - 0.5) * 90}deg`,
+      '--base-scale': scaleMap[layer],
+    } as React.CSSProperties,
   };
 }
 
-// Pool: 5 front + 14 mid + 9 back = 28 corações, mas com pesos diferentes
-const HEARTS: HeartDef[] = [
-  ...Array.from({ length: 5  }, (_, i) => generateHeart(i,      'front')),
-  ...Array.from({ length: 14 }, (_, i) => generateHeart(i + 5,  'mid')),
-  ...Array.from({ length: 9  }, (_, i) => generateHeart(i + 19, 'back')),
+const HEARTS = [
+  ...Array.from({ length: 5 }, (_, i) => generateHeart(i, 'front')),
+  ...Array.from({ length: 14 }, (_, i) => generateHeart(i + 5, 'mid')),
+  ...Array.from({ length: 9 }, (_, i) => generateHeart(i + 19, 'back')),
 ];
 
 function FallingHearts() {
   return (
     <div className="falling-hearts pointer-events-none">
-      <svg width="0" height="0" className="absolute">
-        <defs>
-          <linearGradient id="glass-heart" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
-            <stop offset="30%" stopColor="#ff4d94" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#ff0055" stopOpacity="0.1" />
-          </linearGradient>
-        </defs>
-      </svg>
-
       {HEARTS.map((h) => {
-        const isOutline = h.variant === 'outline';
-        const isGlass   = h.variant === 'glass';
+        const isPulsing = h.layer === 'mid' && Math.random() > 0.4;
         const layerClass = `heart-layer-${h.layer}`;
-        // Ícone: front=grande, mid=médio, back=pequeno
-        const iconClass = h.layer === 'front' ? 'w-10 h-10' : h.layer === 'mid' ? 'w-7 h-7' : 'w-4 h-4';
-
         return (
-          <div
-            key={h.id}
-            className={`falling-heart ${layerClass}`}
-            style={{
-              left: h.left,
-              animationDuration: h.fallDuration,
-              animationDelay: h.delay,
-              '--sway-x': h.sway,
-              '--base-scale': h.baseScale,
-            } as React.CSSProperties}
-          >
-            <div
-              className={h.shouldPulse ? 'heart-pulse inline-flex items-center justify-center' : 'inline-flex items-center justify-center'}
-              style={h.shouldPulse ? { animationDuration: h.pulseDuration, animationDelay: h.delay } : undefined}
-            >
-              <Heart
-                className={`${iconClass} heart-wobble`}
-                style={{
-                  color: h.color,
-                  fill: isOutline ? 'transparent' : isGlass ? 'url(#glass-heart)' : h.color,
-                  strokeWidth: isOutline ? 2.5 : 1,
-                  animationDuration: h.wobbleDuration,
-                  animationDelay: h.delay,
-                  '--start-rot': h.startRot,
-                  '--base-scale': h.baseScale,
-                  filter: `drop-shadow(0 4px 8px rgba(0,0,0,0.25))`,
-                } as React.CSSProperties}
-              />
+          <div key={h.id} className={`heart-container ${layerClass}`} style={h.style}>
+            <div className={`heart-wrapper ${isPulsing ? 'heart-pulse' : ''}`}>
+              {h.variant === 'glass' ? (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="url(#glass-grad)"
+                  stroke="rgba(255,255,255,0.7)"
+                  strokeWidth="1.5"
+                  className={h.layer === 'front' ? 'w-10 h-10' : h.layer === 'mid' ? 'w-7 h-7' : 'w-4 h-4'}
+                >
+                  <defs>
+                    <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="rgba(255,255,255,0.8)" />
+                      <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                </svg>
+              ) : (
+                <Heart
+                  className={h.layer === 'front' ? 'w-10 h-10' : h.layer === 'mid' ? 'w-7 h-7' : 'w-4 h-4'}
+                  fill={h.variant === 'solid' ? h.color : 'none'}
+                  color={h.color}
+                  strokeWidth={h.variant === 'solid' ? 0 : 2}
+                  style={h.variant === 'solid' ? { filter: `drop-shadow(0 0 8px ${h.color}80)` } : undefined}
+                />
+              )}
             </div>
           </div>
         );
@@ -249,34 +244,20 @@ function FallingHearts() {
 }
 
 // ─── Aurora Borealis ──────────────────────────────────────────────────────────
-
-// Paleta de cores completas para as cortinas (rgba fechado)
-const AURORA_PALETTE = [
-  { r: 0,   g: 255, b: 180 }, // Verde-teal brilhante
-  { r: 0,   g: 220, b: 255 }, // Ciano ártico
-  { r: 168, g: 85,  b: 247 }, // Violeta profundo
-  { r: 0,   g: 255, b: 150 }, // Verde esmeralda
-  { r: 100, g: 200, b: 255 }, // Azul-gelo
-  { r: 220, g: 80,  b: 255 }, // Rosa polar
-  { r: 0,   g: 255, b: 200 }, // Teal puro (aurora central)
-  { r: 50,  g: 180, b: 255 }, // Azul celeste
-];
-
-const AURORA_CURTAINS = Array.from({ length: 5 }, (_, i) => { // Reduzido de 8 para 5
-  const { r, g, b } = AURORA_PALETTE[i % AURORA_PALETTE.length];
-  const op = [0.55, 0.45, 0.4, 0.5, 0.35][i];
-  const bl = [25, 20, 30, 15, 35][i]; // Blur substancialmente reduzido (era 40-70)
+const AURORA_CURTAINS = Array.from({ length: 6 }, (_, i) => { 
+  const isAlt = i % 2 === 0;
   return {
     id: i,
-    left: `${5 + i * 18 + (Math.random() * 8 - 4)}%`, // Espalhamento ajustado para menos elementos
-    width: `${25 + Math.random() * 20}%`, // Levemente mais largas para compensar menos elementos
-    height: `${38 + Math.random() * 32}%`,
-    // Gradiente: bottom = cor viva, topo = transparente
-    background: `linear-gradient(to top, rgba(${r},${g},${b},${op}) 0%, rgba(${r},${g},${b},${(op * 0.5).toFixed(2)}) 45%, transparent 100%)`,
-    filter: `blur(${bl}px)`,
-    duration: `${7 + Math.random() * 8}s`,
-    delay: `${Math.random() * 10}s`,
-    opacity: op,
+    left: `${(i - 1) * 20}%`, 
+    width: `${30 + Math.random() * 20}%`, 
+    height: `${50 + Math.random() * 40}%`,
+    background: isAlt
+      ? `linear-gradient(to bottom, rgba(0,255,200,${0.25 + Math.random() * 0.15}) 0%, rgba(34,211,238,${0.1 + Math.random() * 0.1}) 40%, transparent 100%)`
+      : `linear-gradient(to bottom, rgba(168,85,247,${0.2 + Math.random() * 0.15}) 0%, rgba(220,80,255,${0.1 + Math.random() * 0.1}) 40%, transparent 100%)`,
+    filter: `blur(${15 + Math.random() * 15}px)`, 
+    duration: `${25 + Math.random() * 15}s`, 
+    delay: `-${Math.random() * 20}s`,
+    opacity: 0.6 + Math.random() * 0.4,
   };
 });
 
@@ -289,13 +270,13 @@ const AURORA_RAY_PALETTE = [
   { r: 220, g: 80,  b: 255 },
 ];
 
-const AURORA_RAYS = Array.from({ length: 6 }, (_, i) => { // Reduzido de 12 para 6
+const AURORA_RAYS = Array.from({ length: 6 }, (_, i) => {
   const { r, g, b } = AURORA_RAY_PALETTE[i % AURORA_RAY_PALETTE.length];
   const op = parseFloat((0.55 + Math.random() * 0.3).toFixed(2));
-  const bl = parseFloat((4 + Math.random() * 5).toFixed(1)); // Blur reduzido
+  const bl = parseFloat((4 + Math.random() * 5).toFixed(1));
   return {
     id: i,
-    left: `${8 + i * 15 + Math.random() * 5}%`, // Ajustado
+    left: `${8 + i * 15 + Math.random() * 5}%`,
     width: `${0.8 + Math.random() * 1.5}%`,
     height: `${25 + Math.random() * 45}%`,
     background: `linear-gradient(to top, rgba(${r},${g},${b},${op}) 0%, rgba(${r},${g},${b},${(op * 0.35).toFixed(2)}) 55%, transparent 100%)`,
@@ -309,10 +290,8 @@ const AURORA_RAYS = Array.from({ length: 6 }, (_, i) => { // Reduzido de 12 para
 function AuroraBorealis() {
   return (
     <div className="aurora-bg">
-      {/* Base horizon glow */}
       <div className="aurora-glow-base" />
 
-      {/* Cortinas largas — efeito principal */}
       {AURORA_CURTAINS.map((c) => (
         <div
           key={c.id}
@@ -330,7 +309,6 @@ function AuroraBorealis() {
         />
       ))}
 
-      {/* Raios finos — filamentos de luz */}
       {AURORA_RAYS.map((r) => (
         <div
           key={r.id}
@@ -343,7 +321,7 @@ function AuroraBorealis() {
             filter: r.filter,
             animationDuration: r.duration,
             animationDelay: r.delay,
-            '--ray-opacity': r.opacity,
+            '--aurora-opacity': r.opacity,
           } as React.CSSProperties}
         />
       ))}
@@ -366,12 +344,10 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
     if (!ctx) return;
     let animId: number;
 
-    // Guarda tamanho anterior da janela (iniciado negativo para forçar o primeiro resize)
     let lastWidth = -1;
     let lastHeight = -1;
 
     if (theme === 'snow') {
-      // ── Neve Mágica com Sprites Pre-renderizados e Física (Mouse Repulsion) ──
       const snowFlakes: {
         x: number; y: number; r: number;
         speedY: number; speedX: number;
@@ -386,13 +362,10 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
       window.addEventListener('mousemove', onMouseMove);
       window.addEventListener('touchmove', onTouchMove, { passive: true });
 
-      // Otimização Extrema: Pré-renderizar os designs em mini-canvas (Sprites)
-      // Evita recalcular arcos e gradientes milhares de vezes por segundo na GPU.
       const createSprite = (type: 'orb' | 'flake' | 'dot') => {
         const c = document.createElement('canvas');
         const cCtx = c.getContext('2d')!;
         if (type === 'orb') {
-          // Esfera grande e desfocada (Bokeh para primeiro plano)
           c.width = 40; c.height = 40;
           const grad = cCtx.createRadialGradient(20, 20, 0, 20, 20, 20);
           grad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
@@ -401,7 +374,6 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
           cCtx.fillStyle = grad;
           cCtx.fillRect(0, 0, 40, 40);
         } else if (type === 'flake') {
-          // Cristal de Neve clássico com 6 pontas (Meio plano)
           c.width = 24; c.height = 24;
           cCtx.translate(12, 12);
           cCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
@@ -410,19 +382,20 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
           for (let i = 0; i < 6; i++) {
             cCtx.beginPath();
             cCtx.moveTo(0, 0);
-            cCtx.lineTo(0, -9);
-            cCtx.moveTo(0, -4);
-            cCtx.lineTo(-3, -7);
+            cCtx.lineTo(0, -10);
             cCtx.moveTo(0, -4);
             cCtx.lineTo(3, -7);
+            cCtx.moveTo(0, -4);
+            cCtx.lineTo(-3, -7);
             cCtx.stroke();
             cCtx.rotate(Math.PI / 3);
           }
         } else {
-          // Ponto simples (Plano de fundo distante)
           c.width = 4; c.height = 4;
-          cCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-          cCtx.beginPath(); cCtx.arc(2, 2, 2, 0, Math.PI * 2); cCtx.fill();
+          cCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          cCtx.beginPath();
+          cCtx.arc(2, 2, 1.5, 0, Math.PI * 2);
+          cCtx.fill();
         }
         return c;
       };
@@ -435,17 +408,18 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
 
       const init = () => {
         snowFlakes.length = 0;
-        // 110 flocos variados e super leves (quantidade reduzida para max FPS)
         for (let i = 0; i < 110; i++) {
-          const type = i < 12 ? 'orb' : i < 40 ? 'flake' : 'dot';
-          const r = type === 'orb' ? Math.random() * 6 + 10 : type === 'flake' ? Math.random() * 4 + 4 : Math.random() * 1.5 + 0.5;
+          let type: 'orb' | 'flake' | 'dot';
+          let r, speedY;
+          if (i < 12) { type = 'orb'; r = Math.random() * 4 + 8; speedY = Math.random() * 0.8 + 0.8; }
+          else if (i < 40) { type = 'flake'; r = Math.random() * 2 + 3; speedY = Math.random() * 0.5 + 0.5; }
+          else { type = 'dot'; r = Math.random() * 1 + 1; speedY = Math.random() * 0.3 + 0.2; }
+
           snowFlakes.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            r,
-            speedY: type === 'orb' ? Math.random() * 1.2 + 1.2 : type === 'flake' ? Math.random() * 0.8 + 0.6 : Math.random() * 0.4 + 0.2,
-            speedX: 0,
-            sway: Math.random() * 0.5 + 0.2,
+            r, speedY, speedX: 0,
+            sway: (Math.random() - 0.5) * 0.5,
             phase: Math.random() * Math.PI * 2,
             type,
           });
@@ -463,20 +437,20 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
 
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
         snowFlakes.forEach((f) => {
           f.phase += 0.01;
           
           let targetSpeedX = Math.sin(f.phase) * f.sway;
-
-          // Física de Repulsão (Super Otimizada sem Math.sqrt em todos os frames)
-          const dx = f.x - mouseX;
-          const dy = f.y - mouseY;
-          const distSq = dx * dx + dy * dy;
-          const pushRadiusSq = 14400; // Equivalente a 120px * 120px
           
-          if (distSq < pushRadiusSq) {
-            const dist = Math.sqrt(distSq) || 1;
-            const force = (120 - dist) / 120;
+          const dx = mouseX - f.x;
+          const dy = mouseY - f.y;
+          const distSq = dx * dx + dy * dy;
+          const repelRadius = 150;
+          
+          if (distSq < repelRadius * repelRadius) {
+            const dist = Math.sqrt(distSq);
+            const force = (repelRadius - dist) / repelRadius;
             targetSpeedX += (dx / dist) * force * 4; 
             f.y += (dy / dist) * force * 1.5; 
           }
@@ -485,12 +459,10 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
           f.x += f.speedX;
           f.y += f.speedY;
 
-          // Reposiciona se sair da tela
           if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
           if (f.x > canvas.width + f.r) f.x = -f.r;
           if (f.x < -f.r) f.x = canvas.width + f.r;
 
-          // Desenho ultra rápido com drawImage (Sprites)
           const sprite = sprites[f.type];
           ctx.drawImage(sprite, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
         });
@@ -510,7 +482,6 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
     }
 
     if (theme === 'aurora') {
-      // ── Estrelas cintilantes para o tema aurora (Otimizado) ──
       const stars: {
         x: number;
         y: number;
@@ -529,7 +500,7 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
       let time = 0;
 
       const init = () => {
-        stars.length = 0; // Limpa ao redimensionar
+        stars.length = 0;
         for (let i = 0; i < 80; i++) {
           stars.push({
             x: Math.random() * canvas.width,
@@ -544,7 +515,6 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
       };
 
       const resize = () => {
-        // Ignora saltos verticais pequenos típicos da barra de endereço no mobile
         if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) {
           return;
         }
@@ -553,7 +523,7 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
         
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        init(); // Repopula cobrindo o novo tamanho
+        init(); 
       };
 
       const draw = () => {
@@ -575,7 +545,69 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
       };
     }
 
-    // ── Partículas flutuantes para meteoros e corações ──
+    if (theme === 'meteors') {
+      const stars: {
+        x: number; y: number; r: number;
+        baseAlpha: number; speed: number; phase: number;
+        isBlinker: boolean;
+      }[] = [];
+      let time = 0;
+
+      const init = () => {
+        stars.length = 0;
+        const count = window.innerWidth < 640 ? 60 : 120;
+        for (let i = 0; i < count; i++) {
+          stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            r: Math.random() * 1.2 + 0.3,
+            baseAlpha: Math.random() * 0.5 + 0.3,
+            speed: Math.random() * 0.5 + 0.2,
+            phase: Math.random() * Math.PI * 2,
+            isBlinker: Math.random() > 0.6,
+          });
+        }
+      };
+
+      const resize = () => {
+        if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) return;
+        lastWidth = window.innerWidth;
+        lastHeight = window.innerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        init();
+      };
+
+      const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        time += 0.016;
+        
+        ctx.fillStyle = '#ffffff'; 
+        
+        stars.forEach((s) => {
+          let alpha = s.baseAlpha;
+          if (s.isBlinker) {
+            alpha *= (0.3 + 0.7 * Math.abs(Math.sin(time * s.speed + s.phase)));
+          }
+          ctx.globalAlpha = alpha;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        animId = requestAnimationFrame(draw);
+      };
+      
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+      
+      return () => {
+        window.removeEventListener('resize', resize);
+        cancelAnimationFrame(animId);
+      };
+    }
+
     const particles: {
       x: number;
       y: number;
@@ -586,9 +618,7 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
       color: string;
     }[] = [];
 
-    const colors = theme === 'meteors'
-      ? ['rgba(255, 255, 255,', 'rgba(224, 170, 255,', 'rgba(199, 125, 255,', 'rgba(157, 78, 221,']
-      : ['rgba(255, 0, 85,', 'rgba(255, 42, 122,', 'rgba(255, 77, 148,'];
+    const colors = ['rgba(255, 0, 85,', 'rgba(255, 42, 122,', 'rgba(255, 77, 148,'];
 
     const init = () => {
       particles.length = 0;
@@ -606,7 +636,6 @@ function ParticleCanvas({ theme }: { theme: 'meteors' | 'hearts' | 'aurora' | 's
     };
 
     const resize = () => {
-      // Ignora saltos verticais pequenos (barra de endereço)
       if (canvas.width !== 0 && window.innerWidth === lastWidth && Math.abs(window.innerHeight - lastHeight) < 150) {
         return;
       }
@@ -692,8 +721,6 @@ export default function Home() {
   const [msgIndex, setMsgIndex] = useState(0);
   const [openAcrostic, setOpenAcrostic] = useState<number | null>(null);
 
-  // Force the correct CSS variables whenever activeTheme changes (or on first mount),
-  // overriding anything that the store/Firestore may have applied.
   useEffect(() => {
     const THEMES = {
       meteors: {
@@ -746,22 +773,59 @@ export default function Home() {
   return (
     <div
       className="relative -mt-0 min-h-[100lvh] text-slate-200 selection:bg-[var(--theme-primary)]/40 selection:text-white overflow-x-hidden"
-      style={{
-        background:
-          activeTheme === 'meteors'
-            ? 'linear-gradient(135deg, #090314 0%, #1a0636 50%, #05010a 100%)'
-            : activeTheme === 'hearts'
-            ? '#05050A'
-            : activeTheme === 'aurora'
-            ? 'linear-gradient(180deg, #000a0f 0%, #00110d 35%, #001a14 65%, #000508 100%)'
-            : 'linear-gradient(180deg, #020412 0%, #0a1526 50%, #07192f 100%)', // snow background
-      }}
+      style={
+        activeTheme === 'meteors'
+          ? {
+              backgroundImage: 'linear-gradient(rgba(3, 0, 13, 0.35), rgba(11, 1, 32, 0.5))',
+              backgroundColor: '#03000d',
+            }
+          : activeTheme === 'hearts'
+          ? { background: '#05050A' }
+          : activeTheme === 'aurora'
+          ? { background: 'linear-gradient(180deg, #000a0f 0%, #00110d 35%, #001a14 65%, #000508 100%)' }
+          : { background: 'linear-gradient(180deg, #020412 0%, #0a1526 50%, #07192f 100%)' }
+      }
     >
+      {/* ══════════════════════════ NEBULA BACKGROUND (METEORS) ══════════════════════════ */}
+      {activeTheme === 'meteors' && (
+        <>
+          {/* Imagem de fundo — estica por todo o conteúdo da página */}
+          <div
+            className="nebula-bg-mobile absolute inset-0 z-0 pointer-events-none"
+            style={{
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundAttachment: 'fixed',
+              opacity: 0.9,
+            }}
+          />
+          {/* Overlay escuro nas extremidades para legibilidade */}
+          <div
+            className="absolute inset-0 z-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(3,0,13,0.4) 0%, transparent 20%, transparent 80%, rgba(3,0,13,0.5) 100%)',
+            }}
+          />
+        </>
+      )}
+
+
       {/* ══════════════════════════ BACKGROUND NEON LIGHTS ══════════════════════════ */}
       <div className="fixed top-0 left-0 w-screen h-[100lvh] z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[600px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--theme-accent)]/5 blur-[150px] rounded-full" />
-        <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
+        {activeTheme === 'meteors' ? (
+          <>
+            <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-900/20 blur-[200px] rounded-full" />
+            <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] bg-teal-700/15 blur-[180px] rounded-full" />
+            <div className="absolute bottom-[-10%] left-[20%] w-[700px] h-[700px] bg-indigo-900/20 blur-[220px] rounded-full" />
+          </>
+        ) : (
+          <>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[600px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--theme-accent)]/5 blur-[150px] rounded-full" />
+            <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] bg-[var(--theme-primary)]/10 blur-[150px] rounded-full" />
+          </>
+        )}
       </div>
 
       {/* ══════════════════════════ PARTICLES (SITE-WIDE) ══════════════════════════ */}
