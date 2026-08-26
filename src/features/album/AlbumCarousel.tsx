@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, EffectCoverflow } from 'swiper/modules';
-import { AlbumCube } from './AlbumCube';
-import { X, Images } from 'lucide-react';
+import { EffectCoverflow } from 'swiper/modules';
+import type { Swiper as SwiperType } from 'swiper';
+import { AlbumViewerModal } from './AlbumViewerModal';
+import { Images } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
 import { cloudinaryUrl } from '../../services/cloudinary/upload';
 
@@ -34,93 +34,12 @@ interface Album {
   photos: Photo[];
 }
 
-// ─── Modal via Portal (bypasses overflow-x-hidden stacking context) ────────────
-function AlbumModal({ album, onClose }: { album: Album; onClose: () => void }) {
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-
-  const modal = (
-    <div
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        zIndex: 99999,
-        backgroundColor: 'rgba(0,0,0,0.92)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '20px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        flexShrink: 0,
-      }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#fff', fontFamily: 'serif' }}>
-            {album.title}
-          </h3>
-          {album.description && (
-            <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#94a3b8' }}>{album.description}</p>
-          )}
-          <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--theme-secondary, #e0aaff)' }}>
-            {album.photos.length} fotos{album.date ? ` · ${album.date}` : ''}
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: 44, height: 44, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.25)',
-            color: '#fff', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <X style={{ width: 22, height: 22 }} />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div style={{
-        flex: 1, overflowY: 'auto',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '32px 16px',
-      }}>
-        <div style={{ width: '100%', maxWidth: 440 }}>
-          <AlbumCube photos={album.photos} />
-          <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.75rem', marginTop: 20 }}>
-            Deslize o cubo para girar · Toque fora para fechar
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  return createPortal(modal, document.body);
-}
-
-// ─── Main Carousel ─────────────────────────────────────────────────────────────
 export function AlbumCarousel() {
   const { config } = useSiteConfigStore();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [selectedAlbumIndex, setSelectedAlbumIndex] = useState<number | null>(null);
+  const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
 
   useEffect(() => {
     const fetchAlbums = async () => {
@@ -180,23 +99,25 @@ export function AlbumCarousel() {
     <>
       <div className="w-full relative py-8">
         <Swiper
+          onSwiper={setSwiperInstance}
           effect="coverflow"
+          loop={true}
+          slideToClickedSlide={true}
           grabCursor centeredSlides slidesPerView="auto"
           coverflowEffect={{ rotate: 20, stretch: 0, depth: 200, modifier: 1, slideShadows: true }}
-          modules={[Navigation, EffectCoverflow]}
-          navigation
+          modules={[EffectCoverflow]}
           className="w-full album-coverflow-swiper"
         >
-          {albums.map((album) => {
+          {albums.map((album, index) => {
             const coverSrc = getCover(album);
             return (
               <SwiperSlide key={album.id} style={{ width: 280, height: 380 }}>
                 {({ isActive }) => (
                   <button
-                    onClick={() => isActive && setSelectedAlbum(album)}
+                    onClick={() => isActive && setSelectedAlbumIndex(index)}
                     className={cn(
                       'group relative w-full h-full rounded-2xl overflow-hidden border border-white/10 transition-all duration-300',
-                      isActive ? 'cursor-pointer' : 'opacity-80 cursor-default'
+                      isActive ? 'cursor-pointer' : 'opacity-80 cursor-pointer'
                     )}
                   >
                     {coverSrc ? (
@@ -229,33 +150,16 @@ export function AlbumCarousel() {
         </Swiper>
       </div>
 
-      {/* Modal via Portal */}
-      {selectedAlbum && (
-        <AlbumModal album={selectedAlbum} onClose={() => setSelectedAlbum(null)} />
+      {/* Novo Modal de Álbuns */}
+      {selectedAlbumIndex !== null && (
+        <AlbumViewerModal 
+          albums={albums} 
+          initialAlbumIndex={selectedAlbumIndex} 
+          onClose={() => setSelectedAlbumIndex(null)}
+          onAlbumChange={(idx) => swiperInstance?.slideToLoop?.(idx) ?? swiperInstance?.slideTo(idx)}
+        />
       )}
-
-      <style>{`
-        .album-coverflow-swiper .swiper-button-next,
-        .album-coverflow-swiper .swiper-button-prev {
-          color: rgba(255,255,255,0.9);
-          background: rgba(255,255,255,0.1);
-          width: 44px; height: 44px;
-          border-radius: 50%;
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255,255,255,0.2);
-          transition: all 0.3s;
-        }
-        .album-coverflow-swiper .swiper-button-next:hover,
-        .album-coverflow-swiper .swiper-button-prev:hover {
-          background: rgba(var(--theme-primary-rgb, 157,78,221), 0.4);
-          border-color: var(--theme-primary, #9d4edd);
-          transform: scale(1.1);
-        }
-        .album-coverflow-swiper .swiper-button-next::after,
-        .album-coverflow-swiper .swiper-button-prev::after {
-          font-size: 16px; font-weight: bold;
-        }
-      `}</style>
     </>
   );
 }
+
