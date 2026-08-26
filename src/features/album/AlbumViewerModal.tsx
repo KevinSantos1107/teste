@@ -185,6 +185,9 @@ function ZoomableImage({ src, alt }: { src: string; alt: string }) {
 
     if (pointers.current.size === 0) {
       initialGesto.current = null;
+      // Usuário soltou todos os dedos: reseta suavemente o zoom e o pan para o estado original
+      setScale(1);
+      setPan({ x: 0, y: 0 });
     }
   };
 
