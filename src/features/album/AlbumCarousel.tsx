@@ -88,6 +88,7 @@ export function AlbumCarousel() {
   const dragStartY      = useRef<number | null>(null);
   const isDragging      = useRef(false);
   const swipeHandled    = useRef(false);   // garante que 1 gesto = 1 slide
+  const lastNavigatedAt = useRef(0);       // timestamp da última navegação lateral
 
   // ─── Navegação ─────────────────────────────────────────────────────────────
 
@@ -233,7 +234,7 @@ export function AlbumCarousel() {
       {/* Carrossel */}
       <div
         ref={containerRef}
-        className="w-full relative py-10 select-none"
+        className="w-full relative py-10 select-none outline-none"
         style={{ height: CARD_H + 80, touchAction: 'pan-y' }}
         // Pointer events unificados (mouse + touch + stylus)
         onPointerDown={onPointerDown}
@@ -262,10 +263,14 @@ export function AlbumCarousel() {
                   // Ignora se foi consequência de um swipe
                   if (swipeHandled.current) return;
                   if (isActive) {
-                    // Clique no álbum central → abre modal
-                    setSelectedAlbumIndex(realIdx);
+                    // Abre o modal apenas se não navegamos lateralmente há pouco tempo
+                    // (evita que duplo-toque rápido em album inativo o abra imediatamente)
+                    if (Date.now() - lastNavigatedAt.current > 350) {
+                      setSelectedAlbumIndex(realIdx);
+                    }
                   } else {
-                    // Clique em álbum lateral → navega para ele
+                    // Clique em álbum lateral → navega para ele e registra o momento
+                    lastNavigatedAt.current = Date.now();
                     goToIndex(realIdx, albums.length);
                   }
                 }}
