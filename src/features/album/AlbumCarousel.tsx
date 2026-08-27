@@ -182,12 +182,32 @@ export function AlbumCarousel() {
     }
 
     // ── CLIQUE / TOQUE ────────────────────────────────────────────────────────
-    // Se não foi swipe, trata como clique normal.
+    // Se não foi swipe, trata como clique normal diretamente no PointerUp.
+    // Isso evita o bug do iOS/Mobile Safari que engole o evento 'click' 
+    // quando o elemento tem estilos de :hover (group-hover).
     isDragging.current   = false;
     swipeHandled.current = false;
 
-    // O clique em si é tratado pelo onClick de cada card (ver abaixo).
-  }, [albums.length]);
+    const target = e.target as HTMLElement;
+    const card = target.closest('[data-album-index]');
+    if (card) {
+      const idxStr = card.getAttribute('data-album-index');
+      if (idxStr !== null) {
+        const clickedIdx = parseInt(idxStr, 10);
+        const dist = circularDistance(activeIndex, clickedIdx, albums.length);
+        const isActive = dist === 0;
+
+        if (isActive) {
+          if (Date.now() - lastNavigatedAt.current > 350) {
+            setSelectedAlbumIndex(clickedIdx);
+          }
+        } else {
+          lastNavigatedAt.current = Date.now();
+          goToIndex(clickedIdx, albums.length);
+        }
+      }
+    }
+  }, [albums.length, activeIndex, goToIndex]);
 
   const onPointerCancel = useCallback(() => {
     dragStartX.current   = null;
@@ -259,21 +279,7 @@ export function AlbumCarousel() {
             return (
               <div
                 key={album.id}
-                onClick={() => {
-                  // Ignora se foi consequência de um swipe
-                  if (swipeHandled.current) return;
-                  if (isActive) {
-                    // Abre o modal apenas se não navegamos lateralmente há pouco tempo
-                    // (evita que duplo-toque rápido em album inativo o abra imediatamente)
-                    if (Date.now() - lastNavigatedAt.current > 350) {
-                      setSelectedAlbumIndex(realIdx);
-                    }
-                  } else {
-                    // Clique em álbum lateral → navega para ele e registra o momento
-                    lastNavigatedAt.current = Date.now();
-                    goToIndex(realIdx, albums.length);
-                  }
-                }}
+                data-album-index={realIdx}
                 className="absolute group"
                 style={{
                   width:   CARD_W,
