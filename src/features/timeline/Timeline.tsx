@@ -262,6 +262,20 @@ export function Timeline({ events }: TimelineProps) {
               <stop offset="50%" stopColor="var(--theme-secondary)" />
               <stop offset="100%" stopColor="var(--theme-primary)" />
             </linearGradient>
+            {/* Gradiente ultra-suave com 11 stops — transição orgânica contínua */}
+            <linearGradient id="trailSmoothGradient" gradientUnits="userSpaceOnUse" x1="15" y1="40" x2="105" y2="40">
+              <stop offset="0%"   stopColor="var(--theme-primary)"   stopOpacity="0.45" />
+              <stop offset="10%"  stopColor="var(--theme-primary)"   stopOpacity="0.6" />
+              <stop offset="22%"  stopColor="var(--theme-secondary)" stopOpacity="0.72" />
+              <stop offset="34%"  stopColor="var(--theme-primary)"   stopOpacity="0.84" />
+              <stop offset="44%"  stopColor="var(--theme-secondary)" stopOpacity="0.92" />
+              <stop offset="50%"  stopColor="#ffffff"                 stopOpacity="0.95" />
+              <stop offset="56%"  stopColor="var(--theme-secondary)" stopOpacity="0.92" />
+              <stop offset="66%"  stopColor="var(--theme-primary)"   stopOpacity="0.84" />
+              <stop offset="78%"  stopColor="var(--theme-secondary)" stopOpacity="0.72" />
+              <stop offset="90%"  stopColor="var(--theme-primary)"   stopOpacity="0.6" />
+              <stop offset="100%" stopColor="var(--theme-primary)"   stopOpacity="0.45" />
+            </linearGradient>
           </defs>
 
           {/* Conexão grossa e brilhante: topo → centro do infinito */}
@@ -281,38 +295,30 @@ export function Timeline({ events }: TimelineProps) {
             strokeOpacity="0.15"
           />
 
-          {/* === RASTRO DO COMETA EM CAMADAS (DEGRADÊ SUAVE) === */}
-          
-          {/* Camada 1: Cauda longa, fina e bem transparente */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="var(--theme-primary)" strokeWidth="4" strokeOpacity="0.1" fill="none" 
-            pathLength="100" strokeDasharray="50 50" strokeLinecap="round" />
+          {/* Rastro animado — camada de glow suave (halo externo) */}
+          <path 
+            className="trail-comet"
+            d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
+            stroke="url(#trailSmoothGradient)" 
+            strokeWidth="4" 
+            fill="none" 
+            pathLength={100}
+            strokeDasharray="45 55"
+            strokeLinecap="round"
+            style={{ filter: 'drop-shadow(0 0 5px var(--theme-primary))' }}
+          />
 
-          {/* Camada 2: Cauda média, começa a ganhar cor */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="var(--theme-primary)" strokeWidth="4" strokeOpacity="0.25" fill="none" 
-            pathLength="100" strokeDasharray="35 65" strokeLinecap="round" />
-
-          {/* Camada 3: Cauda curta, cor mais intensa (transição) */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="var(--theme-primary)" strokeWidth="3.5" strokeOpacity="0.5" fill="none" 
-            pathLength="100" strokeDasharray="20 80" strokeLinecap="round" />
-
-          {/* Camada 4: Corpo brilhante (cor secundária misturando com primária) */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="var(--theme-secondary)" strokeWidth="3" strokeOpacity="0.8" fill="none" 
-            pathLength="100" strokeDasharray="10 90" strokeLinecap="round" />
-
-          {/* Camada 5: Ponta brilhante misturando para o branco */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="#ffffff" strokeWidth="2.5" strokeOpacity="0.9" fill="none" 
-            pathLength="100" strokeDasharray="4 96" strokeLinecap="round" />
-
-          {/* Camada 6: Núcleo de luz estourado (ponto focal exato) */}
-          <path className="trail-comet" d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="#ffffff" strokeWidth="1.5" fill="none" 
-            pathLength="100" strokeDasharray="1 99" strokeLinecap="round" 
-            style={{ filter: 'drop-shadow(0 0 4px #ffffff)' }} />
+          {/* Rastro animado — núcleo brilhante (traço principal) */}
+          <path 
+            className="trail-comet"
+            d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
+            stroke="url(#trailSmoothGradient)" 
+            strokeWidth="2.5" 
+            fill="none" 
+            pathLength={100}
+            strokeDasharray="45 55"
+            strokeLinecap="round"
+          />
         </svg>
         <span className="text-theme-text-secondary italic text-[11px] md:text-sm font-serif mt-3 opacity-80 tracking-wider">
           Nossa história continua...
