@@ -262,19 +262,19 @@ export function Timeline({ events }: TimelineProps) {
               <stop offset="50%" stopColor="var(--theme-secondary)" />
               <stop offset="100%" stopColor="var(--theme-primary)" />
             </linearGradient>
-            {/* Gradiente ultra-suave com 11 stops — transição orgânica contínua */}
-            <linearGradient id="trailSmoothGradient" gradientUnits="userSpaceOnUse" x1="15" y1="40" x2="105" y2="40">
-              <stop offset="0%"   stopColor="var(--theme-primary)"   stopOpacity="0.45" />
-              <stop offset="10%"  stopColor="var(--theme-primary)"   stopOpacity="0.6" />
-              <stop offset="22%"  stopColor="var(--theme-secondary)" stopOpacity="0.72" />
-              <stop offset="34%"  stopColor="var(--theme-primary)"   stopOpacity="0.84" />
-              <stop offset="44%"  stopColor="var(--theme-secondary)" stopOpacity="0.92" />
-              <stop offset="50%"  stopColor="#ffffff"                 stopOpacity="0.95" />
-              <stop offset="56%"  stopColor="var(--theme-secondary)" stopOpacity="0.92" />
-              <stop offset="66%"  stopColor="var(--theme-primary)"   stopOpacity="0.84" />
-              <stop offset="78%"  stopColor="var(--theme-secondary)" stopOpacity="0.72" />
-              <stop offset="90%"  stopColor="var(--theme-primary)"   stopOpacity="0.6" />
-              <stop offset="100%" stopColor="var(--theme-primary)"   stopOpacity="0.45" />
+            {/* Gradiente simples de 3 stops que ROTACIONA em sincronia com o traço */}
+            <linearGradient id="trailFlowGradient" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--theme-primary)" />
+              <stop offset="50%" stopColor="var(--theme-secondary)" />
+              <stop offset="100%" stopColor="var(--theme-primary)" />
+              <animateTransform 
+                attributeName="gradientTransform" 
+                type="rotate" 
+                from="0 0.5 0.5" 
+                to="360 0.5 0.5" 
+                dur="3s" 
+                repeatCount="indefinite" 
+              />
             </linearGradient>
           </defs>
 
@@ -295,30 +295,57 @@ export function Timeline({ events }: TimelineProps) {
             strokeOpacity="0.15"
           />
 
-          {/* Rastro animado — camada de glow suave (halo externo) */}
+          {/* === PATH BASE INVISÍVEL PARA REFERÊNCIA DE MOVIMENTO === */}
           <path 
-            className="trail-comet"
+            id="infinityMotionPath"
             d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="url(#trailSmoothGradient)" 
-            strokeWidth="4" 
             fill="none" 
-            pathLength={100}
-            strokeDasharray="45 55"
-            strokeLinecap="round"
-            style={{ filter: 'drop-shadow(0 0 5px var(--theme-primary))' }}
+            stroke="none"
           />
 
-          {/* Rastro animado — núcleo brilhante (traço principal) */}
-          <path 
-            className="trail-comet"
-            d="M 60 40 C 80 20, 105 20, 105 40 C 105 60, 80 60, 60 40 C 40 20, 15 20, 15 40 C 15 60, 40 60, 60 40 Z" 
-            stroke="url(#trailSmoothGradient)" 
-            strokeWidth="2.5" 
-            fill="none" 
-            pathLength={100}
-            strokeDasharray="45 55"
-            strokeLinecap="round"
-          />
+          {/* === O COMETA VERDADEIRO (GRADIENTE NO PERCURSO) === */}
+          {/* Renderiza 45 pequenos círculos sobrepostos formando a fita contínua. 
+              Cada círculo recebe uma cor interpolada nativa e viaja com um delay. */}
+          {Array.from({ length: 45 }).map((_, i) => {
+            const isHead = i === 0;
+            const progress = i / 44; // de 0 (cabeça) a 1 (ponta da cauda)
+            
+            // Raio decrescente para afinar a cauda
+            const r = isHead ? 2.2 : 2.0 - (progress * 1.2);
+            
+            // A opacidade cai de 1 até 0 na cauda
+            const opacity = 1 - Math.pow(progress, 1.5);
+            
+            // Mistura de cor usando color-mix: 
+            // Cabeça (0%) = 100% theme-secondary (Rosa)
+            // Meio (50%) = Mistura (Violeta)
+            // Cauda (100%) = 100% theme-primary (Roxo)
+            const mixPercent = Math.max(0, 100 - (progress * 100)).toFixed(1);
+            const fill = `color-mix(in srgb, var(--theme-secondary) ${mixPercent}%, var(--theme-primary))`;
+            
+            // Atraso de tempo negativo espalha os círculos ao longo do caminho
+            const delay = `-${(i * 0.015).toFixed(3)}s`;
+
+            return (
+              <circle 
+                key={i} 
+                r={r} 
+                fill={fill}
+                opacity={opacity}
+                style={{ 
+                  filter: isHead ? 'drop-shadow(0 0 4px var(--theme-secondary))' : 'drop-shadow(0 0 2px var(--theme-primary))' 
+                }}
+              >
+                <animateMotion 
+                  dur="3s" 
+                  repeatCount="indefinite" 
+                  begin={delay}
+                >
+                  <mpath href="#infinityMotionPath" />
+                </animateMotion>
+              </circle>
+            );
+          })}
         </svg>
         <span className="text-theme-text-secondary italic text-[11px] md:text-sm font-serif mt-3 opacity-80 tracking-wider">
           Nossa história continua...
