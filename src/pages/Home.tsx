@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Heart, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteConfigStore } from '../store/siteConfigStore';
 import { useThemeStore } from '../store/useThemeStore';
 import { PlaylistTabs } from '../features/playlist/PlaylistTabs';
@@ -50,14 +50,21 @@ function getTimeLeft(startDate: Date): TimeLeft {
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 const LOVE_MESSAGES = [
-  'Você é o melhor capítulo da minha vida.',
-  'Com você, todo dia é um motivo pra sorrir.',
-  'Meu amor por você cresce a cada segundo que passa.',
-  'Você me faz querer ser alguém melhor todos os dias.',
-  'A distância só me deu mais certeza de que é você que eu quero.',
-  'Seu sorriso é o que mais gosto de ver nesse mundo.',
-  'Você transformou completamente o meu 2025 — para sempre melhor.',
-  'Não importa as constelações nem o idioma, eu vou te amar de qualquer maneira.',
+  'Cada dia ao seu lado é uma página nova em nosso livro de amor, escrita com sorrisos, carinho e cumplicidade.',
+  'Se eu pudesse escolher novamente entre todas as pessoas do mundo, escolheria você, sempre você.',
+  'Nos seus olhos encontro meu lugar favorito no mundo, onde posso ser apenas eu e saber que sou amado.',
+  'O amor que sinto por você não cabe em palavras, mas transborda em cada gesto, cada olhar, cada momento juntos.',
+  'Mesmo de longe, você conseguiu fazer eu me sentir mais amado do que nunca.',
+  'Você transformou a distância em mais uma prova de que fomos feitos um para o outro.',
+  'Amar você é a coisa mais natural e bonita que já aconteceu na minha vida.',
+  'Você chegou na minha vida e, sem perceber, se tornou meu lugar favorito.',
+  'Não importa a distância, meu coração sempre encontra o caminho até você.',
+  'Com você, até os dias comuns se tornam especiais.',
+  'Você é a melhor coincidência que a vida colocou no meu caminho.',
+  'Entre tantas pessoas no mundo, foi você quem fez meu coração se sentir em casa.',
+  'Seu amor mudou completamente a forma como eu vejo a vida.',
+  'Toda vez que penso no futuro, é você que eu imagino ao meu lado.',
+  'Você conseguiu ser minha paz mesmo estando quilômetros de distância.',
 ];
 
 const ACROSTIC = [
@@ -91,8 +98,8 @@ import type { Variants } from 'framer-motion';
 
 // ─── Animations ──────────────────────────────────────────────────────────────
 const fadeUpVariant: Variants = {
-  hidden: { opacity: 0, y: 50 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0, 0, 0.2, 1] } },
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0 },
 };
 
 // ─── Meteor Shower ──────────────────────────────────────────────────────────
@@ -1099,52 +1106,115 @@ export default function Home() {
           <div className="text-center space-y-4">
             <SectionLabel emoji="✨" text="Acróstico" />
             <h2
-              className="text-4xl md:text-5xl font-serif font-bold text-white mt-4"
+              className="text-4xl md:text-5xl font-serif font-bold text-white mt-4 tracking-wide"
               style={{ textShadow: '0 0 20px var(--theme-primary)' }}
             >
               I A R A
             </h2>
           </div>
 
-          <div className="space-y-6">
-            {ACROSTIC.map((line, index) => (
-              <button
-                key={index}
-                onClick={() => setOpenAcrostic(openAcrostic === index ? null : index)}
-                className="w-full text-left rounded-3xl border border-[var(--theme-primary)]/30 bg-white/[0.02] backdrop-blur-xl hover:bg-[var(--theme-primary)]/10 hover:border-[var(--theme-primary)]/60 hover:shadow-[0_0_40px_rgba(var(--theme-primary-rgb),0.3)] transition-all duration-500 overflow-hidden group"
-                style={{ touchAction: 'manipulation' }}
-              >
-                <div className="flex items-center gap-6 p-6 md:p-8">
-                  <span
-                    className={`text-5xl md:text-6xl font-bold font-serif shrink-0 ${line.color} transition-all duration-500 group-hover:scale-110 group-hover:drop-shadow-[0_0_20px_currentColor]`}
-                    style={{ textShadow: '0 0 20px currentColor', opacity: 1 }}
-                  >
-                    {line.letter}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-white font-medium text-xl md:text-2xl"
-                      style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}
-                    >
-                      <span className={`font-bold ${line.color}`}>{line.letter}</span>
-                      {line.short}
-                    </p>
-                    {openAcrostic === index && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="text-slate-300 text-base md:text-lg mt-4 leading-relaxed font-light"
-                      >
-                        {line.long}
-                      </motion.p>
-                    )}
-                  </div>
-                  <ChevronDown
-                    className={`w-8 h-8 text-[var(--theme-primary)]/50 shrink-0 transition-all duration-500 group-hover:text-[var(--theme-primary)] ${openAcrostic === index ? 'rotate-180 text-[var(--theme-primary)]' : ''}`}
+          <div className="space-y-5">
+            {ACROSTIC.map((line, index) => {
+              const isOpen = openAcrostic === index;
+              return (
+                <motion.button
+                  key={index}
+                  onClick={() => setOpenAcrostic(isOpen ? null : index)}
+                  layout
+                  transition={{ layout: { type: 'spring', stiffness: 300, damping: 30 } }}
+                  className={`
+                    w-full text-left rounded-2xl overflow-hidden
+                    backdrop-blur-xl transition-all duration-500 group
+                    border
+                    ${isOpen
+                      ? 'bg-white/[0.06] border-[var(--theme-primary)]/50 shadow-[0_0_50px_rgba(var(--theme-primary-rgb),0.25),inset_0_1px_0_rgba(255,255,255,0.08)]'
+                      : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-[var(--theme-primary)]/40 hover:shadow-[0_0_35px_rgba(var(--theme-primary-rgb),0.15)]'
+                    }
+                  `}
+                  style={{ touchAction: 'manipulation' }}
+                >
+                  {/* Active glow line at top */}
+                  <div
+                    className={`h-[2px] w-full transition-all duration-500 ${
+                      isOpen
+                        ? 'bg-gradient-to-r from-transparent via-[var(--theme-primary)] to-transparent opacity-100'
+                        : 'bg-gradient-to-r from-transparent via-[var(--theme-primary)] to-transparent opacity-0 group-hover:opacity-40'
+                    }`}
                   />
-                </div>
-              </button>
-            ))}
+
+                  <div className="flex items-center gap-5 p-5 md:p-7">
+                    {/* Letter badge */}
+                    <div className={`
+                      relative w-14 h-14 md:w-16 md:h-16 rounded-xl shrink-0
+                      flex items-center justify-center
+                      transition-all duration-500
+                      ${isOpen
+                        ? 'bg-[var(--theme-primary)]/15 shadow-[0_0_25px_rgba(var(--theme-primary-rgb),0.3)]'
+                        : 'bg-white/[0.04] group-hover:bg-[var(--theme-primary)]/10'
+                      }
+                    `}>
+                      <span
+                        className={`text-3xl md:text-4xl font-bold font-serif ${line.color} transition-all duration-500`}
+                        style={{
+                          textShadow: isOpen ? '0 0 25px currentColor' : '0 0 12px currentColor',
+                          filter: isOpen ? 'brightness(1.2)' : undefined,
+                        }}
+                      >
+                        {line.letter}
+                      </span>
+                    </div>
+
+                    {/* Content area */}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-white/90 font-medium text-lg md:text-xl leading-snug"
+                        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}
+                      >
+                        <span className={`font-bold ${line.color}`}>{line.letter}</span>
+                        {line.short}
+                      </p>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            key={`acrostic-content-${index}`}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{
+                              height: { type: 'spring', stiffness: 250, damping: 28 },
+                              opacity: { duration: 0.25, ease: 'easeInOut' },
+                            }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-4 pb-1">
+                              <div className="h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent mb-4" />
+                              <p className="text-slate-300/90 text-base md:text-lg leading-relaxed font-light">
+                                {line.long}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Chevron */}
+                    <motion.div
+                      animate={{ rotate: isOpen ? 180 : 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      className="shrink-0"
+                    >
+                      <ChevronDown
+                        className={`w-6 h-6 transition-colors duration-300 ${
+                          isOpen ? 'text-[var(--theme-primary)]' : 'text-white/30 group-hover:text-white/60'
+                        }`}
+                        style={isOpen ? { filter: 'drop-shadow(0 0 8px var(--theme-primary))' } : undefined}
+                      />
+                    </motion.div>
+                  </div>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </motion.section>
@@ -1158,44 +1228,77 @@ export default function Home() {
         className="py-24 px-4 z-10 relative"
       >
         <div className="max-w-3xl mx-auto">
-          <div className="relative rounded-[2.5rem] overflow-hidden border border-[var(--theme-primary)]/40 bg-white/[0.02] backdrop-blur-2xl shadow-[0_0_60px_rgba(var(--theme-primary-rgb),0.25),inset_0_0_30px_rgba(var(--theme-primary-rgb),0.1)] p-10 md:p-16 text-center space-y-8 transition-all duration-500 hover:border-[var(--theme-primary)]/60 hover:shadow-[0_0_80px_rgba(var(--theme-primary-rgb),0.4),inset_0_0_40px_rgba(var(--theme-primary-rgb),0.2)] group">
-            <Sparkles
-              className="w-12 h-12 text-[var(--theme-primary)] mx-auto"
-              style={{ filter: 'drop-shadow(0 0 15px var(--theme-primary))' }}
-            />
-            <h2
-              className="text-3xl md:text-4xl font-serif font-bold text-white"
-              style={{ textShadow: '0 0 20px var(--theme-primary)' }}
-            >
-              Para Minha Princesa
-            </h2>
+          <div className="relative rounded-[2.5rem] overflow-hidden border border-[var(--theme-primary)]/30 bg-white/[0.03] backdrop-blur-2xl shadow-[0_0_50px_rgba(var(--theme-primary-rgb),0.2),inset_0_1px_0_rgba(255,255,255,0.1)] p-8 md:p-14 text-center space-y-10 transition-all duration-500 hover:border-[var(--theme-primary)]/50 hover:shadow-[0_0_70px_rgba(var(--theme-primary-rgb),0.35),inset_0_1px_0_rgba(255,255,255,0.15)] group">
+            
+            {/* Top gradient glow line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--theme-primary)] to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-700" />
+            
+            <div className="space-y-4">
+              <motion.div 
+                animate={{ rotate: [-5, 5, -5] }}
+                transition={{ repeat: Infinity, duration: 5, ease: 'easeInOut' }}
+              >
+                <Sparkles
+                  className="w-12 h-12 text-[var(--theme-primary)] mx-auto opacity-90"
+                  style={{ filter: 'drop-shadow(0 0 15px var(--theme-primary))' }}
+                />
+              </motion.div>
+              
+              <h2
+                className="text-3xl md:text-4xl font-serif font-bold text-white tracking-wide"
+                style={{ textShadow: '0 0 20px var(--theme-primary)' }}
+              >
+                Para Minha Princesa
+              </h2>
+            </div>
 
-            <p
-              className="text-white leading-relaxed text-xl md:text-2xl italic font-light"
-              style={{ textShadow: '0 0 10px rgba(255,255,255,0.4)' }}
-            >
-              "{LOVE_MESSAGES[msgIndex]}"
-            </p>
+            <div className="min-h-[160px] md:min-h-[140px] flex items-center justify-center px-2">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={msgIndex}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  className="text-white/95 leading-relaxed md:leading-loose text-xl md:text-2xl italic font-light tracking-wide"
+                  style={{ textShadow: '0 2px 10px rgba(0,0,0,0.4)' }}
+                >
+                  "{LOVE_MESSAGES[msgIndex]}"
+                </motion.p>
+              </AnimatePresence>
+            </div>
 
-            <div className="flex flex-col gap-2 pt-6">
-              <p className="text-slate-300 text-base font-medium uppercase tracking-widest">
+            <div className="flex flex-col gap-2 pt-8 border-t border-[var(--theme-primary)]/20 relative">
+              <p className="text-slate-300/80 text-xs md:text-sm font-medium uppercase tracking-[0.3em]">
                 Com todo meu amor,
               </p>
               <p
-                className="text-white font-serif text-3xl font-bold"
-                style={{ textShadow: '0 0 20px var(--theme-primary), 0 0 40px var(--theme-primary)' }}
+                className="text-white text-3xl md:text-4xl mt-2"
+                style={{ 
+                  fontFamily: "'Dancing Script', cursive",
+                  textShadow: '0 0 15px var(--theme-primary), 0 0 30px var(--theme-primary)' 
+                }}
               >
                 {partner1.name} 💕
               </p>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setMsgIndex((i) => (i + 1) % LOVE_MESSAGES.length)}
-              className="mt-8 inline-flex items-center justify-center gap-3 text-sm text-white font-bold uppercase tracking-wider px-8 py-4 rounded-full bg-[var(--theme-primary)]/20 hover:bg-[var(--theme-primary)]/40 border border-[var(--theme-primary)]/50 hover:border-[var(--theme-primary)] hover:shadow-[0_0_30px_rgba(var(--theme-primary-rgb),0.6)] transition-all duration-300"
+              className="mt-2 inline-flex items-center justify-center gap-3 text-sm text-white font-bold uppercase tracking-wider px-8 py-4 rounded-full bg-[var(--theme-primary)]/10 hover:bg-[var(--theme-primary)]/25 border border-[var(--theme-primary)]/40 hover:border-[var(--theme-primary)]/80 hover:shadow-[0_0_35px_rgba(var(--theme-primary-rgb),0.5)] transition-colors duration-300"
               style={{ touchAction: 'manipulation' }}
             >
-              <RefreshCw className="w-5 h-5" /> Nova mensagem
-            </button>
+              <motion.div
+                initial={false}
+                animate={{ rotate: msgIndex * 180 }}
+                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              >
+                <RefreshCw className="w-5 h-5" />
+              </motion.div>
+              Nova mensagem
+            </motion.button>
           </div>
         </div>
       </motion.section>
