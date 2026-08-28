@@ -8,16 +8,25 @@ interface CloudinaryImageProps {
   className?: string;
   width?: number;
   height?: number;
+  style?: React.CSSProperties;
+  onLoad?: () => void;
 }
 
 export function CloudinaryImage({
   publicId,
   alt = 'Imagem do Álbum',
   className,
+  style,
+  onLoad,
 }: CloudinaryImageProps) {
   const [loaded, setLoaded] = useState(false);
 
   if (!publicId) return null;
+
+  const handleLoad = () => {
+    setLoaded(true);
+    if (onLoad) onLoad();
+  };
 
   // Se for URL completa (fallback/legado), usa img padrão
   if (publicId.startsWith('http://') || publicId.startsWith('https://')) {
@@ -26,7 +35,8 @@ export function CloudinaryImage({
         src={publicId}
         alt={alt}
         className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
-        onLoad={() => setLoaded(true)}
+        style={style}
+        onLoad={handleLoad}
       />
     );
   }
@@ -41,7 +51,8 @@ export function CloudinaryImage({
       src={url}
       alt={alt}
       className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
-      onLoad={() => setLoaded(true)}
+      style={style}
+      onLoad={handleLoad}
     />
   );
 }
