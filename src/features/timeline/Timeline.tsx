@@ -304,36 +304,32 @@ export function Timeline({ events }: TimelineProps) {
           />
 
           {/* === O COMETA VERDADEIRO (GRADIENTE NO PERCURSO) === */}
-          {/* Renderiza 45 pequenos círculos sobrepostos formando a fita contínua. 
-              Cada círculo recebe uma cor interpolada nativa e viaja com um delay. */}
-          {Array.from({ length: 45 }).map((_, i) => {
+          {/* Renderiza 90 pequenos círculos sobrepostos formando uma fita muito mais longa. */}
+          {Array.from({ length: 90 }).map((_, i) => {
             const isHead = i === 0;
-            const progress = i / 44; // de 0 (cabeça) a 1 (ponta da cauda)
+            const progress = i / 89; // de 0 (cabeça) a 1 (ponta da cauda)
             
-            // Raio decrescente para afinar a cauda
-            const r = isHead ? 2.2 : 2.0 - (progress * 1.2);
+            // Raio decrescente para afinar a cauda de forma progressiva
+            const r = isHead ? 2.8 : 2.4 - (progress * 2.0);
             
             // A opacidade cai de 1 até 0 na cauda
-            const opacity = 1 - Math.pow(progress, 1.5);
+            const opacity = Math.max(0, 1 - Math.pow(progress, 1.2));
             
             // Mistura de cor usando color-mix: 
-            // Cabeça (0%) = 100% theme-secondary (Rosa)
-            // Meio (50%) = Mistura (Violeta)
-            // Cauda (100%) = 100% theme-primary (Roxo)
             const mixPercent = Math.max(0, 100 - (progress * 100)).toFixed(1);
             const fill = `color-mix(in srgb, var(--theme-secondary) ${mixPercent}%, var(--theme-primary))`;
             
-            // Atraso de tempo negativo espalha os círculos ao longo do caminho
-            const delay = `-${(i * 0.015).toFixed(3)}s`;
+            // Atraso esticado para fazer a fita ficar bem longa (cobre quase metade do percurso)
+            const delay = `-${(i * 0.018).toFixed(3)}s`;
 
             return (
               <circle 
                 key={i} 
-                r={r} 
+                r={Math.max(0, r)} 
                 fill={fill}
                 opacity={opacity}
                 style={{ 
-                  filter: isHead ? 'drop-shadow(0 0 4px var(--theme-secondary))' : 'drop-shadow(0 0 2px var(--theme-primary))' 
+                  filter: isHead ? 'drop-shadow(0 0 5px var(--theme-secondary))' : 'drop-shadow(0 0 2px var(--theme-primary))' 
                 }}
               >
                 <animateMotion 
