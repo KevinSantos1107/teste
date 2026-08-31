@@ -12,25 +12,35 @@ interface SiteConfigState {
   updateConfig: (siteId: string, updates: Partial<SiteConfig>) => Promise<void>;
 }
 
-function hexToRgb(hex: string) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-    : '255, 0, 85';
-}
+const THEME_CACHE_KEY = 're_theme_cache';
 
+
+// Aplica apenas variáveis estruturais de UI — NÃO toca em primary/secondary/accent
+// As cores do tema são responsabilidade exclusiva do useThemeStore
 function applyThemeVars(colors: SiteConfig['theme']['colors']) {
   const root = document.documentElement;
-  root.style.setProperty('--theme-primary', colors.primary);
-  root.style.setProperty('--theme-primary-rgb', hexToRgb(colors.primary));
-  root.style.setProperty('--theme-secondary', colors.secondary);
-  root.style.setProperty('--theme-bg', colors.bg);
-  root.style.setProperty('--theme-text', colors.text);
-  root.style.setProperty('--theme-text-secondary', colors.textSecondary);
-  root.style.setProperty('--theme-accent', colors.accent);
-  root.style.setProperty('--theme-card-bg', colors.cardBg);
-  root.style.setProperty('--theme-card-border', colors.cardBorder);
+  root.style.setProperty('--theme-bg',             colors.bg            || '#0d0d14');
+  root.style.setProperty('--theme-text',           colors.text          || '#f1f0fb');
+  root.style.setProperty('--theme-text-secondary', colors.textSecondary || '#a9a9c8');
+  root.style.setProperty('--theme-card-bg',        colors.cardBg        || '#1a1a2e');
+  root.style.setProperty('--theme-card-border',    colors.cardBorder    || '#2d2d4a');
 }
+
+function applyVarsFromObj(colors: SiteConfig['theme']['colors']) {
+  const root = document.documentElement;
+  // Apenas variáveis estruturais (mesmo princípio)
+  root.style.setProperty('--theme-bg',             colors.bg            || '#0d0d14');
+  root.style.setProperty('--theme-text',           colors.text          || '#f1f0fb');
+  root.style.setProperty('--theme-text-secondary', colors.textSecondary || '#a9a9c8');
+  root.style.setProperty('--theme-card-bg',        colors.cardBg        || '#1a1a2e');
+  root.style.setProperty('--theme-card-border',    colors.cardBorder    || '#2d2d4a');
+}
+
+// Restaura apenas as vars estruturais do cache — as cores do tema vêm do useThemeStore
+try {
+  const cached = localStorage.getItem(THEME_CACHE_KEY);
+  if (cached) applyVarsFromObj(JSON.parse(cached) as SiteConfig['theme']['colors']);
+} catch (e) {}
 
 export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
   config: null,
@@ -40,7 +50,6 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
   loadConfig: async (siteId: string) => {
     set({ isLoading: true, error: null });
     try {
-      // Dev mock: VITE_USE_MOCK_DATA=true bypasses Firestore
       if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
         setTimeout(() => {
           applyThemeVars(meuSiteConfig.theme.colors);
@@ -48,20 +57,14 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
         }, 500);
         return;
       }
-
-      // Real Firestore read
       const docRef = doc(db, 'sites', siteId);
       const docSnap = await getDoc(docRef);
-
       if (docSnap.exists()) {
         const data = docSnap.data() as SiteConfig;
-        if (data.theme?.colors) {
-          applyThemeVars(data.theme.colors);
-        }
+        if (data.theme?.colors) applyThemeVars(data.theme.colors);
         set({ config: data, isLoading: false });
       } else {
-        // Fallback to local mock when Firestore doc doesn't exist yet
-        console.warn(`Site '${siteId}' not found in Firestore — using local mock.`);
+        console.warn(`Site '${siteId}' nao encontrado no Firestore - usando mock local.`);
         applyThemeVars(meuSiteConfig.theme.colors);
         set({ config: meuSiteConfig, isLoading: false });
       }
@@ -73,8 +76,6 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
   updateConfig: async (siteId: string, updates: Partial<SiteConfig>) => {
     const { config } = get();
     if (!config) return;
-
-    // Real Firestore write (skipped in mock mode)
     if (import.meta.env.VITE_USE_MOCK_DATA !== 'true') {
       try {
         const { updateDoc } = await import('firebase/firestore');
@@ -82,17 +83,11 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
         await updateDoc(docRef, updates as Record<string, unknown>);
       } catch (err: any) {
         console.error('Erro ao atualizar Firestore:', err);
-        throw new Error('Falha ao salvar as configurações.');
+        throw new Error('Falha ao salvar as configuracoes.');
       }
     }
-
     const newConfig = { ...config, ...updates };
-
-    // Re-inject CSS vars if theme colors changed
-    if (updates.theme?.colors) {
-      applyThemeVars(updates.theme.colors);
-    }
-
+    if (updates.theme?.colors) applyThemeVars(updates.theme.colors);
     set({ config: newConfig });
   },
 }));
