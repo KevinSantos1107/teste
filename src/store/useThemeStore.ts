@@ -65,6 +65,9 @@ function restoreTheme(): keyof typeof THEMES {
       return saved;
     }
   } catch (e) {}
+  
+  // Se não tem tema salvo, aplica o meteors como padrão
+  applyTheme('meteors');
   return 'meteors';
 }
 

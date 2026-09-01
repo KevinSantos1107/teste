@@ -80,6 +80,12 @@ const KEY_BG: Record<string, string> = {
     'bg-[rgba(var(--theme-primary-rgb),0.05)] text-white/80 border-[rgba(var(--theme-primary-rgb),0.2)] hover:bg-[rgba(var(--theme-primary-rgb),0.15)] hover:border-[var(--theme-primary)] hover:text-white active:scale-[0.92] transition-all',
 };
 
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+  </svg>
+);
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function normalizeWord(w: string): string {
   return w
@@ -503,7 +509,7 @@ export function WordGame() {
 
   const handleKey = useCallback(
     (key: string) => {
-      if (gameOver || revealingRow >= 0) return;
+      if (gameOver || revealingRow >= 0 || currentInput === 'ANIMATING') return;
 
       let chars = currentInput.split('');
       while (chars.length < wordLength) chars.push(' ');
@@ -549,9 +555,10 @@ export function WordGame() {
           .map((letter, i) => ({ letter, state: states[i] }));
         const newGuesses = [...guesses, newRow];
         setGuesses(newGuesses);
-        setCurrentInput('');
+
+        // Bloqueia o input durante a animação — a linha seguinte só ativa depois
+        setCurrentInput('ANIMATING');
         setLastTypedIdx(-1);
-        setCursorPos(0);
 
         const rowIdx = newGuesses.length - 1;
         setRevealingRow(rowIdx);
@@ -560,8 +567,10 @@ export function WordGame() {
         for (let i = 0; i < wordLength; i++) {
           setTimeout(() => {
             setRevealProgress(i + 1);
-          }, i * 180 + 250); // 250ms = exatamente quando a letra está em -90deg (invisível) na animação wg-flip
+          }, i * 180 + 250);
         }
+
+        const animationEnd = (wordLength - 1) * 180 + 500 + 100;
 
         setTimeout(() => {
           setRevealingRow(-1);
@@ -581,10 +590,12 @@ export function WordGame() {
             setStats(newStats);
             saveStats(newStats);
             setBounceRow(rowIdx);
+            
             setTimeout(() => {
               setWon(true);
               setGameOver(true);
               clearActiveGame();
+              setCurrentInput('');
             }, 600);
           } else if (newGuesses.length >= 6) {
             const newStats: GameStats = {
@@ -597,8 +608,13 @@ export function WordGame() {
             setWon(false);
             setGameOver(true);
             clearActiveGame();
+            setCurrentInput('');
+          } else {
+            // Jogo continua — só agora ativa a próxima linha
+            setCurrentInput('');
+            setCursorPos(0);
           }
-        }, (wordLength - 1) * 180 + 500 + 100); // Aguarda o delay da última letra + 500ms de animação + 100ms de folga
+        }, animationEnd);
         return;
       }
 
@@ -635,16 +651,41 @@ export function WordGame() {
 
   // Share logic
   const shareOnWhatsApp = () => {
-    const siteUrl = window.location.href.split('#')[0].split('?')[0];
+    // Domínio dinâmico: pega o domínio exato em que o usuário está acessando (sem o https://)
+    const siteHost = window.location.host;
+
+    // Codificações exatas dos Emojis para URL (evita qualquer problema de enconding do arquivo)
+    const green = '%F0%9F%9F%A9';
+    const yellow = '%F0%9F%9F%A8';
+    const black = '%E2%AC%9B';
+    const heart = '%E2%9D%A4%EF%B8%8F';
+    const broken = '%F0%9F%92%94';
+    const game = '%F0%9F%8E%AE';
+    const link = '%F0%9F%94%97';
+
+    // Monta a grade com os códigos diretamente
     const grid = guesses
       .map((row) =>
-        row
-          .map((c) => (c.state === 'correct' ? '🟩' : c.state === 'present' ? '🟨' : '⬛'))
-          .join('')
+        row.map((c) => (c.state === 'correct' ? green : c.state === 'present' ? yellow : black)).join('')
       )
-      .join('\n');
-    const msg = `🎮 Jogo de Palavras\n\n"❤️ Acertei em ${guesses.length} tentativa${guesses.length > 1 ? 's' : ''}!"\n\n${grid}\n\nJogue também acessando:\n🔗 ${siteUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+      .join('%0A'); // %0A = quebra de linha
+
+    const resultLine = won
+      ? `%22${heart} ${encodeURIComponent('Acertei em ' + guesses.length + ' tentativa' + (guesses.length > 1 ? 's' : '') + '!')}%22`
+      : `%22${broken} ${encodeURIComponent('Não consegui dessa vez... a palavra era ' + currentWord)}%22`;
+
+    const encodedMsg = [
+      `${game} ${encodeURIComponent('Jogo de Palavras')}`,
+      '',
+      resultLine,
+      '',
+      grid,
+      '',
+      encodeURIComponent('Jogue também acessando:'),
+      `${link} ${siteHost}`
+    ].join('%0A');
+
+    window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
   };
 
   // ── Build keyboard state ───────────────────────────────────────────────────
@@ -666,9 +707,11 @@ export function WordGame() {
     if (i < guesses.length) {
       rows.push({ cells: guesses[i], isActive: false });
     } else if (i === guesses.length && !gameOver) {
+      const isAnimating = currentInput === 'ANIMATING';
       const cells: LetterCell[] = Array(wordLength)
         .fill(null)
         .map((_, j) => {
+          if (isAnimating) return { letter: '', state: 'empty' as LetterState };
           let st: LetterState = 'empty';
           if (j === cursorPos) st = 'active';
           else if (currentInput[j] && currentInput[j] !== ' ') st = 'typed';
@@ -678,7 +721,7 @@ export function WordGame() {
             state: st,
           };
         });
-      rows.push({ cells, isActive: true });
+      rows.push({ cells, isActive: !isAnimating });
     } else {
       rows.push({
         cells: Array(wordLength).fill({ letter: '', state: 'empty' as LetterState }),
@@ -793,7 +836,7 @@ export function WordGame() {
             className={cn(
               'flex gap-[5px] transition-all duration-300 relative',
               shake && ri === guesses.length && 'wg-shake',
-              !row.isActive && ri > guesses.length && 'opacity-20 scale-[0.97]'
+              !row.isActive && ri >= guesses.length && 'opacity-20 scale-[0.97]'
             )}
           >
             {row.cells.map((cell, ci) => {
@@ -930,9 +973,9 @@ export function WordGame() {
                       'border rounded-[7px] font-semibold uppercase select-none flex items-center justify-center transition-all duration-150',
                       KEY_BG[state || 'default']
                     )}
-                    style={{ flex: 1, height: 'clamp(34px, 9.5vw, 46px)' }}
+                    style={{ flex: 1, height: 'clamp(38px, 10.5vw, 50px)' }}
                   >
-                    <span className="text-[11px]">{key}</span>
+                    <span className="text-[12px]">{key}</span>
                   </button>
                 );
               })}
@@ -1048,7 +1091,7 @@ export function WordGame() {
                       onClick={shareOnWhatsApp}
                       className="flex-1 py-3.5 bg-[var(--theme-card-bg)] border border-[var(--theme-card-border)] hover:border-[var(--theme-primary)] text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
                     >
-                      <MessageCircle className="w-4 h-4" /> Enviar
+                      <WhatsAppIcon className="w-4 h-4" /> Enviar
                     </button>
                   </motion.div>
                 </>
