@@ -7,7 +7,6 @@ import {
   Heart,
   HeartCrack,
   Play,
-  MessageCircle,
   Delete,
   Check,
   Trophy,
@@ -786,19 +785,6 @@ export function WordGame() {
           "{currentQuestion}"
         </p>
       </div>
-
-      {/* ── 🛠️ DEBUG TEMPORÁRIO — REMOVER APÓS TESTE ─────────────────────────── */}
-      <div
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold tracking-widest"
-        style={{
-          background: 'rgba(255,0,0,0.12)',
-          border: '1px dashed rgba(255,0,0,0.5)',
-          color: '#ff6b6b',
-        }}
-      >
-        🔑 <span style={{ color: '#fff', letterSpacing: '0.25em' }}>{currentWord}</span>
-      </div>
-      {/* ── /DEBUG ─────────────────────────────────────────────────────────── */}
 
       {/* ── Toast ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
