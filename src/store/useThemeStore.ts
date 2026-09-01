@@ -3,6 +3,7 @@ import { create } from 'zustand';
 interface ThemeState {
   activeTheme: 'meteors' | 'hearts' | 'aurora' | 'snow';
   toggleTheme: () => void;
+  setTheme: (theme: 'meteors' | 'hearts' | 'aurora' | 'snow') => void;
 }
 
 const THEMES = {
@@ -81,5 +82,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     const nextTheme = THEME_ORDER[(idx + 1) % THEME_ORDER.length];
     applyTheme(nextTheme);
     set({ activeTheme: nextTheme });
+  },
+  setTheme: (theme) => {
+    applyTheme(theme);
+    set({ activeTheme: theme });
   },
 }));

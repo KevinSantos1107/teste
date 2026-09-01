@@ -305,6 +305,9 @@ export function WordGame() {
 
   // Stats & Streak
   const [stats, setStats] = useState<GameStats>(loadStats);
+  // Ref to avoid stale closure in handleKey setTimeout callbacks
+  const statsRef = useRef<GameStats>(stats);
+  useEffect(() => { statsRef.current = stats; }, [stats]);
 
   // ── Load Dictionary ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -577,13 +580,14 @@ export function WordGame() {
 
           if (inputToValidate === currentWord) {
             const attemptIdx = newGuesses.length - 1;
-            const newWinsByAttempt = [...(stats.winsByAttempt || [0,0,0,0,0,0])];
+            const latestStats = statsRef.current;
+            const newWinsByAttempt = [...(latestStats.winsByAttempt || [0,0,0,0,0,0])];
             newWinsByAttempt[attemptIdx] = (newWinsByAttempt[attemptIdx] || 0) + 1;
             const newStats: GameStats = {
-              gamesPlayed: stats.gamesPlayed + 1,
-              wins: stats.wins + 1,
-              currentStreak: stats.currentStreak + 1,
-              bestStreak: Math.max(stats.bestStreak, stats.currentStreak + 1),
+              gamesPlayed: latestStats.gamesPlayed + 1,
+              wins: latestStats.wins + 1,
+              currentStreak: latestStats.currentStreak + 1,
+              bestStreak: Math.max(latestStats.bestStreak, latestStats.currentStreak + 1),
               winsByAttempt: newWinsByAttempt,
             };
             setStats(newStats);
@@ -597,9 +601,10 @@ export function WordGame() {
               setCurrentInput('');
             }, 600);
           } else if (newGuesses.length >= 6) {
+            const latestStats = statsRef.current;
             const newStats: GameStats = {
-              ...stats,
-              gamesPlayed: stats.gamesPlayed + 1,
+              ...latestStats,
+              gamesPlayed: latestStats.gamesPlayed + 1,
               currentStreak: 0,
             };
             setStats(newStats);
@@ -627,7 +632,7 @@ export function WordGame() {
         }
       }
     },
-    [gameOver, revealingRow, currentInput, wordLength, guesses, currentWord, stats, isValidWord, cursorPos]
+    [gameOver, revealingRow, currentInput, wordLength, guesses, currentWord, isValidWord, cursorPos]
   );
 
   // Physical keyboard
@@ -754,7 +759,7 @@ export function WordGame() {
             className="w-1.5 h-1.5 rounded-full animate-pulse"
             style={{ backgroundColor: 'var(--theme-primary)' }}
           />
-          <span className="text-xs uppercase tracking-widest font-semibold text-white/40">Palavras</span>
+          <span className="text-xs uppercase tracking-wide font-semibold text-white/40">Palavras</span>
         </div>
 
         {/* Streak / Stats button */}

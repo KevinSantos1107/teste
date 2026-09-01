@@ -8,7 +8,7 @@ import { X, Clock } from 'lucide-react';
 import { Spinner } from '../../shared/ui/Spinner';
 
 // ─── Modal via Portal (bypasses overflow-x-hidden stacking context) ────────────
-function TimelineModalContent({
+export function TimelineModalContent({
   events,
   loading,
   onClose,

@@ -7,10 +7,6 @@ import { Spinner } from '../shared/ui/Spinner';
 
 // Lazy load pages
 const Home = lazy(() => import('../pages/Home'));
-const AlbumPage = lazy(() => import('../pages/AlbumPage'));
-const TimelinePage = lazy(() => import('../pages/TimelinePage'));
-const MapPage = lazy(() => import('../pages/MapPage'));
-const GamesPage = lazy(() => import('../pages/GamesPage'));
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 
 // Lazy load admin pages
@@ -46,38 +42,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <Home />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'album',
-        element: (
-          <SuspenseWrapper>
-            <AlbumPage />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'timeline',
-        element: (
-          <SuspenseWrapper>
-            <TimelinePage />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'mapa',
-        element: (
-          <SuspenseWrapper>
-            <MapPage />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'jogos',
-        element: (
-          <SuspenseWrapper>
-            <GamesPage />
           </SuspenseWrapper>
         ),
       },

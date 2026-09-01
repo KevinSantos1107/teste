@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Heart, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
+import { Heart, ChevronDown, RefreshCw, Sparkles, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteConfigStore } from '../store/siteConfigStore';
 import { useThemeStore } from '../store/useThemeStore';
 import { PlaylistTabs } from '../features/playlist/PlaylistTabs';
 import { AlbumCarousel } from '../features/album/AlbumCarousel';
-import { TimelineModal } from '../features/timeline/TimelineModal';
+import { useModalsStore } from '../store/useModalsStore';
 import {
   differenceInSeconds,
   differenceInMinutes,
@@ -724,6 +724,7 @@ function SectionLabel({ emoji, text }: { emoji: string; text: string }) {
 export default function Home() {
   const { config } = useSiteConfigStore();
   const { activeTheme } = useThemeStore();
+  const { openModal } = useModalsStore();
   const [time, setTime] = useState<TimeLeft | null>(null);
   const [msgIndex, setMsgIndex] = useState(0);
   const [openAcrostic, setOpenAcrostic] = useState<number | null>(null);
@@ -847,7 +848,7 @@ export default function Home() {
       )}
 
       {/* ══════════════════════════ HERO ══════════════════════════ */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-4">
+      <section id="section-hero" className="relative min-h-screen flex flex-col items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -949,6 +950,7 @@ export default function Home() {
         viewport={{ once: true, margin: '-100px' }}
         variants={fadeUpVariant}
         className="relative py-24 px-4 z-10"
+        id="section-carta"
       >
         <div className="max-w-2xl mx-auto">
           <div className="text-center space-y-4 mb-12">
@@ -1020,6 +1022,7 @@ export default function Home() {
         viewport={{ once: true, margin: '-100px' }}
         variants={fadeUpVariant}
         className="relative py-24 px-4 overflow-hidden z-10"
+        id="section-contador"
       >
         <div className="max-w-3xl mx-auto text-center space-y-12">
           <div className="space-y-4">
@@ -1054,6 +1057,7 @@ export default function Home() {
           viewport={{ once: true, margin: '-100px' }}
           variants={fadeUpVariant}
           className="py-24 overflow-hidden relative z-10"
+          id="section-musica"
         >
           <div className="max-w-3xl mx-auto text-center space-y-4 px-4 mb-12">
             <SectionLabel emoji="🎵" text="Nossa Trilha Sonora" />
@@ -1078,6 +1082,7 @@ export default function Home() {
           viewport={{ once: true, margin: '-100px' }}
           variants={fadeUpVariant}
           className="py-24 overflow-hidden z-10 relative"
+          id="section-albuns"
         >
           <div className="max-w-3xl mx-auto text-center space-y-4 px-4 mb-12">
             <SectionLabel emoji="📸" text="Nossas Memórias" />
@@ -1101,6 +1106,7 @@ export default function Home() {
         viewport={{ once: true, margin: '-100px' }}
         variants={fadeUpVariant}
         className="py-24 px-4 z-10 relative"
+        id="section-acrostico"
       >
         <div className="max-w-3xl mx-auto space-y-12">
           <div className="text-center space-y-4">
@@ -1226,6 +1232,7 @@ export default function Home() {
         viewport={{ once: true, margin: '-100px' }}
         variants={fadeUpVariant}
         className="py-24 px-4 z-10 relative"
+        id="section-mensagens"
       >
         <div className="max-w-3xl mx-auto">
           <div className="relative rounded-[2.5rem] overflow-hidden border border-[var(--theme-primary)]/30 bg-white/[0.03] backdrop-blur-2xl shadow-[0_0_50px_rgba(var(--theme-primary-rgb),0.2),inset_0_1px_0_rgba(255,255,255,0.1)] p-8 md:p-14 text-center space-y-10 transition-all duration-500 hover:border-[var(--theme-primary)]/50 hover:shadow-[0_0_70px_rgba(var(--theme-primary-rgb),0.35),inset_0_1px_0_rgba(255,255,255,0.15)] group">
@@ -1311,6 +1318,7 @@ export default function Home() {
           viewport={{ once: true, margin: '-100px' }}
           variants={fadeUpVariant}
           className="py-24 px-4 text-center space-y-8 z-10 relative"
+          id="section-historia"
         >
           <div className="max-w-3xl mx-auto space-y-4">
             <SectionLabel emoji="📖" text="Nossa História" />
@@ -1322,7 +1330,37 @@ export default function Home() {
             </h2>
           </div>
           <div className="flex justify-center mt-12 drop-shadow-[0_0_40px_rgba(var(--theme-primary-rgb),0.5)] hover:drop-shadow-[0_0_60px_rgba(var(--theme-primary-rgb),0.8)] transition-all duration-500 scale-110">
-            <TimelineModal />
+            <button
+              onClick={() => openModal('timeline')}
+              className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl border transition-all duration-300 hover:scale-105"
+              style={{
+                borderColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.3)',
+                backgroundColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.05)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.1)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.05)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(var(--theme-primary-rgb, 157,78,221), 0.3)';
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                style={{ backgroundColor: 'rgba(var(--theme-primary-rgb, 157,78,221), 0.1)' }}
+              >
+                <Clock className="w-5 h-5" style={{ color: 'var(--theme-secondary, #e0aaff)' }} />
+              </div>
+              <div className="text-left">
+                <p className="text-white font-bold text-base">Nossa História</p>
+                <p className="text-slate-400 text-sm">Relembra nossos momentos juntos</p>
+              </div>
+              <div
+                className="w-2 h-2 rounded-full animate-pulse ml-2"
+                style={{ backgroundColor: 'var(--theme-primary, #9d4edd)' }}
+              />
+            </button>
           </div>
         </motion.section>
       )}

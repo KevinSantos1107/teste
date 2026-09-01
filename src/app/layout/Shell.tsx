@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SplashScreen } from '../../features/core/SplashScreen';
-import { FloatingNav } from '../../features/core/FloatingNav';
+import { HamburgerMenu } from '../../features/core/HamburgerMenu';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { RetroShell } from '../../features/retrospective-v2/components/RetroShell';
 import { AudioEngine } from '../../features/player/AudioEngine';
+import { GlobalModals } from '../../features/modals/GlobalModals';
 
 export function Shell() {
   const [showSplash, setShowSplash] = useState(true);
@@ -21,6 +22,9 @@ export function Shell() {
         <div className="animate-in fade-in duration-1000 flex flex-col min-h-screen">
           <RetroShell />
 
+          {/* Menu Hambúrguer Global */}
+          <HamburgerMenu />
+
           <main className="flex-1">
             <Outlet />
           </main>
@@ -28,8 +32,8 @@ export function Shell() {
           {/* Motor de áudio global */}
           <AudioEngine />
 
-          {/* Navegação flutuante radial */}
-          <FloatingNav />
+          {/* Modais Globais (Interativos) */}
+          <GlobalModals />
         </div>
       )}
     </div>
