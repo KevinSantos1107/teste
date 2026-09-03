@@ -556,59 +556,80 @@ export function StarMap() {
 
         // Base scale for the constellation
         const baseW = Math.min(w, 1000);
-        const scale = baseW * (isMobile ? 0.22 : 0.14) * (0.8 + Math.random() * 0.4);
+        // Reduced mobile scale so 5 can actually fit on a narrow screen
+        const scale = baseW * (isMobile ? 0.16 : 0.14) * (0.8 + Math.random() * 0.4);
         
         // Approximate radius of the constellation bounding box
-        const reqRadius = scale * 0.6 + 25; // +25px padding for labels and glow
+        const reqRadius = scale * 0.6 + 20;
 
         let bestPos: { cx: number; cy: number } | null = null;
         let bestScore = -Infinity;
 
-        // Try random positions, scoring them based on distance from everything else
-        for (let attempt = 0; attempt < 2000; attempt++) {
-          const cx = Math.random() * w;
-          const cy = Math.random() * h;
+        const constSize = reqRadius * 2;
+        const rectIntersect = (r1x: number, r1y: number, r1w: number, r1h: number, 
+                               r2x: number, r2y: number, r2w: number, r2h: number) => {
+          return !(r2x > r1x + r1w || r2x + r2w < r1x || r2y > r1y + r1h || r2y + r2h < r1y);
+        };
 
-          // 1. Boundary check
-          if (cx < reqRadius || cx > w - reqRadius || cy < reqRadius || cy > h - (reqRadius + 20)) continue;
+        const titleBoxW = isMobile ? 320 : 500;
+        const titleBoxH = isMobile ? 180 : 150;
+        const titleBoxX = (w - titleBoxW) / 2;
 
-          // 2. Title area check (top center)
-          if (cy < h * 0.16 && cx > w * 0.25 && cx < w * 0.75) continue;
+        const quoteBoxW = isMobile ? 360 : 650;
+        const quoteBoxH = isMobile ? 130 : 110;
+        const quoteBoxX = (w - quoteBoxW) / 2;
+        const quoteBoxY = h - quoteBoxH;
 
-          // 3. Quote area check (bottom center)
-          if (cy > h * 0.82 && cx > w * 0.20 && cx < w * 0.80) continue;
+        // Try 3 passes with decreasing strictness to guarantee it finds a spot
+        for (let pass = 0; pass < 3; pass++) {
+          const padConst = pass === 0 ? (isMobile ? 10 : 20) : (pass === 1 ? 0 : -20);
+          const padCurve = pass === 0 ? (isMobile ? 10 : 20) : (pass === 1 ? 0 : -15);
+          const padCenter = pass === 0 ? (isMobile ? w * 0.25 : w * 0.15) : (isMobile ? w * 0.15 : w * 0.10);
 
-          // 4. Center Encounter check
-          const distToCenter = Math.hypot(cx - encX, cy - encY);
-          if (distToCenter < (isMobile ? w * 0.25 : w * 0.15)) continue;
+          for (let attempt = 0; attempt < 800; attempt++) {
+            const cx = Math.random() * w;
+            const cy = Math.random() * h;
+            const constLeft = cx - reqRadius;
+            const constTop = cy - reqRadius;
 
-          // 5. Curve collision check
-          let distToCurve = Infinity;
-          for (const pt of curvePts) {
-            const d = Math.hypot(cx - pt.x, cy - pt.y);
-            if (d < distToCurve) distToCurve = d;
+            // 1. BOUNDARY (HARD)
+            if (cx < reqRadius || cx > w - reqRadius || cy < reqRadius || cy > h - (reqRadius + 20)) continue;
+
+            // 2. TEXT BOXES (HARD)
+            if (rectIntersect(titleBoxX, 0, titleBoxW, titleBoxH, constLeft, constTop, constSize, constSize)) continue;
+            if (rectIntersect(quoteBoxX, quoteBoxY, quoteBoxW, quoteBoxH, constLeft, constTop, constSize, constSize)) continue;
+
+            // 3. CENTER (RELAXABLE)
+            const distToCenter = Math.hypot(cx - encX, cy - encY);
+            if (distToCenter < padCenter) continue;
+
+            // 4. CURVE (RELAXABLE)
+            let distToCurve = Infinity;
+            for (const pt of curvePts) {
+              const d = Math.hypot(cx - pt.x, cy - pt.y);
+              if (d < distToCurve) distToCurve = d;
+            }
+            if (distToCurve < reqRadius + padCurve) continue;
+
+            // 5. OTHER CONSTELLATIONS (RELAXABLE)
+            let distToOthers = Infinity;
+            for (const other of rendered) {
+              // @ts-ignore
+              const d = Math.hypot(cx - other.cx, cy - other.cy);
+              // @ts-ignore
+              if (d < distToOthers) distToOthers = d - other.reqRadius;
+            }
+            if (distToOthers < reqRadius + padConst) continue;
+
+            // Score position
+            const score = Math.min(distToCurve, distToOthers !== Infinity ? distToOthers : w);
+            if (score > bestScore) {
+              bestScore = score;
+              bestPos = { cx, cy };
+            }
           }
-          if (distToCurve < reqRadius + (isMobile ? 10 : 20)) continue;
 
-          // 6. Other constellations check
-          let distToOthers = Infinity;
-          for (const other of rendered) {
-            // @ts-ignore (we know other has reqRadius attached temporarily)
-            const d = Math.hypot(cx - other.cx, cy - other.cy);
-            // @ts-ignore
-            if (d < distToOthers) distToOthers = d - other.reqRadius;
-          }
-          
-          if (distToOthers < reqRadius + (isMobile ? 10 : 20)) continue; // Overlap check
-
-          // Score: prioritize positions that are furthest from the curve and other constellations, 
-          // but also slightly prefer filling empty spaces
-          const score = Math.min(distToCurve, distToOthers !== Infinity ? distToOthers : w);
-          
-          if (score > bestScore) {
-            bestScore = score;
-            bestPos = { cx, cy };
-          }
+          if (bestPos) break; // found a spot in this pass!
         }
 
         // If we found a valid position (even if we had to relax, but loop guarantees basic constraints if bestPos != null)
