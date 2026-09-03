@@ -1,4 +1,4 @@
-import { SnakeGame } from '../games/SnakeGame';
+import { SnakeGame } from '../games/snake/SnakeGame';
 import { FullScreenOverlay } from '../../shared/ui/FullScreenOverlay';
 import { Worm } from 'lucide-react';
 
