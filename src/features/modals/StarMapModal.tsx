@@ -11,7 +11,7 @@ export function StarMapModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
       subtitle="Como estava o céu no nosso momento mais especial"
       icon={<Stars className="w-6 h-6" />}
     >
-      <div className="max-w-5xl mx-auto h-full flex flex-col p-4 md:p-8">
+      <div className="w-full min-h-full flex flex-col p-0">
         <StarMap />
       </div>
     </FullScreenOverlay>

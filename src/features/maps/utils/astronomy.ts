@@ -134,7 +134,6 @@ export function calculateVisibleConstellations(
 
     return { ...c, maxAltitude, distFromMeridian, score };
   })
-  .filter(c => c.maxAltitude > 10) // Só considerar constelações que sobem razoavelmente
   .sort((a, b) => a.score - b.score); // Classificar pelas mais bem posicionadas (menor score)
 
   // Retornar os top `maxCount` nomes

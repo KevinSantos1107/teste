@@ -528,14 +528,15 @@ export function StarMap() {
       const encY = h * 0.52;
       
       // Calculate curve points for collision detection
-      const startX = w * 0.08;
-      const startY = h * 0.88;
-      const endX   = w * 0.87;
-      const endY   = h * 0.18;
-      const cp1x   = encX - w * 0.12;
-      const cp1y   = encY + h * 0.12;
-      const cp2x   = encX + w * 0.10;
-      const cp2y   = encY - h * 0.12;
+      const isMobile = w < 768;
+      const startX = isMobile ? w * 0.20 : w * 0.08;
+      const startY = isMobile ? h * 0.78 : h * 0.88;
+      const endX   = isMobile ? w * 0.80 : w * 0.87;
+      const endY   = isMobile ? h * 0.28 : h * 0.18;
+      const cp1x   = isMobile ? encX - w * 0.25 : encX - w * 0.12;
+      const cp1y   = isMobile ? encY + h * 0.15 : encY + h * 0.12;
+      const cp2x   = isMobile ? encX + w * 0.25 : encX + w * 0.10;
+      const cp2y   = isMobile ? encY - h * 0.15 : encY - h * 0.12;
 
       const bezier3 = (t: number, p0: number, p1: number, p2: number) =>
         (1-t)*(1-t)*p0 + 2*(1-t)*t*p1 + t*t*p2;
@@ -554,8 +555,8 @@ export function StarMap() {
         if (!shape) return;
 
         // Base scale for the constellation
-        const isMobile = w < 768;
-        const scale = w * (isMobile ? 0.22 : 0.16) * (0.8 + Math.random() * 0.4);
+        const baseW = Math.min(w, 1000);
+        const scale = baseW * (isMobile ? 0.22 : 0.14) * (0.8 + Math.random() * 0.4);
         
         // Approximate radius of the constellation bounding box
         const reqRadius = scale * 0.6 + 25; // +25px padding for labels and glow
@@ -564,22 +565,22 @@ export function StarMap() {
         let bestScore = -Infinity;
 
         // Try random positions, scoring them based on distance from everything else
-        for (let attempt = 0; attempt < 500; attempt++) {
+        for (let attempt = 0; attempt < 2000; attempt++) {
           const cx = Math.random() * w;
           const cy = Math.random() * h;
 
           // 1. Boundary check
-          if (cx < reqRadius + 20 || cx > w - (reqRadius + 20) || cy < reqRadius + 20 || cy > h - (reqRadius + 40)) continue;
+          if (cx < reqRadius || cx > w - reqRadius || cy < reqRadius || cy > h - (reqRadius + 20)) continue;
 
           // 2. Title area check (top center)
-          if (cy < h * 0.25 && cx > w * 0.15 && cx < w * 0.85) continue;
+          if (cy < h * 0.16 && cx > w * 0.25 && cx < w * 0.75) continue;
 
           // 3. Quote area check (bottom center)
-          if (cy > h * 0.80 && cx > w * 0.10 && cx < w * 0.90) continue;
+          if (cy > h * 0.82 && cx > w * 0.20 && cx < w * 0.80) continue;
 
           // 4. Center Encounter check
           const distToCenter = Math.hypot(cx - encX, cy - encY);
-          if (distToCenter < (isMobile ? w * 0.28 : w * 0.22)) continue;
+          if (distToCenter < (isMobile ? w * 0.25 : w * 0.15)) continue;
 
           // 5. Curve collision check
           let distToCurve = Infinity;
@@ -587,7 +588,7 @@ export function StarMap() {
             const d = Math.hypot(cx - pt.x, cy - pt.y);
             if (d < distToCurve) distToCurve = d;
           }
-          if (distToCurve < reqRadius + (isMobile ? 20 : 40)) continue;
+          if (distToCurve < reqRadius + (isMobile ? 10 : 20)) continue;
 
           // 6. Other constellations check
           let distToOthers = Infinity;
@@ -598,7 +599,7 @@ export function StarMap() {
             if (d < distToOthers) distToOthers = d - other.reqRadius;
           }
           
-          if (distToOthers < reqRadius + (isMobile ? 15 : 30)) continue; // Overlap check
+          if (distToOthers < reqRadius + (isMobile ? 10 : 20)) continue; // Overlap check
 
           // Score: prioritize positions that are furthest from the curve and other constellations, 
           // but also slightly prefer filling empty spaces
@@ -641,7 +642,13 @@ export function StarMap() {
       if (!parent) return;
       const dpr = window.devicePixelRatio || 1;
       const w = parent.clientWidth;
-      const h = window.innerWidth < 768 ? 520 : 640;
+      const h = window.innerWidth < 768 ? 750 : Math.max(600, window.innerHeight - 130);
+      
+      // Prevent unnecessary re-renders on mobile scroll (URL bar hiding/showing fires resize)
+      if (canvas.width === w * dpr && canvas.height === h * dpr) {
+        return;
+      }
+      
       canvas.width  = w * dpr;
       canvas.height = h * dpr;
       canvas.style.width  = `${w}px`;
@@ -719,11 +726,14 @@ export function StarMap() {
           ctx.restore();
 
           // Draw stars
-          c.stars.forEach(s => {
+          c.stars.forEach((s, idx) => {
+            // Subtle twinkle effect: modulates between 0.7 and 1.3 based on time and star position
+            const twinkle = 1 + Math.sin(elapsed * 0.0015 + (s.x * 0.01 + s.y * 0.01 + idx)) * 0.3;
+            
             // Glow
-            const glowR = s.r * 5;
+            const glowR = s.r * 5 * twinkle;
             const glow = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
-            glow.addColorStop(0, `rgba(223,206,168,${0.35 * pConst})`);
+            glow.addColorStop(0, `rgba(223,206,168,${0.35 * pConst * twinkle})`);
             glow.addColorStop(1, 'rgba(223,206,168,0)');
             ctx.fillStyle = glow;
             ctx.beginPath();
@@ -732,7 +742,7 @@ export function StarMap() {
 
             // Core
             ctx.beginPath();
-            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.arc(s.x, s.y, s.r * (0.8 + 0.2 * twinkle), 0, Math.PI * 2);
             ctx.fillStyle = `rgba(255,255,255,${0.95 * pConst})`;
             ctx.fill();
           });
@@ -758,14 +768,15 @@ export function StarMap() {
       const encY = h * 0.52;
 
       if (pRoute > 0) {
-        const startX = w * 0.08;
-        const startY = h * 0.88;
-        const endX   = w * 0.87;
-        const endY   = h * 0.18;
-        const cp1x   = encX - w * 0.12;
-        const cp1y   = encY + h * 0.12;
-        const cp2x   = encX + w * 0.10;
-        const cp2y   = encY - h * 0.12;
+        const isMobile = w < 768;
+        const startX = isMobile ? w * 0.20 : w * 0.08;
+        const startY = isMobile ? h * 0.78 : h * 0.88;
+        const endX   = isMobile ? w * 0.80 : w * 0.87;
+        const endY   = isMobile ? h * 0.28 : h * 0.18;
+        const cp1x   = isMobile ? encX - w * 0.25 : encX - w * 0.12;
+        const cp1y   = isMobile ? encY + h * 0.15 : encY + h * 0.12;
+        const cp2x   = isMobile ? encX + w * 0.25 : encX + w * 0.10;
+        const cp2y   = isMobile ? encY - h * 0.15 : encY - h * 0.12;
 
         const STEPS = 200;
         const drawTo = Math.floor(STEPS * pRoute);
@@ -931,108 +942,150 @@ export function StarMap() {
   const numConst = mapConfig?.constellations?.length ?? 0;
 
   return (
-    <Card className="w-full max-w-6xl mx-auto overflow-hidden bg-[#02040A] shadow-2xl border border-[#DFCEA8]/10 rounded-xl flex flex-col font-sans">
-
+    <Card className="w-full h-full overflow-hidden bg-[#02040A] shadow-2xl border-0 rounded-none flex flex-col font-sans">
       {/* ── CANVAS ZONE ── */}
       <div className="relative w-full">
         <canvas ref={canvasRef} className="w-full block" />
 
         {/* Top title overlay */}
-        <div className="absolute top-0 left-0 w-full pointer-events-none flex flex-col items-center pt-8 md:pt-10 px-4">
-          <h2 className="text-[#DFCEA8] font-serif text-xl md:text-3xl tracking-[0.22em] font-light leading-tight">
-            O CÉU DAQUELA NOITE
+        <div className="absolute top-0 left-0 w-full pointer-events-none flex flex-col items-center pt-10 md:pt-12 px-4">
+          <h2 className="text-[#DFCEA8] font-serif text-[26px] md:text-3xl tracking-[0.2em] md:tracking-[0.25em] font-light leading-snug text-center">
+            O CÉU DAQUELA<br className="md:hidden" /> NOITE
           </h2>
-          <div className="mt-3 mb-3 flex items-center gap-2 text-[#DFCEA8]/40">
-            <div className="h-px w-12 bg-[#DFCEA8]/30" />
-            <StarIcon className="w-3 h-3 fill-[#DFCEA8]/40 text-transparent" />
-            <div className="h-px w-12 bg-[#DFCEA8]/30" />
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-[#DFCEA8]/80 font-sans text-sm md:text-base tracking-widest">{formattedDate}</p>
-            {mapConfig?.time && (
-              <p className="text-[#DFCEA8]/60 font-sans text-xs md:text-sm tracking-widest">{mapConfig.time}</p>
-            )}
-            <p className="text-[#DFCEA8]/50 font-sans text-xs tracking-widest">
-              {mapConfig?.customLocation.name}
-            </p>
+          <div className="mt-4 mb-4 flex items-center gap-3 text-[#DFCEA8]/40">
+            <div className="h-[1px] w-12 md:w-16 bg-[#DFCEA8]/30" />
+            <StarIcon className="w-3.5 h-3.5 fill-[#DFCEA8]/50 text-transparent" />
+            <div className="h-[1px] w-12 md:w-16 bg-[#DFCEA8]/30" />
           </div>
         </div>
 
         {/* Bottom quote overlay */}
         {mapConfig?.romanticQuote && (
-          <div className="absolute bottom-0 left-0 w-full pointer-events-none flex flex-col items-center pb-6 px-4">
-            <div className="mb-3 text-[#DFCEA8]/30">
-              <div className="h-px w-16 bg-[#DFCEA8]/20 mx-auto" />
-            </div>
-            <p className="text-[#DFCEA8]/65 font-serif italic text-xs md:text-sm text-center max-w-md leading-relaxed">
+          <div className="absolute bottom-6 md:bottom-10 left-0 w-full pointer-events-none flex flex-col items-center px-6">
+            <p className="text-[#DFCEA8]/80 font-serif italic text-sm md:text-lg text-center max-w-sm md:max-w-xl leading-relaxed">
               "{mapConfig.romanticQuote}"
             </p>
+            <div className="mt-4 flex items-center gap-3 text-[#DFCEA8]/40">
+              <div className="h-[1px] w-8 bg-[#DFCEA8]/20" />
+              <StarIcon className="w-3 h-3 fill-[#DFCEA8]/30 text-transparent" />
+              <div className="h-[1px] w-8 bg-[#DFCEA8]/20" />
+            </div>
           </div>
         )}
       </div>
 
-      {/* ── BOTTOM INFO BAR ── */}
-      <div className="bg-[#030610] border-t border-[#DFCEA8]/12 px-5 py-4 flex flex-wrap md:flex-nowrap items-center justify-between gap-5">
-
-        {/* Data points */}
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-5 text-[10px] md:text-xs tracking-widest uppercase text-[#DFCEA8]/60">
-          <div className="flex items-center gap-2.5">
-            <Calendar className="w-3.5 h-3.5 text-[#DFCEA8]/35 flex-shrink-0" />
-            <div>
-              <p className="text-[#DFCEA8]/35 mb-0.5">DATA</p>
-              <p className="text-[#DFCEA8]/70">{formattedDate}</p>
+      {/* ── INFO BAR (Desktop) / GRID (Mobile) ── */}
+      <div className="bg-[#030610] md:border-t border-[#DFCEA8]/10 px-5 md:px-6 pb-8 pt-4 md:py-4">
+        
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden md:flex items-center justify-between gap-5">
+          <div className="flex items-center gap-6 text-xs tracking-widest uppercase text-[#DFCEA8]/60">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-4 h-4 text-[#DFCEA8]/40 flex-shrink-0" />
+              <div>
+                <p className="text-[#DFCEA8]/40 mb-1">DATA</p>
+                <p className="text-[#DFCEA8]/80">{formattedDate}</p>
+              </div>
             </div>
+
+            {mapConfig?.time && (
+              <>
+                <div className="w-px h-8 bg-[#DFCEA8]/10" />
+                <div className="flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-[#DFCEA8]/40 flex-shrink-0" />
+                  <div>
+                    <p className="text-[#DFCEA8]/40 mb-1">HORA</p>
+                    <p className="text-[#DFCEA8]/80">{mapConfig.time}</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="w-px h-8 bg-[#DFCEA8]/10" />
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-[#DFCEA8]/40 flex-shrink-0" />
+              <div>
+                <p className="text-[#DFCEA8]/40 mb-1">LOCAL</p>
+                <p className="text-[#DFCEA8]/80 max-w-[160px] truncate" title={mapConfig?.customLocation.name}>
+                  {mapConfig?.customLocation.name}
+                </p>
+              </div>
+            </div>
+
+            {coordStr && (
+              <>
+                <div className="w-px h-8 bg-[#DFCEA8]/10" />
+                <div className="flex items-center gap-3">
+                  <Compass className="w-4 h-4 text-[#DFCEA8]/40 flex-shrink-0" />
+                  <div>
+                    <p className="text-[#DFCEA8]/40 mb-1">COORDENADAS</p>
+                    <p className="text-[#DFCEA8]/80 font-mono text-[11px]">{coordStr}</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {mapConfig?.time && (
-            <>
-              <div className="hidden md:block w-px h-7 bg-[#DFCEA8]/10" />
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-3.5 h-3.5 text-[#DFCEA8]/35 flex-shrink-0" />
-                <div>
-                  <p className="text-[#DFCEA8]/35 mb-0.5">HORA</p>
-                  <p className="text-[#DFCEA8]/70">{mapConfig.time}</p>
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className="hidden md:block w-px h-7 bg-[#DFCEA8]/10" />
-          <div className="flex items-center gap-2.5">
-            <MapPin className="w-3.5 h-3.5 text-[#DFCEA8]/35 flex-shrink-0" />
-            <div>
-              <p className="text-[#DFCEA8]/35 mb-0.5">LOCAL</p>
-              <p className="text-[#DFCEA8]/70 max-w-[130px] truncate" title={mapConfig?.customLocation.name}>
-                {mapConfig?.customLocation.name}
-              </p>
+          <div className="border border-[#DFCEA8]/20 rounded-lg px-5 py-3 flex flex-col items-center justify-center">
+            <div className="flex items-center gap-2">
+              <StarIcon className="w-3.5 h-3.5 text-[#DFCEA8]/70" />
+              <span className="text-[#DFCEA8]/90 text-xs font-bold tracking-widest uppercase">
+                {numConst} {numConst === 1 ? 'CONSTELAÇÃO' : 'CONSTELAÇÕES'}
+              </span>
             </div>
-          </div>
-
-          {coordStr && (
-            <>
-              <div className="hidden md:block w-px h-7 bg-[#DFCEA8]/10" />
-              <div className="flex items-center gap-2.5">
-                <Compass className="w-3.5 h-3.5 text-[#DFCEA8]/35 flex-shrink-0" />
-                <div>
-                  <p className="text-[#DFCEA8]/35 mb-0.5">COORDENADAS</p>
-                  <p className="text-[#DFCEA8]/70 font-mono">{coordStr}</p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Constellations badge */}
-        <div className="border border-[#DFCEA8]/20 rounded px-4 py-2.5 flex flex-col items-center justify-center min-w-[160px] w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <StarIcon className="w-3 h-3 text-[#DFCEA8]/60" />
-            <span className="text-[#DFCEA8]/85 text-[10px] md:text-xs font-bold tracking-widest uppercase">
-              {numConst} {numConst === 1 ? 'CONSTELAÇÃO' : 'CONSTELAÇÕES'}
+            <span className="text-[#DFCEA8]/40 text-[9px] tracking-[0.2em] uppercase mt-1">
+              CALCULADAS PARA ESTE MOMENTO
             </span>
           </div>
-          <span className="text-[#DFCEA8]/35 text-[9px] md:text-[10px] tracking-widest uppercase mt-0.5">
-            DEFINIDAS NO ADMIN
-          </span>
+        </div>
+
+        {/* MOBILE LAYOUT */}
+        <div className="md:hidden flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="border border-[#DFCEA8]/10 bg-[#060a14] rounded-lg p-3.5 flex items-start gap-3">
+              <Calendar className="w-4 h-4 text-[#DFCEA8]/40 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[#DFCEA8]/40 text-[9px] tracking-widest uppercase mb-1">DATA</p>
+                <p className="text-[#DFCEA8]/80 text-[11px] uppercase tracking-wide">{formattedDate}</p>
+              </div>
+            </div>
+            
+            <div className="border border-[#DFCEA8]/10 bg-[#060a14] rounded-lg p-3.5 flex items-start gap-3">
+              <Clock className="w-4 h-4 text-[#DFCEA8]/40 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[#DFCEA8]/40 text-[9px] tracking-widest uppercase mb-1">HORA</p>
+                <p className="text-[#DFCEA8]/80 text-[11px] uppercase tracking-wide">{mapConfig?.time || '--:--'}</p>
+              </div>
+            </div>
+
+            <div className="border border-[#DFCEA8]/10 bg-[#060a14] rounded-lg p-3.5 flex items-start gap-3">
+              <MapPin className="w-4 h-4 text-[#DFCEA8]/40 mt-0.5 flex-shrink-0" />
+              <div className="overflow-hidden">
+                <p className="text-[#DFCEA8]/40 text-[9px] tracking-widest uppercase mb-1">LOCAL</p>
+                <p className="text-[#DFCEA8]/80 text-[11px] uppercase tracking-wide truncate">{mapConfig?.customLocation.name}</p>
+              </div>
+            </div>
+
+            <div className="border border-[#DFCEA8]/10 bg-[#060a14] rounded-lg p-3.5 flex items-start gap-3">
+              <Compass className="w-4 h-4 text-[#DFCEA8]/40 mt-0.5 flex-shrink-0" />
+              <div className="overflow-hidden">
+                <p className="text-[#DFCEA8]/40 text-[9px] tracking-widest uppercase mb-1">COORDENADAS</p>
+                <p className="text-[#DFCEA8]/80 text-[10px] font-mono whitespace-nowrap">{coordStr}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-[#DFCEA8]/20 bg-gradient-to-b from-[#0a101f] to-[#04070e] rounded-lg p-4 flex flex-col items-center justify-center mt-1">
+            <div className="flex items-center gap-2">
+              <StarIcon className="w-4 h-4 text-[#DFCEA8]/70" />
+              <span className="text-[#DFCEA8]/90 text-xs font-bold tracking-widest uppercase">
+                {numConst} {numConst === 1 ? 'CONSTELAÇÃO' : 'CONSTELAÇÕES'}
+              </span>
+            </div>
+            <span className="text-[#DFCEA8]/50 text-[9px] tracking-[0.2em] uppercase mt-1.5">
+              CALCULADAS PARA ESTE MOMENTO
+            </span>
+          </div>
         </div>
 
       </div>
