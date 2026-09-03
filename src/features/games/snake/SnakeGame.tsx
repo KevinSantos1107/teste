@@ -22,35 +22,37 @@ export function SnakeGame() {
   // cellSize is computed in integers to prevent subpixel rendering issues
   const [cellSize, setCellSize] = useState(22);
 
-  // ─── Resize Logic (Safe for iOS Safari) ───────────────────────────────────
+  // ─── Resize via ResizeObserver (fires when container actually changes) ─────
   useEffect(() => {
-    const handleResize = () => {
-      if (!containerRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-      // Use the container's actual rendered width for precision
-      const rect = containerRef.current.getBoundingClientRect();
-      const maxW = Math.floor(rect.width) - 4; // subtract border width
-      // innerHeight is unreliable on iOS Safari; visualViewport is the fix
+    const BORDER = 2; // border px on each side of canvas wrapper
+
+    const compute = () => {
+      const availW = el.clientWidth; // padding-box, fires AFTER layout
       const viewH = window.visualViewport?.height ?? window.innerHeight;
-      const maxH = Math.floor(viewH) - 220;
+      const availH = Math.floor(viewH) - 190;
 
-      // Integer division to guarantee perfectly aligned grid (no subpixel)
-      let size = Math.min(Math.floor(maxW / COLS), Math.floor(maxH / ROWS));
-      size = Math.max(16, Math.min(size, 30));
+      // Subtract border so grid never bleeds outside the wrapper
+      const innerW = availW - BORDER * 2;
+      const innerH = availH - BORDER * 2;
+
+      // Integer floor guarantees no subpixel drift in any cell
+      let size = Math.min(Math.floor(innerW / COLS), Math.floor(innerH / ROWS));
+      size = Math.max(14, Math.min(size, 30));
       setCellSize(size);
     };
 
-    handleResize();
+    compute();
 
-    window.addEventListener('resize', handleResize);
-    window.visualViewport?.addEventListener('resize', handleResize);
-    // Re-check after fonts/layout settle (important on iOS)
-    const t = setTimeout(handleResize, 300);
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    window.visualViewport?.addEventListener('resize', compute);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.visualViewport?.removeEventListener('resize', handleResize);
-      clearTimeout(t);
+      ro.disconnect();
+      window.visualViewport?.removeEventListener('resize', compute);
     };
   }, []);
 
@@ -63,22 +65,19 @@ export function SnakeGame() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Scale canvas for device pixel ratio (crisp on Retina/AMOLED)
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.width = CANVAS_W * dpr;
-    canvas.height = CANVAS_H * dpr;
+    // 1:1 pixel mapping — avoids DPR fractional arithmetic that cuts last row/col
+    canvas.width = CANVAS_W;
+    canvas.height = CANVAS_H;
     canvas.style.width = `${CANVAS_W}px`;
     canvas.style.height = `${CANVAS_H}px`;
 
     const ctx = canvas.getContext('2d')!;
-    ctx.scale(dpr, dpr);
 
-    // Pre-render grid to offscreen canvas (huge perf win — only once per resize)
+    // Pre-render grid (only once per resize/theme change)
     const bgCanvas = document.createElement('canvas');
-    bgCanvas.width = CANVAS_W * dpr;
-    bgCanvas.height = CANVAS_H * dpr;
+    bgCanvas.width = CANVAS_W;
+    bgCanvas.height = CANVAS_H;
     const bgCtx = bgCanvas.getContext('2d')!;
-    bgCtx.scale(dpr, dpr);
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         bgCtx.fillStyle = (r + c) % 2 === 0 ? theme.cellA : theme.cellB;
@@ -141,8 +140,8 @@ export function SnakeGame() {
         }
       }
 
-      // 1. Draw cached grid
-      ctx.drawImage(bgCanvas, 0, 0, CANVAS_W, CANVAS_H);
+      // 1. Draw cached grid (exact 1:1 blit, no scaling)
+      ctx.drawImage(bgCanvas, 0, 0);
 
       // 2. Food
       drawApple(s.food.x, s.food.y);
@@ -336,10 +335,10 @@ export function SnakeGame() {
       className="w-full flex flex-col items-center select-none"
       style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
-      {/* ── HUD ── */}
+      {/* ── HUD — full width, constrained by canvas size ── */}
       <div
         className="w-full flex items-center justify-between mb-3 px-1 tracking-wide"
-        style={{ maxWidth: CANVAS_W, color: theme.textPrimary }}
+        style={{ color: theme.textPrimary }}
       >
         <div className="flex flex-col">
           <span className="text-[10px] uppercase opacity-70">Pontuação</span>
@@ -369,22 +368,25 @@ export function SnakeGame() {
       </div>
 
       {/* ── Canvas Area ── */}
+      {/* Use exact integer pixel sizes so grid cells are all equal width */}
       <div
         className="relative rounded-lg overflow-hidden"
         style={{
           width: CANVAS_W,
           height: CANVAS_H,
+          maxWidth: '100%',
+          boxSizing: 'content-box',
           border: `2px solid ${theme.borderNeon}`,
           boxShadow: `0 0 15px ${theme.borderGlow}, inset 0 0 10px ${theme.borderGlow}`,
           background: theme.boardBg,
-          // Prevents iOS Safari bounce/scroll interfering with game
           overscrollBehavior: 'none',
+          flexShrink: 0,
         }}
       >
         <canvas
           ref={canvasRef}
           className="block"
-          style={{ display: 'block', imageRendering: 'pixelated' }}
+          style={{ display: 'block' }}
         />
 
         {/* ── Overlay: Menu ── */}
