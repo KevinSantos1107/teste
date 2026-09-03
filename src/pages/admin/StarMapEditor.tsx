@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
@@ -6,16 +6,19 @@ import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
 import { cn } from '../../shared/utils/cn';
-import { Save, Star } from 'lucide-react';
+import { Save, Star, Search, MapPin } from 'lucide-react';
+import { calculateVisibleConstellations } from '../../features/maps/utils/astronomy';
 
-interface StarMapConfig {
+export interface StarMapConfig {
   specialDate: string;
+  time?: string;
   customLocation: {
     lat: number;
     lng: number;
     name: string;
   };
   romanticQuote: string;
+  constellations: string[];
 }
 
 function useToast() {
@@ -46,9 +49,33 @@ export default function StarMapEditor() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<StarMapConfig>({
     specialDate: '',
-    customLocation: { lat: -23.5505, lng: -46.6333, name: '' },
+    time: '',
+    customLocation: { lat: 0, lng: 0, name: '' },
     romanticQuote: '',
+    constellations: [],
   });
+  
+  // Geocoding state
+  const [locationSearch, setLocationSearch] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Recalculate constellations whenever date, time, or location changes
+  useEffect(() => {
+    if (form.specialDate && form.customLocation.lat !== 0 && form.customLocation.lng !== 0) {
+      const calculated = calculateVisibleConstellations(
+        form.specialDate,
+        form.time || '21:00',
+        form.customLocation.lat,
+        form.customLocation.lng
+      );
+      setForm(prev => ({ ...prev, constellations: calculated }));
+    } else {
+      setForm(prev => ({ ...prev, constellations: [] }));
+    }
+  }, [form.specialDate, form.time, form.customLocation.lat, form.customLocation.lng]);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -60,13 +87,16 @@ export default function StarMapEditor() {
           const data = snap.data() as Partial<StarMapConfig>;
           setForm({
             specialDate: data.specialDate || '',
+            time: data.time || '',
             customLocation: {
-              lat: data.customLocation?.lat ?? -23.5505,
-              lng: data.customLocation?.lng ?? -46.6333,
+              lat: data.customLocation?.lat ?? 0,
+              lng: data.customLocation?.lng ?? 0,
               name: data.customLocation?.name || '',
             },
             romanticQuote: data.romanticQuote || '',
+            constellations: data.constellations || [],
           });
+          setLocationSearch(data.customLocation?.name || '');
         }
       } catch {
         show('Erro ao carregar configurações', 'err');
@@ -77,8 +107,8 @@ export default function StarMapEditor() {
   }, [siteId]);
 
   const handleSave = async () => {
-    if (!form.specialDate || !form.customLocation.name) {
-      show('Data e nome do local são obrigatórios', 'err');
+    if (!form.specialDate || !form.customLocation.name || form.customLocation.lat === 0) {
+      show('Data e Localização são obrigatórios', 'err');
       return;
     }
     setSaving(true);
@@ -94,6 +124,46 @@ export default function StarMapEditor() {
     setSaving(false);
   };
 
+  const handleLocationSearch = (query: string) => {
+    setLocationSearch(query);
+    setShowSuggestions(true);
+    
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    
+    if (query.length < 3) {
+      setLocationSuggestions([]);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+        const data = await res.json();
+        setLocationSuggestions(data);
+      } catch (err) {
+        console.error('Geocoding error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+  };
+
+  const selectLocation = (loc: any) => {
+    const lat = parseFloat(loc.lat);
+    const lng = parseFloat(loc.lon);
+    // Extrai um nome mais amigável
+    const nameParts = loc.display_name.split(', ');
+    const shortName = nameParts.length > 2 ? `${nameParts[0]}, ${nameParts[nameParts.length - 1]}` : loc.display_name;
+
+    setLocationSearch(shortName);
+    setForm(prev => ({
+      ...prev,
+      customLocation: { name: shortName, lat, lng }
+    }));
+    setShowSuggestions(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center p-12">
@@ -103,13 +173,13 @@ export default function StarMapEditor() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300 pb-20">
       {Toast}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Mapa de Estrelas</h1>
           <p className="text-slate-400 mt-1">
-            Configure a data e local exatos para gerar o mapa estelar.
+            Configure a data e o local para calcularmos o céu exato daquele momento.
           </p>
         </div>
         <Button onClick={handleSave} isLoading={saving} className="gap-2 shrink-0">
@@ -140,63 +210,126 @@ export default function StarMapEditor() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Nome do Local *</label>
+            <label className="text-sm font-medium text-slate-300">Horário (Opcional mas recomendado)</label>
             <Input
-              value={form.customLocation.name}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  customLocation: { ...f.customLocation, name: e.target.value },
-                }))
-              }
+              type="time"
+              value={form.time || ''}
+              onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
               className="bg-slate-900 border-slate-700 text-slate-200"
-              placeholder="Ex: Paris, França"
             />
-            <p className="text-xs text-slate-500">Como o nome do local vai aparecer no mapa.</p>
+            <p className="text-xs text-slate-500">
+              Se preenchido, será usado para calcular com mais precisão as constelações visíveis.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Latitude *</label>
+          {/* Autocomplete de Localização */}
+          <div className="space-y-2 md:col-span-2 relative">
+            <label className="text-sm font-medium text-slate-300">Nome do Local *</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <Input
+                value={locationSearch}
+                onChange={(e) => handleLocationSearch(e.target.value)}
+                onFocus={() => { if (locationSearch.length > 2) setShowSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className="bg-slate-900 border-slate-700 text-slate-200 pl-10"
+                placeholder="Ex: São Paulo, Brasil"
+              />
+            </div>
+            
+            {/* Lista de Sugestões */}
+            {showSuggestions && (locationSuggestions.length > 0 || isSearching) && (
+              <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-xl overflow-hidden">
+                {isSearching ? (
+                  <div className="p-3 text-sm text-slate-400 text-center">Buscando locais...</div>
+                ) : (
+                  locationSuggestions.map((loc, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectLocation(loc)}
+                      className="w-full text-left px-4 py-3 text-sm text-slate-200 hover:bg-slate-700 border-b border-slate-700/50 last:border-0 flex items-start gap-3"
+                    >
+                      <MapPin className="w-4 h-4 text-theme-primary shrink-0 mt-0.5" />
+                      <span>{loc.display_name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+            
+            <p className="text-xs text-slate-500 mt-1">
+              Digite o nome da cidade/estado/país e selecione uma opção na lista.
+            </p>
+          </div>
+
+          {/* Campos readonly de Latitude e Longitude */}
+          <div className="space-y-2 opacity-60">
+            <label className="text-sm font-medium text-slate-300">Latitude (Automático)</label>
             <Input
-              type="number"
-              step="any"
-              value={form.customLocation.lat}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  customLocation: { ...f.customLocation, lat: parseFloat(e.target.value) },
-                }))
-              }
-              className="bg-slate-900 border-slate-700 text-slate-200 font-mono"
-              placeholder="-23.5505"
+              readOnly
+              value={form.customLocation.lat || ''}
+              className="bg-slate-900 border-slate-700 text-slate-400 font-mono cursor-not-allowed"
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Longitude *</label>
+          <div className="space-y-2 opacity-60">
+            <label className="text-sm font-medium text-slate-300">Longitude (Automático)</label>
             <Input
-              type="number"
-              step="any"
-              value={form.customLocation.lng}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  customLocation: { ...f.customLocation, lng: parseFloat(e.target.value) },
-                }))
-              }
-              className="bg-slate-900 border-slate-700 text-slate-200 font-mono"
-              placeholder="-46.6333"
+              readOnly
+              value={form.customLocation.lng || ''}
+              className="bg-slate-900 border-slate-700 text-slate-400 font-mono cursor-not-allowed"
             />
           </div>
         </div>
+      </div>
 
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-slate-700">
+          <div className="p-2 bg-indigo-500/10 rounded-lg">
+            <Star className="w-5 h-5 text-indigo-400" />
+          </div>
+          <h2 className="font-bold text-white text-lg">Constelações Calculadas</h2>
+        </div>
+        
+        <p className="text-sm text-slate-400">
+          Com base na data, horário e localização selecionados, o sistema calculará automaticamente as constelações visíveis no céu.
+        </p>
+
+        {form.specialDate && form.customLocation.lat !== 0 ? (
+          <div className="bg-slate-900 border border-slate-700 p-5 rounded-lg">
+            <div className="text-xs text-emerald-400 font-medium mb-3 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Constelações visíveis neste momento
+            </div>
+            {form.constellations.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {form.constellations.map((c, i) => (
+                  <span key={i} className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-md text-slate-200 text-sm font-medium">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Nenhuma constelação suportada visível nos dados atuais.</p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-slate-900 border border-slate-700 border-dashed p-6 rounded-lg text-center">
+            <p className="text-sm text-slate-500">
+              Preencha a Data e a Localização acima para calcular o céu.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">Frase Romântica</label>
+          <label className="text-sm font-medium text-slate-300">Frase Romântica (Opcional)</label>
           <Input
             value={form.romanticQuote}
             onChange={(e) => setForm((f) => ({ ...f, romanticQuote: e.target.value }))}
             className="bg-slate-900 border-slate-700 text-slate-200"
-            placeholder="Ex: O céu quando nossos mundos colidiram..."
+            placeholder="Ex: O momento em que nossas trajetórias se cruzaram..."
           />
         </div>
       </div>

@@ -290,6 +290,12 @@ export function SnakeGame() {
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
+      // Ignore touches on UI buttons so they can be clicked normally
+      const target = e.target as HTMLElement;
+      if (target && typeof target.closest === 'function' && target.closest('button, a')) {
+        return;
+      }
+
       const t = e.touches[0];
       touchAnchor.current = { x: t.clientX, y: t.clientY };
       lastDir.current = null;
