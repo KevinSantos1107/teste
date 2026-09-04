@@ -23,7 +23,6 @@ export function AdminShell() {
     await signOut(auth);
     navigate('/admin/login');
   };
-
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { label: 'Configurações', icon: Settings, path: '/admin/config' },
@@ -31,7 +30,6 @@ export function AdminShell() {
     { label: 'Álbum', icon: ImageIcon, path: '/admin/album' },
     { label: 'História', icon: History, path: '/admin/timeline' },
     { label: 'Músicas', icon: Music, path: '/admin/playlist' },
-    { label: 'Mapa de Lugares', icon: LayoutDashboard, path: '/admin/map' },
     { label: 'Roleta', icon: LayoutDashboard, path: '/admin/roulette' },
     { label: 'Mapa de Estrelas', icon: LayoutDashboard, path: '/admin/starmap' },
   ];

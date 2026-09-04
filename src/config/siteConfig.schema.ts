@@ -31,7 +31,6 @@ export interface SiteConfig {
   };
   features: {
     enableTimeline: boolean;
-    enableMap: boolean;
     enableGames: boolean;
     enableMusic: boolean;
     enableAlbum: boolean;

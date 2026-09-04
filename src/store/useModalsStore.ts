@@ -4,7 +4,6 @@ export type ModalType =
   | 'word-game'
   | 'snake'
   | 'star-map'
-  | 'travel-map'
   | 'timeline'
   | null;
 

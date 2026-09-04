@@ -2,7 +2,6 @@ import { useModalsStore } from '../../store/useModalsStore';
 import { WordGameModal } from './WordGameModal';
 import { SnakeModal } from './SnakeModal';
 import { StarMapModal } from './StarMapModal';
-import { TravelMapModal } from './TravelMapModal';
 import { TimelineModalWrapper } from './TimelineModalWrapper';
 
 export function GlobalModals() {
@@ -14,7 +13,6 @@ export function GlobalModals() {
       <WordGameModal isOpen={activeModal === 'word-game'} onClose={closeModal} />
       <SnakeModal isOpen={activeModal === 'snake'} onClose={closeModal} />
       <StarMapModal isOpen={activeModal === 'star-map'} onClose={closeModal} />
-      <TravelMapModal isOpen={activeModal === 'travel-map'} onClose={closeModal} />
     </>
   );
 }

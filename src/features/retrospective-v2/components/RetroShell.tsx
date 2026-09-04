@@ -3,7 +3,6 @@ import { X, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
 import { useRetroV2Store } from '../store/useRetroV2Store';
 import { IntroSlide } from './slides/01-IntroSlide';
 import { TimeSlide } from './slides/02-TimeSlide';
-import { MapSlide } from './slides/03-MapSlide';
 import { ErasSlide } from './slides/04-ErasSlide';
 import { RouletteSlide } from './slides/05-RouletteSlide';
 import { WordGameSlide } from './slides/06-WordGameSlide';
@@ -12,7 +11,7 @@ import { OutroSlide } from './slides/08-OutroSlide';
 import '../styles/retro-v2.css';
 
 // Slides that have internal interactive elements — swipe nav only, no tap zones
-const INTERACTIVE_SLIDES = new Set([3, 4, 5]); // MapSlide=2(idx), RouletteSlide=4, WordGame=5
+const INTERACTIVE_SLIDES = new Set([3, 4]); // RouletteSlide=3(idx), WordGame=4
 
 export function RetroShell() {
   const { isOpen, closeRetro, isReady, config } = useRetroV2Store();
@@ -167,9 +166,6 @@ export function RetroShell() {
         </div>
         <div className="retro-v2-slide">
           <TimeSlide />
-        </div>
-        <div className="retro-v2-slide">
-          <MapSlide />
         </div>
         <div className="retro-v2-slide">
           <ErasSlide />

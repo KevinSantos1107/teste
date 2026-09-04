@@ -16,7 +16,6 @@ const AlbumEditor = lazy(() => import('../pages/admin/AlbumEditor'));
 const TimelineEditor = lazy(() => import('../pages/admin/TimelineEditor'));
 const PlaylistEditor = lazy(() => import('../pages/admin/PlaylistEditor'));
 const RouletteEditor = lazy(() => import('../pages/admin/RouletteEditor'));
-const MapEditor = lazy(() => import('../pages/admin/MapEditor'));
 const StarMapEditor = lazy(() => import('../pages/admin/StarMapEditor'));
 const RetrospectiveEditor = lazy(() => import('../pages/admin/RetrospectiveEditor'));
 
@@ -112,14 +111,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <RouletteEditor />
-          </SuspenseWrapper>
-        ),
-      },
-      {
-        path: 'map',
-        element: (
-          <SuspenseWrapper>
-            <MapEditor />
           </SuspenseWrapper>
         ),
       },

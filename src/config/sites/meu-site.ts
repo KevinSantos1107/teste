@@ -23,7 +23,6 @@ export const meuSiteConfig: SiteConfig = {
   },
   features: {
     enableTimeline: true,
-    enableMap: true,
     enableGames: true,
     enableMusic: true,
     enableAlbum: true,

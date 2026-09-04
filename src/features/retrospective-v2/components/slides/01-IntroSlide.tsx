@@ -1,121 +1,199 @@
 import { useSiteConfigStore } from '../../../../store/siteConfigStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { animate } from 'framer-motion';
+
+// Fix de fuso horário: lê a data como meio-dia local para nunca cruzar a barreira UTC
+function parseLocalDate(dateStr: string): Date {
+  // "YYYY-MM-DD" → injeta T12:00:00 para evitar o shift de UTC
+  return new Date(`${dateStr}T12:00:00`);
+}
+
+// Estrelas com tamanho e posição estáveis (sem Math.random() no render)
+const STARS = Array.from({ length: 55 }, (_, i) => ({
+  id: i,
+  w: ((i * 7 + 13) % 25) / 10 + 1,       // 1 ~ 3.5px
+  top: ((i * 37 + 11) % 100),
+  left: ((i * 53 + 7) % 100),
+  opacity: ((i * 19 + 3) % 60) / 100 + 0.15,
+  delay: ((i * 41) % 30) / 10,
+  duration: ((i * 23 + 5) % 20) / 10 + 2,
+}));
 
 export function IntroSlide({ onStart, isReady }: { onStart: () => void; isReady: boolean }) {
   const { config } = useSiteConfigStore();
-  const [days, setDays] = useState(0);
+  const [displayDays, setDisplayDays] = useState(0);
 
-  useEffect(() => {
+  const { days, startDate } = useMemo(() => {
     const startStr = config?.relationship?.startDate;
-    const startMs = startStr
-      ? new Date(startStr).getTime()
-      : new Date('2025-10-27T00:00:00').getTime();
-    const d = Math.floor((Date.now() - startMs) / 86400000);
-    setDays(isNaN(d) || d < 0 ? 0 : d);
+    const start = startStr ? parseLocalDate(startStr) : parseLocalDate('2025-10-27');
+    const d = Math.floor((Date.now() - start.getTime()) / 86400000);
+    const formatted = start.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+    return { days: isNaN(d) || d < 0 ? 0 : d, startDate: formatted };
   }, [config?.relationship?.startDate]);
 
-  const startDate = config?.relationship?.startDate
-    ? new Date(config.relationship.startDate).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-      })
-    : '27 de outubro de 2025';
+  // Animação estilo Spotify: sobe rápido, freia dramaticamente no final
+  useEffect(() => {
+    if (days === 0) return;
+    const controls = animate(0, days, {
+      duration: 2.5,
+      ease: [0.16, 1, 0.3, 1] as const,
+      onUpdate: (v) => setDisplayDays(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [days]);
 
   const partner1 = config?.couple?.partner1?.name || 'Você';
   const partner2 = config?.couple?.partner2?.name || '';
 
+  // Variantes de animação para entrar em sequência
+  const container = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.18, delayChildren: 0.2 } },
+  };
+  const fadeUp = {
+    hidden: { opacity: 0, y: 24 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const } },
+  };
+  const fadeIn = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.8 } },
+  };
+
   return (
     <div className="flex-1 relative flex flex-col items-center justify-center text-center overflow-hidden p-6">
-      {/* Animated gradient background */}
+
+      {/* Gradiente de fundo principal */}
       <div
-        className="absolute inset-0 -z-0"
-        style={{
-          background: 'radial-gradient(ellipse at top, #4f1787 0%, #1a0533 40%, #09090b 100%)',
-        }}
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(ellipse at 50% 0%, #5b21b6 0%, #1a0533 45%, #080010 100%)' }}
       />
+      {/* Glow rosado no canto inferior */}
       <div
-        className="absolute inset-0 -z-0 opacity-30"
-        style={{
-          background: 'radial-gradient(ellipse at 80% 80%, #be185d 0%, transparent 60%)',
-        }}
+        className="absolute inset-0 opacity-40"
+        style={{ background: 'radial-gradient(ellipse at 75% 90%, #be185d 0%, transparent 55%)' }}
+      />
+      {/* Glow azulado no canto oposto */}
+      <div
+        className="absolute inset-0 opacity-20"
+        style={{ background: 'radial-gradient(ellipse at 20% 20%, #2563eb 0%, transparent 50%)' }}
       />
 
-      {/* Stars scatter */}
-      <div className="absolute inset-0 pointer-events-none -z-0">
-        {Array.from({ length: 40 }).map((_, i) => (
-          <div
-            key={i}
+      {/* Estrelas pulsantes */}
+      <div className="absolute inset-0 pointer-events-none">
+        {STARS.map((s) => (
+          <motion.div
+            key={s.id}
             className="absolute rounded-full bg-white"
             style={{
-              width: `${Math.random() * 2 + 1}px`,
-              height: `${Math.random() * 2 + 1}px`,
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              opacity: Math.random() * 0.5 + 0.2,
+              width: s.w,
+              height: s.w,
+              top: `${s.top}%`,
+              left: `${s.left}%`,
+              opacity: s.opacity,
             }}
+            animate={{ opacity: [s.opacity, s.opacity * 2.5, s.opacity] }}
+            transition={{ duration: s.duration, delay: s.delay, repeat: Infinity, ease: 'easeInOut' }}
           />
         ))}
       </div>
 
-      <div className="z-10 flex flex-col items-center gap-6">
-        {/* Name tag */}
+      {/* Conteúdo principal com entrada em cascata */}
+      <motion.div
+        className="z-10 flex flex-col items-center gap-5"
+        variants={container}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Nomes do casal */}
         {partner2 && (
-          <p className="text-white/50 text-xs tracking-[0.3em] uppercase">
-            {partner1} & {partner2}
-          </p>
+          <motion.p
+            variants={fadeIn}
+            className="text-white/50 text-xs tracking-[0.35em] uppercase font-medium"
+          >
+            {partner1} &amp; {partner2}
+          </motion.p>
         )}
 
-        {/* Main title */}
-        <h1
+        {/* Título principal com glow */}
+        <motion.h1
+          variants={fadeUp}
           className="font-black uppercase leading-none"
           style={{
-            fontSize: 'clamp(3.5rem, 18vw, 7rem)',
+            fontSize: 'clamp(3.2rem, 17vw, 6.5rem)',
             letterSpacing: '-0.03em',
-            background: 'linear-gradient(135deg, #fff 0%, #d8b4fe 40%, #f9a8d4 80%)',
+            background: 'linear-gradient(145deg, #ffffff 0%, #e9d5ff 35%, #f9a8d4 70%, #fbbf24 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
-            filter: 'drop-shadow(0 0 30px rgba(192,132,252,0.5))',
+            filter: 'drop-shadow(0 0 35px rgba(192,132,252,0.55))',
           }}
         >
           Nossa
           <br />
           História
-        </h1>
+        </motion.h1>
 
-        {/* Days counter */}
-        <div className="flex flex-col items-center">
-          <span
-            className="font-black leading-none"
+        {/* Número de dias */}
+        <motion.div variants={fadeUp} className="flex flex-col items-center -mt-1">
+          <motion.span
+            className="font-black leading-none tabular-nums"
             style={{
-              fontSize: 'clamp(4.5rem, 22vw, 9rem)',
-              background: 'linear-gradient(180deg, #fff 0%, #c084fc 50%, #f472b6 100%)',
+              fontSize: 'clamp(4rem, 21vw, 8.5rem)',
+              background: 'linear-gradient(180deg, #ffffff 0%, #d946ef 45%, #f43f5e 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 40px rgba(240,60,160,0.8))',
+              filter: 'drop-shadow(0 0 45px rgba(217,70,239,0.75))',
             }}
           >
-            {days.toLocaleString('pt-BR')}
+            {displayDays.toLocaleString('pt-BR')}
+          </motion.span>
+          <span className="text-white/40 text-[11px] tracking-[0.3em] uppercase mt-1 font-medium">
+            Dias Juntos
           </span>
-          <span className="text-white/40 text-xs tracking-[0.3em] uppercase mt-1">Dias Juntos</span>
-          <span className="text-white/20 text-[10px] mt-2">Desde {startDate}</span>
-        </div>
+        </motion.div>
 
-        {/* Play button */}
-        <button
+        {/* Data de início — só aparece depois dos dias subirem */}
+        <motion.p
+          variants={fadeIn}
+          transition={{ delay: 2.2 }}
+          className="text-white/25 text-[11px] -mt-2 font-light"
+        >
+          Desde {startDate}
+        </motion.p>
+
+        {/* Botão Começar */}
+        <motion.button
+          variants={fadeUp}
           onClick={onStart}
           disabled={!isReady}
-          className="mt-4 retro-v2-btn-play px-10 py-4 rounded-full font-bold text-sm uppercase tracking-widest text-white transition-transform active:scale-95 disabled:opacity-50 relative overflow-hidden"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="mt-2 px-10 py-4 rounded-full font-bold text-sm uppercase tracking-widest text-white disabled:opacity-50 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #7c3aed, #db2777)',
-            boxShadow: '0 0 40px rgba(219,39,119,0.5)',
+            background: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)',
+            boxShadow: '0 0 35px rgba(219,39,119,0.55), 0 0 70px rgba(124,58,237,0.25)',
           }}
         >
-          {isReady ? '▶  Começar' : 'Carregando...'}
-        </button>
-      </div>
+          {/* Brilho animado no botão */}
+          <motion.span
+            className="absolute inset-0 rounded-full"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)' }}
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' }}
+          />
+          <span className="relative z-10">
+            {isReady ? '▶  Começar' : 'Carregando...'}
+          </span>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }
+
+
