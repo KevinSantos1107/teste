@@ -16,7 +16,7 @@ interface LetterCell {
 const KEYBOARD_ROWS = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACKSPACE'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M'],
 ];
 
 // ─── Styles from the original WordGame ───────────────────────────────────────
@@ -286,42 +286,80 @@ export function WordGameSlide(_props: { onNext: () => void }) {
         </AnimatePresence>
       </div>
 
-      {/* Keyboard */}
+      {/* Keyboard — mesmo design do jogo principal */}
       {!won && (
-        <div className="w-full max-w-lg mt-auto pt-2 sm:pt-4 flex flex-col gap-1 sm:gap-1.5 touch-none">
-          {KEYBOARD_ROWS.map((row, i) => (
-            <div key={i} className="flex justify-center gap-1 sm:gap-1.5">
-              {row.map((key) => {
-                const isEnter = key === 'ENTER';
-                const isBackspace = key === 'BACKSPACE';
-                const state = keyStates[key] || 'default';
-                const styleClass = KEY_BG[state];
+        <div className="w-full pb-2 pt-0.5 px-2 mt-auto">
+          {/* Botões circulares de apagar e confirmar */}
+          <div className="flex items-center justify-center gap-5 mb-2">
+            <button
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+              onClick={(e) => { e.stopPropagation(); handleKey('BACKSPACE'); }}
+              className="relative w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90 group"
+              style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1.5px solid rgba(239, 68, 68, 0.3)',
+                boxShadow: '0 0 20px rgba(239, 68, 68, 0.08)',
+              }}
+            >
+              <Delete className="w-4 h-4 text-red-400 group-hover:text-red-300 transition-colors" />
+              <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(239, 68, 68, 0.06)' }} />
+            </button>
+            <button
+              onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+              onClick={(e) => { e.stopPropagation(); handleKey('ENTER'); }}
+              className="relative w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90 group"
+              style={{
+                background: 'rgba(52, 211, 153, 0.08)',
+                border: '1.5px solid rgba(52, 211, 153, 0.35)',
+                boxShadow: '0 0 20px rgba(52, 211, 153, 0.12)',
+              }}
+            >
+              <Check className="w-4 h-4 text-emerald-400 group-hover:text-emerald-300 transition-colors" strokeWidth={2.5} />
+              <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ background: 'rgba(52, 211, 153, 0.06)' }} />
+            </button>
+          </div>
 
-                return (
-                  <button
-                    key={key}
-                    onClick={(e) => {
-                      e.currentTarget.blur();
-                      handleKey(key);
-                    }}
-                    className={cn(
-                      'h-10 sm:h-12 md:h-14 flex items-center justify-center rounded-md font-bold text-xs sm:text-sm md:text-base border-b-4 select-none',
-                      isEnter || isBackspace ? 'px-2 sm:px-3 sm:px-4 text-[10px] sm:text-[11px]' : 'flex-1 max-w-[2.2rem] sm:max-w-[2.5rem]',
-                      styleClass
-                    )}
-                  >
-                    {isEnter ? (
-                      <Check className="w-4 h-4 md:w-5 md:h-5" />
-                    ) : isBackspace ? (
-                      <Delete className="w-4 h-4 md:w-5 md:h-5" />
-                    ) : (
-                      key
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+          {/* Linha divisória com glow */}
+          <div className="relative flex items-center justify-center mb-2">
+            <div className="w-full h-px bg-white/5" />
+            <div
+              className="absolute w-20 h-px"
+              style={{
+                background: `linear-gradient(to right, transparent, rgba(var(--theme-primary-rgb), 0.4), transparent)`,
+              }}
+            />
+          </div>
+
+          {/* Teclas — mesmo layout flex do jogo original */}
+          <div className="flex flex-col gap-[5px] items-center w-full px-1">
+            {KEYBOARD_ROWS.map((row, ri) => (
+              <div key={ri} className="flex gap-[3px] w-full justify-center">
+                {ri === 1 && <div style={{ flex: 0.5 }} />}
+                {ri === 2 && <div style={{ flex: 1.5 }} />}
+                {row.map((key) => {
+                  const state = keyStates[key];
+                  return (
+                    <button
+                      key={key}
+                      onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+                      onClick={(e) => { e.stopPropagation(); handleKey(key); }}
+                      className={cn(
+                        'border rounded-[7px] font-semibold uppercase select-none flex items-center justify-center transition-all duration-150',
+                        KEY_BG[state || 'default']
+                      )}
+                      style={{ flex: 1, height: 'clamp(36px, 10vw, 48px)' }}
+                    >
+                      <span className="text-[12px]">{key}</span>
+                    </button>
+                  );
+                })}
+                {ri === 1 && <div style={{ flex: 0.5 }} />}
+                {ri === 2 && <div style={{ flex: 1.5 }} />}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
