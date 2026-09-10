@@ -288,7 +288,7 @@ export function WordGameSlide(_props: { onNext: () => void }) {
 
       {/* Keyboard — mesmo design do jogo principal */}
       {!won && (
-        <div className="w-full pb-2 pt-0.5 px-2 mt-auto">
+        <div className="w-full max-w-[500px] mx-auto pb-2 pt-0.5 px-2 mt-auto">
           {/* Botões circulares de apagar e confirmar */}
           <div className="flex items-center justify-center gap-5 mb-2">
             <button
