@@ -38,6 +38,9 @@ export interface RetroConfig {
   musicUrl: string;
   musicName: string;
   wordGameAnswer: string;
+  wordGameQuestion: string;
+  outroTitle: string;
+  outroMessage: string;
 }
 
 interface RetroState {
@@ -65,6 +68,9 @@ export const useRetroV2Store = create<RetroState>((set, get) => ({
     musicUrl: '',
     musicName: 'Nossa Trilha',
     wordGameAnswer: 'O amor da minha vida',
+    wordGameQuestion: 'O QUE EU ACHO DE VOCÊ?',
+    outroTitle: 'Feliz 1 ano pra nós, meu amor!',
+    outroMessage: 'Obrigado por cada momento incrível. Essa é só uma parte da nossa história.',
   },
 
   openRetro: async (siteId: string) => {

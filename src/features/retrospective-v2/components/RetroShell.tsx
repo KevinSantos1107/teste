@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react';
+import { X, Volume2, VolumeX } from 'lucide-react';
 import { useRetroV2Store } from '../store/useRetroV2Store';
 import { IntroSlide } from './slides/01-IntroSlide';
 import { TimeSlide } from './slides/02-TimeSlide';
@@ -10,8 +10,7 @@ import { SummarySlide } from './slides/07-SummarySlide';
 import { OutroSlide } from './slides/08-OutroSlide';
 import '../styles/retro-v2.css';
 
-// Slides that have internal interactive elements — swipe nav only, no tap zones
-const INTERACTIVE_SLIDES = new Set([3, 4]); // RouletteSlide=3(idx), WordGame=4
+
 
 export function RetroShell() {
   const { isOpen, closeRetro, isReady, config } = useRetroV2Store();
@@ -20,12 +19,16 @@ export function RetroShell() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Swipe tracking
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const isSwiping = useRef(false);
+  // Gesture tracking — mesmo padrão do AlbumViewerModal
+  const gesture = useRef<{
+    startX: number;
+    startY: number;
+    startTime: number;
+    moved: boolean;
+    pointerId: number | null;
+  }>({ startX: 0, startY: 0, startTime: 0, moved: false, pointerId: null });
 
-  // Music
+  // ── Música ─────────────────────────────────────────────────────────────────
   const startMusic = useCallback(async () => {
     if (!config.musicUrl) return;
     try {
@@ -57,14 +60,15 @@ export function RetroShell() {
       document.body.style.overflow = '';
       stopMusic();
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen, stopMusic]);
 
-  const nextSlide = useCallback((max: number) => {
-    setCurrentSlide((prev) => Math.min(prev + 1, max - 1));
-  }, []);
+  const hasRoulette = config.rouletteOptions && config.rouletteOptions.length > 0;
+  const TOTAL_SLIDES = hasRoulette ? 7 : 6;
+
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => Math.min(prev + 1, TOTAL_SLIDES - 1));
+  }, [TOTAL_SLIDES]);
 
   const prevSlide = useCallback(() => {
     setCurrentSlide((prev) => Math.max(prev - 1, 0));
@@ -72,7 +76,7 @@ export function RetroShell() {
 
   const handleStart = () => {
     startMusic();
-    nextSlide(100); // 100 is just a safe max since Intro is slide 0
+    nextSlide();
   };
 
   const toggleMute = () => {
@@ -82,49 +86,81 @@ export function RetroShell() {
     }
   };
 
-  // Swipe gesture handling on the outer wrapper
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    isSwiping.current = false;
-  };
+  // ── Navegação por Pointer Events (igual ao álbum) ─────────────────────────
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (gesture.current.pointerId !== null) return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - touchStartY.current;
-    // Mark as horizontal swipe if horizontal motion dominates
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-      isSwiping.current = true;
+    // Se o clique foi em um elemento interativo (botão, input, link…),
+    // NÃO captamos o pointer — deixamos o evento chegar normalmente ao elemento.
+    const target = e.target as HTMLElement;
+    const isInteractiveElement = !!target.closest(
+      'button, input, select, textarea, a, [role="button"], [data-interactive]'
+    );
+    if (isInteractiveElement) return;
+
+    gesture.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startTime: Date.now(),
+      moved: false,
+      pointerId: e.pointerId,
+    };
+    // Captura o pointer SÓ quando não é um elemento interativo
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (gesture.current.pointerId !== e.pointerId) return;
+    const dx = Math.abs(e.clientX - gesture.current.startX);
+    const dy = Math.abs(e.clientY - gesture.current.startY);
+    if (dx > 8 || dy > 8) gesture.current.moved = true;
+  }, []);
+
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (gesture.current.pointerId !== e.pointerId) return;
+
+    const { startX, moved } = gesture.current;
+    gesture.current.pointerId = null;
+
+    // Slide 0 (Intro) não navega por clique — só pelo botão "Começar"
+    if (currentSlide === 0) return;
+
+    // Tap simples (sem arrastar): navegar por metade da tela
+    if (!moved) {
+      const isRightSide = e.clientX > window.innerWidth / 2;
+      if (isRightSide) nextSlide();
+      else prevSlide();
+      return;
     }
-  };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isSwiping.current || currentSlide === 0) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (dx < -50) nextSlide(100);
-    else if (dx > 50) prevSlide();
-    isSwiping.current = false;
-  };
+    // Swipe horizontal
+    const dx = e.clientX - startX;
+    const dy = e.clientY - gesture.current.startY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0) nextSlide();
+      else prevSlide();
+    }
+  }, [currentSlide, nextSlide, prevSlide]);
+
+  const onPointerCancel = useCallback(() => {
+    gesture.current.pointerId = null;
+  }, []);
 
   if (!isOpen) return null;
 
-  const hasRoulette = config.rouletteOptions && config.rouletteOptions.length > 0;
-  const TOTAL_SLIDES = hasRoulette ? 8 : 7;
-  const isInteractive = INTERACTIVE_SLIDES.has(currentSlide);
-
-  // Safe wrapper for nextSlide with the actual total
-  const goNext = () => nextSlide(TOTAL_SLIDES);
 
   return (
     <div
       className="retro-v2-modal"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      style={{ touchAction: 'none' }}
     >
-      {/* Progress Bars */}
+      {/* Barra de progresso — estilo Instagram Stories */}
       {currentSlide > 0 && (
-        <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-2 pt-2">
+        <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-2 pt-2 pointer-events-none">
           {Array.from({ length: TOTAL_SLIDES - 1 }).map((_, i) => (
             <div key={i} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
               <div
@@ -136,10 +172,10 @@ export function RetroShell() {
         </div>
       )}
 
-      {/* Top Controls */}
+      {/* Controles do topo — X e mudo */}
       <div className="absolute top-5 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
         <button
-          onClick={closeRetro}
+          onClick={(e) => { e.stopPropagation(); closeRetro(); }}
           className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center pointer-events-auto active:scale-95 transition-transform border border-white/10"
         >
           <X className="w-4 h-4 text-white" />
@@ -147,7 +183,7 @@ export function RetroShell() {
 
         {currentSlide > 0 && (
           <button
-            onClick={toggleMute}
+            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
             className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center pointer-events-auto active:scale-95 transition-transform border border-white/10"
           >
             {isMuted ? (
@@ -159,28 +195,56 @@ export function RetroShell() {
         )}
       </div>
 
+      {/* Indicador visual de zona de clique — aparece brevemente no primeiro slide não-intro */}
+      {currentSlide === 1 && (
+        <div className="absolute inset-y-16 left-0 right-0 z-30 flex pointer-events-none select-none">
+          <div className="w-1/2 h-full flex items-center justify-start pl-3 opacity-0 hover:opacity-20 transition-opacity">
+            <span className="text-white text-2xl">‹</span>
+          </div>
+          <div className="w-1/2 h-full flex items-center justify-end pr-3 opacity-0 hover:opacity-20 transition-opacity">
+            <span className="text-white text-2xl">›</span>
+          </div>
+        </div>
+      )}
+
       {/* Slides */}
-      <div className="retro-v2-slider" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+      <div
+        className="retro-v2-slider"
+        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+      >
+        {/* Slide 0 — Intro (tem seu próprio botão, não navega por clique) */}
         <div className="retro-v2-slide">
           <IntroSlide onStart={handleStart} isReady={isReady} />
         </div>
+
+        {/* Slide 1 — Horas Juntos */}
         <div className="retro-v2-slide">
           <TimeSlide />
         </div>
+
+        {/* Slide 2 — Eras / Álbuns */}
         <div className="retro-v2-slide">
           <ErasSlide />
         </div>
+
+        {/* Slide 3 — Roleta (interativo: clique em elementos internos não navega) */}
         {config.rouletteOptions && config.rouletteOptions.length > 0 && (
           <div className="retro-v2-slide">
             <RouletteSlide />
           </div>
         )}
+
+        {/* Slide 4 — Jogo de Palavras (interativo) */}
         <div className="retro-v2-slide">
-          <WordGameSlide onNext={goNext} />
+          <WordGameSlide onNext={nextSlide} />
         </div>
+
+        {/* Slide 5 — Resumo */}
         <div className="retro-v2-slide">
           <SummarySlide />
         </div>
+
+        {/* Slide 6 — Outro */}
         <div className="retro-v2-slide">
           <OutroSlide
             onReplay={() => {
@@ -194,68 +258,7 @@ export function RetroShell() {
         </div>
       </div>
 
-      {/* Navigation — only show for non-interactive, non-intro slides */}
-      {currentSlide > 0 && !isInteractive && (
-        <>
-          {/* Left zone: prev (1/4 of screen) */}
-          <div
-            onClick={prevSlide}
-            className="absolute left-0 inset-y-16 w-1/4 z-40 cursor-pointer flex items-center justify-start pl-2 group"
-          >
-            <div className="opacity-0 group-hover:opacity-30 transition-opacity">
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </div>
-          </div>
-
-          {/* Right zone: next (3/4 of screen) */}
-          <div
-            onClick={goNext}
-            className="absolute right-0 inset-y-16 w-3/4 z-40 cursor-pointer flex items-center justify-end pr-2 group"
-          >
-            <div className="opacity-0 group-hover:opacity-30 transition-opacity">
-              <ChevronRight className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* For interactive slides, show explicit nav buttons at bottom */}
-      {currentSlide > 0 && isInteractive && (
-        <div className="absolute bottom-4 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              prevSlide();
-            }}
-            className="pointer-events-auto flex items-center gap-1 px-4 py-2 bg-black/50 backdrop-blur-md rounded-full text-white text-xs border border-white/10 active:scale-95 transition-transform"
-          >
-            <ChevronLeft className="w-3 h-3" /> Voltar
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              goNext();
-            }}
-            className="pointer-events-auto flex items-center gap-1 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-white text-xs border border-white/10 active:scale-95 transition-transform"
-          >
-            Pular <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
-      )}
-
-      {/* Dot indicators */}
-      {currentSlide > 0 && !isInteractive && currentSlide < TOTAL_SLIDES - 1 && (
-        <div className="absolute bottom-5 left-0 right-0 z-50 flex justify-center gap-1.5 pointer-events-none">
-          {Array.from({ length: TOTAL_SLIDES - 1 }).map((_, i) => (
-            <div
-              key={i}
-              className={`rounded-full transition-all duration-300 ${
-                i + 1 === currentSlide ? 'w-4 h-1.5 bg-white' : 'w-1.5 h-1.5 bg-white/30'
-              }`}
-            />
-          ))}
-        </div>
-      )}
+    
     </div>
   );
 }

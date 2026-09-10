@@ -21,6 +21,9 @@ interface RetroV2Config {
   musicUrl?: string;
   musicName?: string;
   wordGameAnswer?: string;
+  wordGameQuestion?: string;
+  outroTitle?: string;
+  outroMessage?: string;
 }
 
 function useToast() {
@@ -53,6 +56,9 @@ export default function RetrospectiveEditor() {
     musicUrl: '',
     musicName: '',
     wordGameAnswer: 'INCRIVEL',
+    wordGameQuestion: 'O QUE EU ACHO DE VOCÊ?',
+    outroTitle: 'Feliz 1 ano pra nós, meu amor!',
+    outroMessage: 'Obrigado por cada momento incrível. Essa é só uma parte da nossa história.',
   });
 
   // Data for dropdowns
@@ -72,6 +78,9 @@ export default function RetrospectiveEditor() {
             musicUrl: data.musicUrl || '',
             musicName: data.musicName || '',
             wordGameAnswer: data.wordGameAnswer || 'INCRIVEL',
+            wordGameQuestion: data.wordGameQuestion || 'O QUE EU ACHO DE VOCÊ?',
+            outroTitle: data.outroTitle || 'Feliz 1 ano pra nós, meu amor!',
+            outroMessage: data.outroMessage || 'Obrigado por cada momento incrível. Essa é só uma parte da nossa história.',
           });
         }
 
@@ -192,26 +201,79 @@ export default function RetrospectiveEditor() {
 
           <div className="space-y-3 bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
             <label className="text-sm font-medium text-slate-300">
-              Palavra do Jogo de Palavras (Final da Retrospectiva)
+              Jogo de Palavras (Final da Retrospectiva)
             </label>
-            <p className="text-xs text-slate-500">
-              Esta palavra aparecerá como um "Termo" no final da retrospectiva. Evite usar acentos.
+            <p className="text-xs text-slate-500 mb-2">
+              Configure a pergunta e a palavra (evite acentos) que aparecerão como um minigame "Termo".
             </p>
-            <Input
-              value={retroConfig.wordGameAnswer || ''}
-              onChange={(e) =>
-                setRetroConfig({
-                  ...retroConfig,
-                  wordGameAnswer: e.target.value
-                    .toUpperCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^A-Z]/g, ''),
-                })
-              }
-              className="bg-slate-900 border-slate-700 text-slate-200 h-10 font-mono text-lg tracking-widest uppercase"
-              placeholder="EX: INCRIVEL"
-            />
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1 block">Pergunta / Dica:</label>
+                <Input
+                  value={retroConfig.wordGameQuestion || ''}
+                  onChange={(e) =>
+                    setRetroConfig({
+                      ...retroConfig,
+                      wordGameQuestion: e.target.value,
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200 h-10"
+                  placeholder="EX: O QUE EU ACHO DE VOCÊ?"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1 block">Palavra (Resposta):</label>
+                <Input
+                  value={retroConfig.wordGameAnswer || ''}
+                  onChange={(e) =>
+                    setRetroConfig({
+                      ...retroConfig,
+                      wordGameAnswer: e.target.value
+                        .toUpperCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^A-Z]/g, ''),
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200 h-10 font-mono text-lg tracking-widest uppercase"
+                  placeholder="EX: INCRIVEL"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3 bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
+            <label className="text-sm font-medium text-slate-300">
+              Tela Final (Encerramento)
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              Texto que aparece no último slide da retrospectiva, com os confetes.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1 block">Título:</label>
+                <Input
+                  value={retroConfig.outroTitle || ''}
+                  onChange={(e) => setRetroConfig({ ...retroConfig, outroTitle: e.target.value })}
+                  className="bg-slate-900 border-slate-700 text-slate-200 h-10"
+                  placeholder="EX: Feliz 1 ano pra nós, meu amor!"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-400 mb-1 block">Mensagem:</label>
+                <textarea
+                  value={retroConfig.outroMessage || ''}
+                  onChange={(e) => setRetroConfig({ ...retroConfig, outroMessage: e.target.value })}
+                  rows={3}
+                  className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-3 text-sm focus:ring-1 focus:ring-theme-primary outline-none resize-none"
+                  placeholder="EX: Obrigado por cada momento incrível..."
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

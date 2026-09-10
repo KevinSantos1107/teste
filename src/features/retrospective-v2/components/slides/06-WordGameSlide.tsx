@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { cn } from '../../../../shared/utils/cn';
-import { Heart, HeartCrack, Play } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRetroV2Store } from '../../store/useRetroV2Store';
+import { Check, Delete } from 'lucide-react';
+import { cn } from '../../../../shared/utils/cn';
 
-const MAX_GUESSES = 6;
-
-type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'active';
+// ─── Constants & Types ────────────────────────────────────────────────────────
+const MAX_ATTEMPTS = 6;
+type LetterState = 'correct' | 'present' | 'absent' | 'empty' | 'active' | 'typed';
 
 interface LetterCell {
   letter: string;
@@ -15,57 +16,69 @@ interface LetterCell {
 const KEYBOARD_ROWS = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
   ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫'],
+  ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACKSPACE'],
 ];
 
-function evaluateGuess(guess: string, answer: string): LetterState[] {
-  const WORD_LENGTH = answer.length;
-  const result: LetterState[] = Array(WORD_LENGTH).fill('absent');
-  const answerLetters = answer.split('');
-  const guessLetters = guess.split('');
+// ─── Styles from the original WordGame ───────────────────────────────────────
+const CELL_BG: Record<LetterState, string> = {
+  correct:
+    'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(52,211,153,0.6)] [text-shadow:0_0_8px_rgba(255,255,255,0.8)]',
+  present:
+    'bg-yellow-500 border-yellow-400 text-white shadow-[0_0_20px_rgba(234,179,8,0.6)] [text-shadow:0_0_8px_rgba(255,255,255,0.8)]',
+  absent:
+    'bg-slate-400/5 border-slate-600 text-slate-400 shadow-[0_0_10px_rgba(148,163,184,0.1)]',
+  empty:
+    'bg-[rgba(var(--theme-primary-rgb),0.05)] border-[rgba(var(--theme-primary-rgb),0.3)] text-[var(--theme-primary)]',
+  active:
+    'border-[var(--theme-primary)] text-white shadow-[0_0_15px_rgba(var(--theme-primary-rgb),0.4)]',
+  typed:
+    'bg-[rgba(var(--theme-primary-rgb),0.12)] border-[var(--theme-primary)] text-white',
+};
 
-  guessLetters.forEach((letter, i) => {
-    if (letter === answerLetters[i]) {
+const KEY_BG: Record<string, string> = {
+  correct:
+    'bg-emerald-500 text-white border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)] [text-shadow:0_0_8px_rgba(255,255,255,0.7)]',
+  present:
+    'bg-yellow-500 text-white border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.5)] [text-shadow:0_0_8px_rgba(255,255,255,0.7)]',
+  absent:
+    'bg-slate-800/80 text-slate-500 border-slate-700/50',
+  default:
+    'bg-[rgba(var(--theme-primary-rgb),0.05)] text-white/80 border-[rgba(var(--theme-primary-rgb),0.2)] hover:bg-[rgba(var(--theme-primary-rgb),0.15)] hover:border-[var(--theme-primary)] hover:text-white active:scale-[0.92] transition-all',
+};
+
+// ─── Logic ───────────────────────────────────────────────────────────────────
+function evaluateGuess(guess: string, answer: string): LetterState[] {
+  const result: LetterState[] = Array(answer.length).fill('absent');
+  const answerArr = answer.split('');
+  const guessArr = guess.split('');
+
+  // 1. Corrects
+  guessArr.forEach((letter, i) => {
+    if (letter === answerArr[i]) {
       result[i] = 'correct';
-      answerLetters[i] = '*';
+      answerArr[i] = '*'; // consume
     }
   });
 
-  guessLetters.forEach((letter, i) => {
+  // 2. Presents
+  guessArr.forEach((letter, i) => {
     if (result[i] === 'correct') return;
-    const foundIdx = answerLetters.indexOf(letter);
+    const foundIdx = answerArr.indexOf(letter);
     if (foundIdx !== -1) {
       result[i] = 'present';
-      answerLetters[foundIdx] = '*';
+      answerArr[foundIdx] = '*'; // consume
     }
   });
 
   return result;
 }
 
-const CELL_STYLES: Record<LetterState, string> = {
-  correct: 'bg-emerald-500 border-emerald-500 text-white',
-  present: 'bg-amber-500 border-amber-500 text-white',
-  absent: 'bg-slate-700 border-slate-700 text-slate-300',
-  empty: 'bg-transparent border-slate-600 text-white',
-  active:
-    'bg-transparent border-rose-400/80 text-white scale-110 shadow-[0_0_10px_rgba(244,63,94,0.4)]',
-};
 
-const KEY_STYLES: Record<string, string> = {
-  correct: 'bg-emerald-500 text-white',
-  present: 'bg-amber-500 text-white',
-  absent: 'bg-slate-800 text-slate-500',
-  default: 'bg-slate-700 text-white hover:bg-slate-600 active:scale-95',
-};
-
-interface WordGameSlideProps {
-  onNext: () => void;
-}
-
-export function WordGameSlide({ onNext }: WordGameSlideProps) {
+export function WordGameSlide(_props: { onNext: () => void }) {
   const { config } = useRetroV2Store();
-  const WORD = (config.wordGameAnswer || 'INCRIVEL')
+  
+  // A palavra vem do admin (sempre sanitizada e maiúscula)
+  const WORD = (config.wordGameAnswer || 'AMOR')
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -76,10 +89,11 @@ export function WordGameSlide({ onNext }: WordGameSlideProps) {
   const [currentGuess, setCurrentGuess] = useState('');
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
-  const [shake, setShake] = useState(false);
-  const [message, setMessage] = useState('');
+  const [shakeRow, setShakeRow] = useState(false);
   const [revealingRow, setRevealingRow] = useState(-1);
+  const [message, setMessage] = useState('');
 
+  // Estados das teclas virtuais
   const keyStates: Record<string, LetterState> = {};
   guesses.forEach((row) => {
     row.forEach((cell) => {
@@ -90,288 +104,226 @@ export function WordGameSlide({ onNext }: WordGameSlideProps) {
     });
   });
 
-  const showMessage = (msg: string, duration = 2200) => {
+  const showMsg = (msg: string) => {
     setMessage(msg);
-    setTimeout(() => setMessage(''), duration);
+    setTimeout(() => setMessage(''), 2500);
   };
 
   const handleKey = useCallback(
     (key: string) => {
-      if (gameOver) return;
-      if (revealingRow >= 0) return; // Wait for reveal animation
-
-      if (key === 'BACKSPACE' || key === '⌫') {
-        setCurrentGuess((g) => g.slice(0, -1));
-        return;
-      }
+      if (gameOver || revealingRow !== -1) return;
 
       if (key === 'ENTER') {
-        if (currentGuess.length < WORD_LENGTH) {
-          showMessage(`${WORD_LENGTH} letras!`, 500);
-          setShake(true);
-          setTimeout(() => setShake(false), 500);
+        if (currentGuess.length !== WORD_LENGTH) {
+          setShakeRow(true);
+          showMsg('A palavra está incompleta');
+          setTimeout(() => setShakeRow(false), 500);
           return;
         }
 
-        // No dictionary validation in retrospective
-
-        const states = evaluateGuess(currentGuess, WORD);
-        const newRow: LetterCell[] = currentGuess.split('').map((letter, i) => ({
-          letter,
-          state: states[i],
+        const evaluated = evaluateGuess(currentGuess, WORD);
+        const newGuessRow = currentGuess.split('').map((l, i) => ({
+          letter: l,
+          state: evaluated[i],
         }));
 
-        const newGuesses = [...guesses, newRow];
-        setRevealingRow(newGuesses.length - 1);
-        setTimeout(() => setRevealingRow(-1), WORD_LENGTH * 200 + 100);
-
+        const newGuesses = [...guesses, newGuessRow];
         setGuesses(newGuesses);
         setCurrentGuess('');
+        setRevealingRow(guesses.length);
 
-        if (currentGuess === WORD) {
-          setTimeout(
-            () => {
-              setWon(true);
-              setGameOver(true);
-            },
-            WORD_LENGTH * 200 + 400
-          );
-        } else if (newGuesses.length >= MAX_GUESSES) {
-          setTimeout(
-            () => {
+        const isWin = evaluated.every((s) => s === 'correct');
+        
+        // Wait for reveal animation to finish before deciding win/loss state
+        setTimeout(() => {
+          setRevealingRow(-1);
+          if (isWin) {
+            setWon(true);
+            setGameOver(true);
+          } else if (newGuesses.length >= MAX_ATTEMPTS) {
+            setGameOver(true);
+            showMsg('Acabaram as tentativas! Reiniciando...');
+            // Auto restart after failure to enforce they MUST win
+            setTimeout(() => {
+              setGuesses([]);
+              setCurrentGuess('');
+              setGameOver(false);
               setWon(false);
-              setGameOver(true);
-            },
-            WORD_LENGTH * 200 + 400
-          );
-        }
-        return;
-      }
+            }, 3000);
+          }
+        }, WORD_LENGTH * 300 + 400); // tempo da animação (stagger)
 
-      if (/^[A-ZÁÉÍÓÚÀÂÊÎÔÛÃÕÇ]$/.test(key) && currentGuess.length < WORD_LENGTH) {
-        setCurrentGuess((g) => g + key);
+      } else if (key === 'BACKSPACE') {
+        setCurrentGuess((prev) => prev.slice(0, -1));
+      } else if (/^[A-Z]$/.test(key)) {
+        if (currentGuess.length < WORD_LENGTH) {
+          setCurrentGuess((prev) => prev + key);
+        }
       }
     },
-    [gameOver, currentGuess, guesses, revealingRow]
+    [currentGuess, gameOver, guesses, revealingRow, WORD, WORD_LENGTH]
   );
 
-  // Physical keyboard support
+  // Keyboard events
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      e.stopPropagation();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
       const key = e.key.toUpperCase();
-      if (key === 'ENTER') {
-        e.preventDefault();
-        handleKey(key);
-      } else if (key === 'BACKSPACE') {
-        handleKey(key);
-      } else if (/^[A-ZÁÉÍÓÚÀÂÊÎÔÛÃÕÇ]$/.test(key)) {
-        handleKey(key);
-      }
+      if (key === 'ENTER') handleKey('ENTER');
+      else if (key === 'BACKSPACE') handleKey('BACKSPACE');
+      else if (/^[A-Z]$/.test(key)) handleKey(key);
     };
-
-    window.addEventListener('keydown', handleKeyDown, { capture: true });
-    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleKey]);
 
-  // Build grid
-  const rows: { cells: LetterCell[]; isActive: boolean }[] = [];
-  for (let i = 0; i < MAX_GUESSES; i++) {
-    if (i < guesses.length) {
-      rows.push({ cells: guesses[i], isActive: false });
-    } else if (i === guesses.length && !gameOver) {
-      const cells: LetterCell[] = Array(WORD_LENGTH)
-        .fill(null)
-        .map((_, j) => ({
-          letter: currentGuess[j] || '',
-          state: currentGuess[j] ? 'active' : 'empty',
-        }));
-      rows.push({ cells, isActive: true });
-    } else {
-      rows.push({
-        cells: Array(WORD_LENGTH).fill({ letter: '', state: 'empty' as LetterState }),
-        isActive: false,
-      });
-    }
-  }
-
-  // To restart when losing
-  const restart = () => {
-    setGuesses([]);
-    setCurrentGuess('');
-    setGameOver(false);
-    setWon(false);
-  };
-
+  // Bloqueia clique para avançar enquanto não ganhar
+  // (Isso é feito usando data-interactive no container pai para interceptar o clique no RetroShell)
   return (
-    <div
-      className="flex-1 bg-[#09090b] flex flex-col items-center relative overflow-hidden h-full"
-      onClick={(e) => e.stopPropagation()}
-      onTouchEnd={(e) => e.stopPropagation()}
+    <div 
+      className="flex-1 bg-[#121212] flex flex-col items-center justify-between p-3 sm:p-6 pb-4 sm:pb-8 relative overflow-hidden"
+      data-interactive={!won ? "true" : undefined}
     >
-      {/* Background accent */}
-      <div className="absolute inset-0 bg-gradient-to-b from-rose-950/30 via-transparent to-transparent pointer-events-none" />
+      {/* Messages */}
+      <AnimatePresence>
+        {message && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-10 z-50 bg-white text-black px-6 py-2.5 rounded-full font-bold text-sm tracking-wide shadow-xl"
+          >
+            {message}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="z-10 w-full flex flex-col items-center px-2 pt-16 pb-4 gap-3 max-h-full h-full relative">
-        {/* Header */}
-        <div className="text-center w-full px-2 z-10">
-          <p className="text-white/50 text-[10px] uppercase tracking-widest mb-1">
-            Capítulo 5 · Jogo
+      <div className="flex-1 w-full flex flex-col items-center justify-center max-w-sm mx-auto">
+        
+        {/* Header Text */}
+        <div className="mb-3 sm:mb-6 text-center">
+          <p className="text-theme-primary/80 font-bold text-[10px] uppercase tracking-[0.3em] mb-1">
+            Minigame
           </p>
-          <h2 className="text-white text-base font-bold uppercase tracking-tight leading-snug">
-            O que eu acho de você?
+          <h2 className="text-white text-base sm:text-lg md:text-xl font-black uppercase tracking-widest max-w-[280px] mx-auto leading-tight">
+            {config.wordGameQuestion || 'O QUE EU ACHO DE VOCÊ?'}
           </h2>
         </div>
 
-        {/* Toast */}
-        <div
-          className={cn(
-            'text-center px-4 py-1.5 rounded-full font-bold text-sm transition-all duration-300 min-h-[28px] z-20 absolute top-28',
-            message ? 'bg-white/10 text-white opacity-100' : 'opacity-0 pointer-events-none'
-          )}
-        >
-          {message || ' '}
-        </div>
+        {/* Board Grid */}
+        <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-900/40 border border-slate-800/50 w-full max-w-md mx-auto">
+          {Array.from({ length: MAX_ATTEMPTS }).map((_, rowIndex) => {
+            const isCurrentRow = rowIndex === guesses.length;
+            const isRevealing = rowIndex === revealingRow;
+            const rowGuessed = guesses[rowIndex];
 
-        {/* Board */}
-        <div className="flex flex-col gap-1 items-center w-full z-10 relative">
-          {rows.map((row, ri) => (
-            <div
-              key={ri}
-              className={cn(
-                'flex gap-1',
-                shake && ri === guesses.length && 'animate-[shake_0.5s_ease]'
-              )}
-            >
-              {row.cells.map((cell, ci) => {
-                const isRevealing = ri === revealingRow;
-                return (
-                  <div
-                    key={ci}
-                    className="relative perspective-1000"
-                    style={{
-                      width: WORD_LENGTH > 6 ? '36px' : '44px',
-                      height: WORD_LENGTH > 6 ? '36px' : '44px',
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        'absolute inset-0 border-2 flex items-center justify-center font-extrabold uppercase rounded transition-all duration-300 transform-style-3d',
-                        isRevealing ? 'animate-[flip_0.6s_ease-in-out_forwards]' : '',
-                        CELL_STYLES[cell.state]
-                      )}
-                      style={{
-                        fontSize: WORD_LENGTH > 6 ? '14px' : '18px',
-                        animationDelay: isRevealing ? `${ci * 200}ms` : '0ms',
-                      }}
+            const emptyCells = Array.from({ length: WORD_LENGTH }).map((_, i) => {
+              const letter = isCurrentRow ? currentGuess[i] : '';
+              let state: LetterState = 'empty';
+              if (isCurrentRow && letter) {
+                state = i === currentGuess.length - 1 ? 'active' : 'typed';
+              }
+              return { letter: letter || '', state };
+            });
+
+            const cells = rowGuessed || emptyCells;
+
+            return (
+              <motion.div
+                key={rowIndex}
+                animate={shakeRow && isCurrentRow ? { x: [-5, 5, -5, 5, 0] } : {}}
+                transition={{ duration: 0.4 }}
+                className="flex justify-center gap-1.5"
+              >
+                {cells.map((cell, colIndex) => {
+                  return (
+                    <motion.div
+                      key={colIndex}
+                      initial={false}
+                      animate={
+                        isRevealing
+                          ? { rotateX: [0, 90, 0] }
+                          : { scale: cell.state === 'active' ? [1, 1.1, 1] : 1 }
+                      }
+                      transition={
+                        isRevealing
+                          ? { duration: 0.6, delay: colIndex * 0.15 }
+                          : { duration: 0.2 }
+                      }
+                      className="perspective-[1000px] w-full aspect-square max-w-[2.5rem] sm:max-w-[3rem]"
                     >
-                      {cell.letter}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                      <div
+                        className={cn(
+                          'w-full h-full flex items-center justify-center rounded-lg border-2 font-black text-xl md:text-2xl transition-colors',
+                          isRevealing ? 'delay-[' + colIndex * 150 + 'ms]' : '',
+                          CELL_BG[cell.state]
+                        )}
+                        style={isRevealing ? { transitionDelay: `${colIndex * 150 + 300}ms` } : {}}
+                      >
+                        {cell.letter}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Keyboard */}
-        <div className="flex flex-col gap-1 items-center w-full mt-auto pb-2 z-10 relative">
-          {KEYBOARD_ROWS.map((row, ri) => (
-            <div key={ri} className="flex gap-0.5">
+        {/* Mensagem de sucesso instintiva */}
+        <AnimatePresence>
+          {won && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 text-center"
+            >
+              <p className="text-emerald-400 font-bold uppercase tracking-widest text-sm animate-pulse">
+                Toque na tela para continuar
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Keyboard */}
+      {!won && (
+        <div className="w-full max-w-lg mt-auto pt-2 sm:pt-4 flex flex-col gap-1 sm:gap-1.5 touch-none">
+          {KEYBOARD_ROWS.map((row, i) => (
+            <div key={i} className="flex justify-center gap-1 sm:gap-1.5">
               {row.map((key) => {
-                const state = keyStates[key];
+                const isEnter = key === 'ENTER';
+                const isBackspace = key === 'BACKSPACE';
+                const state = keyStates[key] || 'default';
+                const styleClass = KEY_BG[state];
+
                 return (
                   <button
                     key={key}
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                    }}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      handleKey(key === '⌫' ? '⌫' : key === 'ENTER' ? 'ENTER' : key);
+                      e.currentTarget.blur();
+                      handleKey(key);
                     }}
                     className={cn(
-                      'h-11 rounded font-bold text-xs uppercase transition-all duration-200 select-none relative',
-                      key === 'ENTER' || key === '⌫' ? 'px-1.5 min-w-[48px] text-[10px]' : 'w-8',
-                      KEY_STYLES[state || 'default']
+                      'h-10 sm:h-12 md:h-14 flex items-center justify-center rounded-md font-bold text-xs sm:text-sm md:text-base border-b-4 select-none',
+                      isEnter || isBackspace ? 'px-2 sm:px-3 sm:px-4 text-[10px] sm:text-[11px]' : 'flex-1 max-w-[2.2rem] sm:max-w-[2.5rem]',
+                      styleClass
                     )}
                   >
-                    {key}
+                    {isEnter ? (
+                      <Check className="w-4 h-4 md:w-5 md:h-5" />
+                    ) : isBackspace ? (
+                      <Delete className="w-4 h-4 md:w-5 md:h-5" />
+                    ) : (
+                      key
+                    )}
                   </button>
                 );
               })}
             </div>
           ))}
         </div>
-
-        {/* Game Over Overlay */}
-        {gameOver && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#09090b]/90 backdrop-blur-md px-6 animate-in fade-in duration-500 rounded-lg">
-            <div className="flex flex-col items-center text-center max-w-sm w-full">
-              {won ? (
-                <>
-                  <div className="w-20 h-20 bg-rose-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(243,24,96,0.6)] animate-[pulse_2s_infinite]">
-                    <Heart className="w-10 h-10 text-white fill-current" />
-                  </div>
-                  <h2 className="text-3xl font-black text-white italic mb-2">Parabéns! 🎉</h2>
-                  <p className="text-white/80 font-bold mb-6">A palavra era: {WORD}</p>
-                  <p className="text-rose-400 font-bold text-base mb-8 italic text-balance">
-                    🎀 Sim, você acertou!
-                  </p>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNext();
-                    }}
-                    className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-full shadow-[0_0_20px_rgba(243,24,96,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
-                  >
-                    <Play className="w-4 h-4 fill-current" /> Próximo Slide
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="w-20 h-20 bg-rose-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(243,24,96,0.6)]">
-                    <HeartCrack className="w-10 h-10 text-white fill-current" />
-                  </div>
-                  <h2 className="text-3xl font-black text-white italic mb-2">Quase lá! 💔</h2>
-                  <p className="text-white/80 font-bold mb-6">
-                    A palavra era: <span className="text-rose-400 uppercase">{WORD}</span>
-                  </p>
-                  <p className="text-white/60 text-sm mb-8 italic">
-                    Tente novamente para prosseguir!
-                  </p>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      restart();
-                    }}
-                    className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-full shadow-[0_0_20px_rgba(243,24,96,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
-                  >
-                    <Play className="w-4 h-4 fill-current" /> Tentar Novamente
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <style>{`
-        @keyframes shake { 0%,100%{transform:translateX(0)} 10%,50%,90%{transform:translateX(-5px)} 30%,70%{transform:translateX(5px)} }
-        
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        
-        @keyframes flip { 
-          0% { transform: rotateX(0); } 
-          49.9% { transform: rotateX(-90deg); } 
-          50% { transform: rotateX(-90deg); } 
-          100% { transform: rotateX(0); } 
-        }
-      `}</style>
+      )}
     </div>
   );
 }

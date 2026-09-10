@@ -1,17 +1,53 @@
 import { useSiteConfigStore } from '../../../../store/siteConfigStore';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { animate, motion, useInView } from 'framer-motion';
+import { useCounterState } from '../../../../shared/hooks/useCounterState';
+
+// Hook simples para o contador — usando ref para evitar re-render que mata a animação
+function useAnimatedCounter(target: number, isInView: boolean) {
+  const hasAnimatedRef = useRef(false);
+  const { value, setValue } = useCounterState(0);
+
+  useEffect(() => {
+    // Só dispara quando o slide entrar em tela e apenas uma vez
+    if (!isInView || hasAnimatedRef.current || target === 0) return;
+
+    hasAnimatedRef.current = true; // ref: não causa re-render, não mata a animação
+
+    const controls = animate(0, target, {
+      duration: 3.5,
+      ease: [0.16, 1, 0.3, 1], // expoOut — rápido no início, freia no final
+      onUpdate: (v) => setValue(Math.round(v)),
+    });
+
+    // Cleanup só cancela se o componente for desmontado antes de terminar
+    return () => controls.stop();
+  }, [isInView, target]); // hasAnimatedRef não entra aqui — é uma ref estável
+
+  return value;
+}
 
 export function TimeSlide() {
   const { config: siteConfig } = useSiteConfigStore();
-  const [hours, setHours] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
 
-  // Detecta quando o slide entra em tela para disparar a animação
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, amount: 0.5 });
+  // Detecta quando o slide fica visível (threshold baixo para o carrossel)
+  const rootRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(rootRef, { once: true, amount: 0.3 });
 
-  // Faixas coloridas — pares e ímpares deslizam em direções opostas
+  // Cálculo das horas com fix de fuso horário
+  const targetHours = useMemo(() => {
+    const startStr = siteConfig?.relationship?.startDate;
+    const startMs = startStr
+      ? new Date(`${startStr}T12:00:00`).getTime()
+      : new Date('2025-10-27T12:00:00').getTime();
+    const diff = Math.floor((Date.now() - startMs) / (1000 * 60 * 60));
+    return isNaN(diff) || diff < 0 ? 0 : diff;
+  }, [siteConfig?.relationship?.startDate]);
+
+  const hours = useAnimatedCounter(targetHours, isInView);
+  const formattedNumber = new Intl.NumberFormat('pt-BR').format(hours);
+
+  // Faixas coloridas — pares entram da esquerda, ímpares da direita
   const echoColors = [
     { bg: '#C1175A', text: '#111' }, // Deep Pink
     { bg: '#E65100', text: '#111' }, // Deep Orange
@@ -20,59 +56,25 @@ export function TimeSlide() {
     { bg: '#C1175A', text: '#111' }, // Deep Pink
   ];
 
-  useEffect(() => {
-    if (!isInView || hasAnimated) return;
-
-    // Calcula as horas com fix de fuso horário
-    const startStr = siteConfig?.relationship?.startDate;
-    const startMs = startStr
-      ? new Date(`${startStr}T12:00:00`).getTime()
-      : new Date('2025-10-27T12:00:00').getTime();
-    const diffHours = Math.floor((Date.now() - startMs) / (1000 * 60 * 60));
-    const targetHours = isNaN(diffHours) || diffHours < 0 ? 0 : diffHours;
-
-    if (targetHours === 0) {
-      setHours(0);
-      return;
-    }
-
-    setHasAnimated(true);
-
-    // Animação estilo Spotify: dispara rápido, freia dramaticamente no final
-    const controls = animate(0, targetHours, {
-      duration: 3.5,
-      ease: [0.16, 1, 0.3, 1], // expoOut — muito rápido no início, suave no fim
-      onUpdate: (value) => setHours(Math.round(value)),
-    });
-
-    return () => controls.stop();
-  }, [isInView, hasAnimated, siteConfig?.relationship?.startDate]);
-
-  const formattedNumber = new Intl.NumberFormat('pt-BR').format(hours);
-
   return (
     <div
-      ref={ref}
+      ref={rootRef}
       className="flex-1 bg-[#0a0a0a] flex flex-col items-stretch justify-center relative overflow-hidden"
     >
       {/* Faixas coloridas com deslizamento horizontal alternado */}
       <div className="absolute inset-0 flex flex-col">
         {echoColors.map((color, i) => {
-          const direction = i % 2 === 0 ? '-120%' : '120%';
+          const fromX = i % 2 === 0 ? '-120%' : '120%';
           return (
             <motion.div
               key={i}
               className="flex-1 flex items-center overflow-hidden"
               style={{ backgroundColor: color.bg }}
-              initial={{ x: direction, opacity: 0 }}
+              initial={{ x: fromX, opacity: 0 }}
               animate={isInView ? { x: '0%', opacity: 1 } : {}}
-              transition={{
-                duration: 0.7,
-                delay: i * 0.06,
-                ease: [0.22, 1, 0.36, 1],
-              }}
+              transition={{ duration: 0.7, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
             >
-              {/* Número desliza junto com a faixa, na direção oposta para profundidade */}
+              {/* Número dentro da faixa desliza com leve parallax */}
               <motion.span
                 className="font-black whitespace-nowrap opacity-85 select-none w-full text-center"
                 style={{
@@ -82,9 +84,9 @@ export function TimeSlide() {
                   letterSpacing: '-0.05em',
                   transform: 'scaleY(1.15)',
                 }}
-                initial={{ x: i % 2 === 0 ? '15%' : '-15%' }}
+                initial={{ x: i % 2 === 0 ? '12%' : '-12%' }}
                 animate={isInView ? { x: '0%' } : {}}
-                transition={{ duration: 1.2, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 1.3, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
               >
                 {formattedNumber}
               </motion.span>
@@ -93,43 +95,46 @@ export function TimeSlide() {
         })}
       </div>
 
-      {/* Overlay escuro central com conteúdo */}
+      {/* Overlay central com o número principal */}
       <motion.div
         className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none"
-        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.55) 100%)' }}
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.72) 50%, rgba(0,0,0,0.5) 100%)',
+        }}
         initial={{ opacity: 0 }}
         animate={isInView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.5, delay: 0.25 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
       >
-        {/* Label "Horas Juntos" */}
+        {/* Label */}
         <motion.span
           className="text-white/70 text-xs md:text-sm font-bold mb-3 tracking-[0.25em] uppercase"
           initial={{ opacity: 0, y: -12 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
         >
           Horas Juntos
         </motion.span>
 
-        {/* Número principal grande */}
+        {/* Número principal */}
         <span
           className="text-white font-black tabular-nums"
           style={{
             fontSize: 'clamp(4rem, 18vw, 10rem)',
             lineHeight: 1,
             letterSpacing: '-0.04em',
-            textShadow: '0 0 60px rgba(255,255,255,0.25)',
+            textShadow: '0 0 60px rgba(255,255,255,0.2)',
           }}
         >
           {formattedNumber}
         </span>
 
-        {/* Frase de impacto — aparece só quando o número parou */}
+        {/* Frase de impacto — aparece após a contagem terminar */}
         <motion.span
           className="text-white/50 text-xs md:text-sm mt-8 flex items-center gap-2 tracking-wide"
           initial={{ opacity: 0, y: 10 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7, delay: 3.0 }}
+          transition={{ duration: 0.7, delay: 3.2 }}
         >
           Mais que 14% dos casais no mundo <span>✨</span>
         </motion.span>

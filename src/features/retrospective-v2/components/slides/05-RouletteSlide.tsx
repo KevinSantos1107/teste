@@ -61,12 +61,12 @@ export function RouletteSlide() {
         ))}
       </div>
 
-      <div className="z-10 text-center mb-10">
-        <h2 className="text-white text-3xl font-bold mb-2">Onde Sair</h2>
-        <p className="text-white/50 text-sm">Toque na roda para sortear o próximo date</p>
+      <div className="z-10 text-center mb-4 sm:mb-10">
+        <h2 className="text-white text-2xl sm:text-3xl font-bold mb-1">Onde Sair</h2>
+        <p className="text-white/50 text-xs sm:text-sm">Toque na roda para sortear o próximo date</p>
       </div>
 
-      <div className="relative z-10 flex items-center justify-center w-full max-w-[300px] aspect-square">
+      <div className="relative z-10 flex items-center justify-center w-full max-w-[240px] sm:max-w-[300px] aspect-square">
         {/* Pointer */}
         <div className="absolute -top-4 z-20 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-white drop-shadow-md" />
 
@@ -77,7 +77,6 @@ export function RouletteSlide() {
           className="retro-v2-wheel w-full h-full cursor-pointer relative overflow-hidden"
           style={{
             transform: `rotate(${rotation}deg)`,
-            // Create alternating conic gradient segments
             background: `conic-gradient(${options
               .map((_, i) => {
                 const start = (i * 360) / options.length;
@@ -94,11 +93,11 @@ export function RouletteSlide() {
             return (
               <div
                 key={i}
-                className="absolute w-full h-full flex justify-center items-start pt-6 select-none"
+                className="absolute w-full h-full flex justify-center items-start pt-4 sm:pt-6 select-none"
                 style={{ transform: `rotate(${angle}deg)` }}
               >
                 <span
-                  className="text-white font-bold text-sm tracking-widest uppercase drop-shadow-md"
+                  className="text-white font-bold text-xs sm:text-sm tracking-widest uppercase drop-shadow-md"
                   style={{ writingMode: 'vertical-rl' }}
                 >
                   {opt}
@@ -109,8 +108,8 @@ export function RouletteSlide() {
         </div>
 
         {/* Center dot */}
-        <div className="absolute z-20 w-8 h-8 bg-white rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none">
-          <div className="w-3 h-3 bg-slate-900 rounded-full" />
+        <div className="absolute z-20 w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none">
+          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-slate-900 rounded-full" />
         </div>
       </div>
 
@@ -118,8 +117,8 @@ export function RouletteSlide() {
       <div
         className={`absolute z-30 transition-all duration-500 transform ${winner ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 translate-y-10 pointer-events-none'}`}
       >
-        <div className="bg-[#1e1b4b] border border-indigo-500/30 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center">
-          <h3 className="text-white text-3xl font-black mb-1">{winner}</h3>
+        <div className="bg-[#1e1b4b] border border-indigo-500/30 px-6 sm:px-8 py-4 sm:py-6 rounded-2xl shadow-2xl flex flex-col items-center">
+          <h3 className="text-white text-2xl sm:text-3xl font-black mb-1">{winner}</h3>
           <p className="text-indigo-200 text-xs uppercase tracking-widest">Venceu! 🎉</p>
         </div>
       </div>
@@ -127,7 +126,7 @@ export function RouletteSlide() {
       <button
         onClick={spinWheel}
         disabled={isSpinning}
-        className="mt-12 px-8 py-4 bg-white text-black font-bold rounded-full text-sm uppercase tracking-wider transition-transform active:scale-95 disabled:opacity-50 z-10"
+        className="mt-6 sm:mt-12 px-8 py-3 sm:py-4 bg-white text-black font-bold rounded-full text-sm uppercase tracking-wider transition-transform active:scale-95 disabled:opacity-50 z-10"
       >
         {isSpinning ? 'Sorteando...' : 'Girar Roleta'}
       </button>

@@ -42,15 +42,15 @@ export function ErasSlide() {
         }}
       />
 
-      <div className="z-10 w-full h-full flex flex-col items-center justify-center p-6 relative">
+      <div className="z-10 w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 relative">
         <h2
-          className="absolute top-12 left-6 text-white font-black opacity-30 transform -rotate-90 origin-bottom-left"
-          style={{ fontSize: 'clamp(4rem, 15vw, 6rem)', lineHeight: 0.8 }}
+          className="absolute top-8 sm:top-12 left-4 sm:left-6 text-white font-black opacity-30 transform -rotate-90 origin-bottom-left"
+          style={{ fontSize: 'clamp(3rem, 13vw, 6rem)', lineHeight: 0.8 }}
         >
           {eraYear}
         </h2>
 
-        <div className="w-full max-w-[280px] aspect-[3/4] relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden border-2 border-white/10">
+        <div className="w-full max-w-[220px] sm:max-w-[280px] aspect-[3/4] relative shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-xl overflow-hidden border-2 border-white/10">
           {photos.map((p, i) => (
             <img
               key={i}
@@ -62,9 +62,9 @@ export function ErasSlide() {
           ))}
         </div>
 
-        <div className="absolute bottom-12 right-6 text-right">
-          <p className="text-white text-3xl font-bold uppercase tracking-tighter">Nossas</p>
-          <p className="text-rose-500 text-5xl font-black uppercase tracking-tighter leading-none">
+        <div className="absolute bottom-8 sm:bottom-12 right-4 sm:right-6 text-right">
+          <p className="text-white text-2xl sm:text-3xl font-bold uppercase tracking-tighter">Nossas</p>
+          <p className="text-rose-500 text-4xl sm:text-5xl font-black uppercase tracking-tighter leading-none">
             Eras
           </p>
         </div>
