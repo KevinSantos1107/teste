@@ -58,7 +58,8 @@ export function RouletteSlide() {
   };
 
   // --- Eventos do Botão de Carga ---
-  const handleButtonPointerDown = () => {
+  const handleButtonPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
     if (isSpinning) rotation.stop(); // Interrompe giro se houver
     setIsCharging(true);
     setChargePower(0);
@@ -73,7 +74,8 @@ export function RouletteSlide() {
     }, 20);
   };
 
-  const handleButtonPointerUp = () => {
+  const handleButtonPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
     if (!isCharging) return;
     
     setIsCharging(false);
@@ -101,6 +103,7 @@ export function RouletteSlide() {
   const lastTime = useRef(0);
 
   const handleWheelPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     rotation.stop(); // Freia a roleta na mão se estiver girando
     setIsSpinning(false);
     setWinner(null);
@@ -121,6 +124,7 @@ export function RouletteSlide() {
   };
 
   const handleWheelPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (!isDragging.current) return;
     
     const angle = Math.atan2(e.clientY - center.current.y, e.clientX - center.current.x) * (180 / Math.PI);
@@ -144,6 +148,7 @@ export function RouletteSlide() {
   };
 
   const handleWheelPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (!isDragging.current) return;
     isDragging.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
