@@ -171,7 +171,11 @@ export function RouletteSlide() {
     let duration = Math.max(1.5, distance / 360); // 1 seg por volta completa aprox.
     duration = Math.min(duration, 5); // limite de 5s girando por arrasto
     
-    spinTo(targetRotation, duration);
+    // Apenas gira livremente sem acionar o sorteio
+    animate(rotation, targetRotation, {
+      duration,
+      ease: [0.2, 0.8, 0.1, 1],
+    });
   };
 
   const isMaxPower = chargePower === 100;
