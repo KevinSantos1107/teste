@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Heart } from 'lucide-react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -124,30 +125,14 @@ export function SplashScreen({
                 {name1}
               </motion.p>
 
-              {/* Coração central com glow */}
+              {/* Coração central */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.3 }}
+                initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.55, type: 'spring', stiffness: 200, damping: 12 }}
-                className="relative flex items-center justify-center my-1"
+                transition={{ duration: 0.4, delay: 0.5 }}
+                className="flex items-center justify-center my-2"
               >
-                {/* Coração SVG customizado */}
-                <motion.svg
-                  width="40" height="40" viewBox="0 0 24 24" fill="none"
-                  animate={{ scale: [1, 1.08, 1] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <defs>
-                    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f472b6" />
-                      <stop offset="100%" stopColor="#a855f7" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"
-                    fill="url(#heartGrad)"
-                  />
-                </motion.svg>
+                <Heart className="w-8 h-8 text-rose-500 fill-rose-500" />
               </motion.div>
 
               {/* Nome 2 */}
