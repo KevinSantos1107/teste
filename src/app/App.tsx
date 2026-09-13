@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useSiteConfigStore } from '../store/siteConfigStore';
-import { Spinner } from '../shared/ui/Spinner';
 import { router } from './router';
 import { AuthProvider } from '../features/auth/AuthContext';
 
