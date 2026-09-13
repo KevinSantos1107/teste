@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface SplashScreenProps {
   onComplete: () => void;
   title?: string;
+  isReady?: boolean; // Prop para controlar se os dados estão prontos
 }
 
 // Estrelas estáticas (sem Math.random no render)
@@ -20,6 +21,7 @@ const STARS = Array.from({ length: 60 }, (_, i) => ({
 export function SplashScreen({
   onComplete,
   title = 'Kevin & Iara',
+  isReady = false,
 }: SplashScreenProps) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<'in' | 'out'>('in');
@@ -30,31 +32,45 @@ export function SplashScreen({
   const name2 = parts[1] || 'Iara';
 
   useEffect(() => {
-    // Barra de progresso: sobe de 0 a 100 em ~2.2s com easing
-    const duration = 2200;
+    let raf: number;
     const start = performance.now();
+    let currentProgress = 0;
 
     const tick = (now: number) => {
+      if (phase !== 'in') return;
+      
       const elapsed = now - start;
-      const raw = Math.min(elapsed / duration, 1);
-      // Easing: sobe rápido, desacelera no final
-      const eased = 1 - Math.pow(1 - raw, 3);
-      setProgress(Math.round(eased * 100));
 
-      if (raw < 1) {
-        requestAnimationFrame(tick);
+      if (!isReady) {
+        // Fase 1: Carregamento simulado (assintótico até 90%)
+        // Demora cerca de 3 segundos para chegar em ~90%
+        currentProgress = 90 * (1 - Math.exp(-elapsed / 1200));
+        setProgress(Math.round(currentProgress));
+        raf = requestAnimationFrame(tick);
       } else {
-        // Progresso chegou a 100 → inicia fade out após 400ms
-        setTimeout(() => {
-          setPhase('out');
-          setTimeout(onComplete, 700);
-        }, 400);
+        // Fase 2: isReady é true! Dispara para 100% rapidamente
+        currentProgress += (100 - currentProgress) * 0.15;
+        
+        // Garante que o visual sempre ande pelo menos um pouquinho por frame
+        if (currentProgress > 99) currentProgress = 100;
+        
+        setProgress(Math.round(currentProgress));
+
+        if (currentProgress < 100) {
+          raf = requestAnimationFrame(tick);
+        } else {
+          // Chegou a 100% de verdade, fazemos o fade out
+          setTimeout(() => {
+            setPhase('out');
+            setTimeout(onComplete, 700);
+          }, 300);
+        }
       }
     };
 
-    const raf = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [onComplete]);
+  }, [isReady, onComplete, phase]);
 
   return (
     <AnimatePresence>

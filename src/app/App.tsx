@@ -14,15 +14,10 @@ export default function App() {
     loadConfig(siteId);
   }, [loadConfig]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900">
-        <Spinner size="xl" className="text-rose-500" />
-      </div>
-    );
-  }
+  // Removido o if(isLoading) para que o SplashScreen cuide de toda a UI de loading inicial
 
-  if (error || !config) {
+  // Only show error if we are done loading and there is still an error or no config
+  if (!isLoading && (error || !config)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="text-center space-y-4">
