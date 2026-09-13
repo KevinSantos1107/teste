@@ -131,13 +131,6 @@ export function SplashScreen({
                 transition={{ duration: 0.6, delay: 0.55, type: 'spring', stiffness: 200, damping: 12 }}
                 className="relative flex items-center justify-center my-1"
               >
-                {/* Glow pulsante atrás */}
-                <motion.div
-                  className="absolute rounded-full"
-                  style={{ width: 64, height: 64, background: 'radial-gradient(circle, rgba(236,72,153,0.5) 0%, transparent 70%)' }}
-                  animate={{ scale: [1, 1.6, 1], opacity: [0.5, 0.15, 0.5] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                />
                 {/* Coração SVG customizado */}
                 <motion.svg
                   width="40" height="40" viewBox="0 0 24 24" fill="none"
