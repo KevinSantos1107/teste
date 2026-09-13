@@ -204,11 +204,6 @@ export function SplashScreen({
                   }}
                 />
               </div>
-
-              {/* Texto de carregamento */}
-              <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase font-medium">
-                {progress < 100 ? 'carregando' : 'pronto ✦'}
-              </p>
             </motion.div>
 
           </div>

@@ -17,7 +17,7 @@ export function Shell() {
 
   const title = config?.couple
     ? `${config.couple.partner1.name} & ${config.couple.partner2.name}`
-    : 'Carregando Amor';
+    : 'Kevin & Iara';
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-700 font-sans relative">
