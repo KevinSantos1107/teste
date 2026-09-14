@@ -352,14 +352,18 @@ export default function AlbumEditor() {
   const handleDeleteAlbum = async (album: Album) => {
     if (!confirm(`Deletar o álbum "${album.title}"? Esta ação não pode ser desfeita.`)) return;
     try {
-      await deleteDoc(doc(db, 'albums', album.id));
-      // Deletar os album_photos
+      // 1. Deletar todos os docs de album_photos em batch ANTES do álbum
       const pSnap = await getDocs(
         query(collection(db, 'album_photos'), where('albumId', '==', album.id))
       );
-      const batch = writeBatch(db);
-      pSnap.forEach((d) => batch.delete(doc(db, 'album_photos', d.id)));
-      await batch.commit();
+      if (!pSnap.empty) {
+        const batch = writeBatch(db);
+        pSnap.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      // 2. Só então deletar o documento do álbum
+      await deleteDoc(doc(db, 'albums', album.id));
 
       show('Álbum deletado!');
       if (activeAlbum?.id === album.id) setActiveAlbum(null);
@@ -471,16 +475,26 @@ export default function AlbumEditor() {
   const handleDeletePhoto = async (photo: Photo) => {
     if (!activeAlbum || !confirm('Deletar esta foto?')) return;
     try {
-      // handleDeletePhoto might delete old photos that don't have publicId but have url/src
+      // Remove a foto da lista local
       const updatedPhotos = photos.filter(
         (p) => (p.publicId || p.url || p.src) !== (photo.publicId || photo.url || photo.src)
       );
+
       const pSnap = await getDocs(
         query(collection(db, 'album_photos'), where('albumId', '==', activeAlbum.id))
       );
+
       if (!pSnap.empty) {
-        await updateDoc(doc(db, 'album_photos', pSnap.docs[0].id), { photos: updatedPhotos });
+        const batch = writeBatch(db);
+        // Atualiza o primeiro doc com a lista nova
+        batch.update(pSnap.docs[0].ref, { photos: updatedPhotos });
+        // Deleta docs extras (páginas antigas) para evitar duplicatas/órfãos
+        for (let i = 1; i < pSnap.docs.length; i++) {
+          batch.delete(pSnap.docs[i].ref);
+        }
+        await batch.commit();
       }
+
       setPhotos(updatedPhotos);
       show('Foto deletada!');
       loadAlbums();
@@ -576,7 +590,6 @@ export default function AlbumEditor() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-500">💡 Arraste as fotos para reordená-las</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {photos.map((photo, idx) => (
                 <div
@@ -723,7 +736,6 @@ export default function AlbumEditor() {
         </div>
       ) : (
         <>
-          <p className="text-xs text-slate-500">💡 Arraste os álbuns para reordená-los</p>
           <div className="space-y-2">
             {albums.map((album, idx) => (
               <div key={album.id}>

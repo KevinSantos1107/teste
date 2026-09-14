@@ -102,7 +102,7 @@ export function AlbumCarousel() {
     const fetchAlbums = async () => {
       try {
         const snapshot = await getDocs(
-          query(collection(db, 'albums'), orderBy('createdAt', 'asc'))
+          query(collection(db, 'albums'), orderBy('orderIndex', 'asc'))
         );
         if (snapshot.empty) { setAlbums([]); setLoading(false); return; }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase/config';
@@ -17,7 +17,15 @@ import {
 export function AdminShell() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Exact match for /admin (Dashboard), prefix match for all others
+  const isActive = (path: string) =>
+    path === '/admin'
+      ? location.pathname === '/admin'
+      : location.pathname.startsWith(path);
+
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -68,21 +76,28 @@ export function AdminShell() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => (
-            <a
-              key={item.path}
-              href={item.path}
-              onClick={(e) => {
-                e.preventDefault();
-                setIsMobileMenuOpen(false);
-                navigate(item.path);
-              }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-            >
-              <item.icon className="w-5 h-5 opacity-70" />
-              <span className="font-medium text-sm">{item.label}</span>
-            </a>
-          ))}
+        {navItems.map((item) => {
+            const active = isActive(item.path);
+            return (
+              <a
+                key={item.path}
+                href={item.path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setIsMobileMenuOpen(false);
+                  navigate(item.path);
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  active
+                    ? 'bg-slate-800 text-white font-semibold border-l-2 border-indigo-500 pl-[10px]'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${active ? 'opacity-100 text-indigo-400' : 'opacity-70'}`} />
+                <span className="font-medium text-sm">{item.label}</span>
+              </a>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-slate-800">

@@ -409,7 +409,6 @@ export default function TimelineEditor() {
         </div>
       ) : (
         <>
-          <p className="text-xs text-slate-500">💡 Arraste os eventos para reordená-los</p>
           <div className="space-y-2">
             {events.map((event, idx) => (
               <div key={event.id}>

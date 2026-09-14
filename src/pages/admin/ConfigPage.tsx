@@ -38,7 +38,6 @@ export default function ConfigPage() {
     }
   };
 
-  const colors = formData.theme?.colors ?? config.theme.colors;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -134,37 +133,6 @@ export default function ConfigPage() {
           </CardContent>
         </Card>
 
-        {/* Cores do Tema */}
-        <Card className="bg-slate-800 border-slate-700 shadow-none md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-slate-200">Cores do Tema</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {(['primary', 'secondary', 'bg', 'accent', 'text'] as const).map((colorKey) => {
-              const value = colors[colorKey] || '#000000';
-              return (
-                <div key={colorKey} className="space-y-2">
-                  <label className="text-xs font-medium text-slate-400 uppercase">{colorKey}</label>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(e) => {
-                        const newColors = { ...colors, [colorKey]: e.target.value };
-                        setFormData({
-                          ...formData,
-                          theme: { ...formData.theme!, colors: newColors },
-                        });
-                      }}
-                      className="w-8 h-8 rounded border-none cursor-pointer bg-transparent"
-                    />
-                    <span className="text-sm text-slate-300 font-mono">{value}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
       </div>
 
       <div className="flex items-center gap-4 pt-4 border-t border-slate-800">

@@ -131,13 +131,16 @@ export function HamburgerMenu() {
   return (
     <>
       {/* Botão hambúrguer */}
-      <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
+      <div className="fixed top-3 left-3 sm:top-4 sm:left-4 md:top-5 md:left-5 lg:top-6 lg:left-6 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-3 rounded-xl bg-black/50 backdrop-blur-md border border-white/10 text-white hover:bg-black/70 transition-all shadow-lg hover:scale-105 active:scale-95"
+          className="p-1.5 sm:p-2 text-white/80 hover:text-white transition-all duration-200 hover:scale-110 active:scale-95 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]"
           aria-label="Menu"
         >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isOpen
+            ? <X className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+            : <Menu className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+          }
         </button>
       </div>
 

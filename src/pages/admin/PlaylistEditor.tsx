@@ -110,6 +110,10 @@ function useToast() {
   return { show, Toast };
 }
 
+// Flag de módulo: true enquanto o usuário está arrastando a barra de progresso
+// Compartilhado entre todos os TrackPlayers e as linhas do track
+let _isSeeking = false;
+
 // ─── Mini Audio Player Component ─────────────────────────────────────────────
 function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -120,20 +124,10 @@ function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
   useEffect(() => {
     const audio = new Audio(src);
     audioRef.current = audio;
-    audio.addEventListener('timeupdate', () => {
-      setProgress(audio.currentTime);
-    });
-    audio.addEventListener('loadedmetadata', () => {
-      setDuration(audio.duration);
-    });
-    audio.addEventListener('ended', () => {
-      setPlaying(false);
-      setProgress(0);
-    });
-    return () => {
-      audio.pause();
-      audio.src = '';
-    };
+    audio.addEventListener('timeupdate', () => setProgress(audio.currentTime));
+    audio.addEventListener('loadedmetadata', () => setDuration(audio.duration));
+    audio.addEventListener('ended', () => { setPlaying(false); setProgress(0); });
+    return () => { audio.pause(); audio.src = ''; };
   }, [src]);
 
   const togglePlay = (e: React.MouseEvent) => {
@@ -144,10 +138,8 @@ function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
       audio.pause();
       setPlaying(false);
     } else {
-      // Pause all other admin audio players
       document.querySelectorAll('[data-admin-audio]').forEach((el) => {
-        const evt = new CustomEvent('pause-others', { detail: trackId });
-        el.dispatchEvent(evt);
+        el.dispatchEvent(new CustomEvent('pause-others', { detail: trackId }));
       });
       audio.play();
       setPlaying(true);
@@ -166,11 +158,20 @@ function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
+  const handleRangePointerDown = () => {
+    // Sinaliza que está fazendo seek — limpa automaticamente ao soltar o ponteiro
+    _isSeeking = true;
+    window.addEventListener('pointerup', () => { _isSeeking = false; }, { once: true });
+    window.addEventListener('mouseup',   () => { _isSeeking = false; }, { once: true });
+  };
+
   return (
     <div
       className="flex items-center gap-2 flex-1 min-w-0"
       data-admin-audio
       data-track-id={trackId}
+      // Bloqueia dragstart que borbulhe de dentro do player
+      onDragStart={(e) => e.stopPropagation()}
     >
       <button
         onClick={togglePlay}
@@ -186,9 +187,10 @@ function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
           max={duration || 100}
           value={progress}
           onChange={handleSeek}
-          onPointerDown={(e) => e.stopPropagation()} // Stop drag propagation
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
+          // Seta o flag de seek — o drag da linha checa esse flag
+          onPointerDown={handleRangePointerDown}
+          onMouseDown={handleRangePointerDown}
+          onTouchStart={handleRangePointerDown}
           className="flex-1 h-1 accent-rose-500 cursor-pointer"
         />
         <span className="text-xs text-slate-500 font-mono w-8 shrink-0 text-right">
@@ -483,15 +485,19 @@ export default function PlaylistEditor() {
   const handleDeletePlaylist = async (playlist: Playlist) => {
     if (!confirm(`Deletar a playlist "${playlist.name}"?`)) return;
     try {
-      await deleteDoc(doc(db, 'custom_playlists', playlist.id));
+      // 1. Deletar todas as tracks da playlist em batch ANTES de deletar a playlist
       const tSnap = await getDocs(
         query(collection(db, 'playlist_tracks'), where('playlistId', '==', playlist.id))
       );
       if (!tSnap.empty) {
         const batch = writeBatch(db);
-        tSnap.forEach((d) => batch.delete(doc(db, 'playlist_tracks', d.id)));
+        tSnap.forEach((d) => batch.delete(d.ref));
         await batch.commit();
       }
+
+      // 2. Só então deletar o doc da playlist
+      await deleteDoc(doc(db, 'custom_playlists', playlist.id));
+
       show('Playlist deletada!');
       if (activePlaylist?.id === playlist.id) setActivePlaylist(null);
       loadPlaylists();
@@ -600,22 +606,22 @@ export default function PlaylistEditor() {
     if (!activePlaylist) return;
     if (!confirm(`Deletar a música "${track.title}"?`)) return;
     try {
-      // If we have track.id, just delete it directly
       if (track.id) {
+        // Deleção direta pelo ID do documento
         await deleteDoc(doc(db, 'playlist_tracks', track.id));
       } else {
-        // Fallback for nested array bug items
+        // Fallback para o formato antigo (array aninhado) — usa for...of para aguardar cada await
         const tSnap = await getDocs(
           query(collection(db, 'playlist_tracks'), where('playlistId', '==', activePlaylist.id))
         );
-        tSnap.forEach(async (d) => {
+        for (const d of tSnap.docs) {
           if (d.data().tracks) {
             const updated = d
               .data()
               .tracks.filter((t: any) => t.url !== track.url && t.src !== track.src);
             await updateDoc(d.ref, { tracks: updated });
           }
-        });
+        }
       }
       show('Música deletada!');
       loadPlaylists();
@@ -788,17 +794,13 @@ export default function PlaylistEditor() {
           </div>
         ) : (
           <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-            <p className="text-xs text-slate-500 p-4 pb-0">
-              💡 Arraste as músicas para reordená-las
-            </p>
             {tracks.map((track, idx) => (
               <div
-                key={track.publicId || track.url || idx}
+                key={track.publicId || track.url || String(idx)}
                 draggable
                 onDragStart={(e) => {
-                  const target = e.target as HTMLElement;
-                  // Only allow dragging if they grabbed the drag handle or its children
-                  if (!target.closest('.drag-handle-grip')) {
+                  // Bloqueia o drag da linha apenas se o usuário estiver arrastando a barra de progresso
+                  if (_isSeeking) {
                     e.preventDefault();
                     return;
                   }
@@ -809,7 +811,7 @@ export default function PlaylistEditor() {
                 onDragOver={(e) => e.preventDefault()}
                 className="flex items-center gap-3 p-4 border-b border-slate-700/50 last:border-0 hover:bg-slate-700/30 transition-colors group cursor-grab active:cursor-grabbing"
               >
-                <div className="drag-handle-grip p-2 -ml-2 cursor-grab active:cursor-grabbing hover:bg-slate-600/50 rounded-lg">
+                <div className="p-2 -ml-2">
                   <GripVertical className="w-4 h-4 text-slate-600 flex-shrink-0" />
                 </div>
                 <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -957,7 +959,6 @@ export default function PlaylistEditor() {
         </div>
       ) : (
         <>
-          <p className="text-xs text-slate-500">💡 Arraste as playlists para reordená-las</p>
           <div className="space-y-2">
             {playlists.map((playlist, idx) => (
               <div key={playlist.id}>
