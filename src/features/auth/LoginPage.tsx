@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase/config';
@@ -7,7 +7,10 @@ import { Input } from '../../shared/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/ui/Card';
 import { Heart } from 'lucide-react';
 
+import { useAuth } from './AuthContext';
+
 export default function LoginPage() {
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +20,14 @@ export default function LoginPage() {
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/admin';
 
+  // Redireciona automaticamente quando o contexto de auth for atualizado
+  // Isso evita a "race condition" de redirecionar antes do AuthContext ler os claims
+  useEffect(() => {
+    if (user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -24,10 +35,10 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate(from, { replace: true });
+      // O redirect agora acontece pelo useEffect acima, 
+      // garantindo que o estado global `user` já está preenchido
     } catch (err: any) {
       setError('E-mail ou senha incorretos.');
-    } finally {
       setIsLoading(false);
     }
   };
