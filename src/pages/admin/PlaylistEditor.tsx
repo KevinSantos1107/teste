@@ -19,6 +19,15 @@ import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
 import { cn } from '../../shared/utils/cn';
 import {
+  DndContext,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableItem } from '../../shared/ui/SortableItem';
+import { useSortableList } from '../../shared/hooks/useSortableList';
+import {
   Plus,
   Trash2,
   GripVertical,
@@ -28,7 +37,7 @@ import {
   Music,
   Play,
   Pause,
-  ChevronRight,
+  
   Pencil,
   Save,
 } from 'lucide-react';
@@ -112,7 +121,7 @@ function useToast() {
 
 // Flag de módulo: true enquanto o usuário está arrastando a barra de progresso
 // Compartilhado entre todos os TrackPlayers e as linhas do track
-let _isSeeking = false;
+
 
 // ─── Mini Audio Player Component ─────────────────────────────────────────────
 function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
@@ -160,9 +169,9 @@ function TrackPlayer({ src, trackId }: { src: string; trackId: string }) {
 
   const handleRangePointerDown = () => {
     // Sinaliza que está fazendo seek — limpa automaticamente ao soltar o ponteiro
-    _isSeeking = true;
-    window.addEventListener('pointerup', () => { _isSeeking = false; }, { once: true });
-    window.addEventListener('mouseup',   () => { _isSeeking = false; }, { once: true });
+    
+    window.addEventListener('pointerup', () => {  }, { once: true });
+    window.addEventListener('mouseup',   () => {  }, { once: true });
   };
 
   return (
@@ -211,11 +220,6 @@ export default function PlaylistEditor() {
   const [activePlaylist, setActivePlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
 
-  // Drag-and-drop refs
-  const dragPlaylistItem = useRef<number | null>(null);
-  const dragPlaylistOver = useRef<number | null>(null);
-  const dragTrackItem = useRef<number | null>(null);
-  const dragTrackOver = useRef<number | null>(null);
 
   // Playlist creation
   const [creatingPlaylist, setCreatingPlaylist] = useState(false);
@@ -328,27 +332,10 @@ export default function PlaylistEditor() {
     }
   }, [playlists, activePlaylist?.id]);
 
-  // ─── Playlist Drag & Drop ─────────────────────────────────────────────────
-  const handlePlaylistDragStart = (idx: number) => {
-    dragPlaylistItem.current = idx;
-  };
-  const handlePlaylistDragEnter = (idx: number) => {
-    dragPlaylistOver.current = idx;
-  };
-  const handlePlaylistDrop = async () => {
-    if (dragPlaylistItem.current === null || dragPlaylistOver.current === null) return;
-    if (dragPlaylistItem.current === dragPlaylistOver.current) return;
-
-    const updated = [...playlists];
-    const dragged = updated.splice(dragPlaylistItem.current, 1)[0];
-    updated.splice(dragPlaylistOver.current, 0, dragged);
-    const indexed = updated.map((p, i) => ({ ...p, orderIndex: i }));
-
-    dragPlaylistItem.current = null;
-    dragPlaylistOver.current = null;
-
+  // ─── Sortable Lists ───────────────────────────────────────────────────────
+  const playlistSortable = useSortableList(playlists, async (reordered) => {
+    const indexed = reordered.map((p, i) => ({ ...p, orderIndex: i }));
     setPlaylists(indexed);
-
     try {
       const batch = writeBatch(db);
       indexed.forEach((p) =>
@@ -358,54 +345,35 @@ export default function PlaylistEditor() {
     } catch (e: any) {
       show('Erro ao reordenar: ' + e.message, 'err');
     }
-  };
+  });
 
-  // ─── Track Drag & Drop ───────────────────────────────────────────────────
-  const handleTrackDragStart = (idx: number) => {
-    dragTrackItem.current = idx;
-  };
-  const handleTrackDragEnter = (idx: number) => {
-    dragTrackOver.current = idx;
-  };
-  const handleTrackDrop = async () => {
-    if (!activePlaylist || dragTrackItem.current === null || dragTrackOver.current === null) return;
-    if (dragTrackItem.current === dragTrackOver.current) return;
+  const tracksWithIds = tracks.map((t, idx) => ({ 
+    ...t, 
+    id: t.id || t.publicId || t.url || String(idx) 
+  }));
 
-    const updated = [...tracks];
-    const dragged = updated.splice(dragTrackItem.current, 1)[0];
-    updated.splice(dragTrackOver.current, 0, dragged);
-
-    dragTrackItem.current = null;
-    dragTrackOver.current = null;
-
-    setTracks(updated);
-
+  const trackSortable = useSortableList(tracksWithIds as any, async (reordered: any[]) => {
+    if (!activePlaylist) return;
+    setTracks(reordered);
     try {
       const batch = writeBatch(db);
-
-      // We must ensure the old bug is wiped (array tracks in single doc).
-      // First, get all current docs for this playlist.
       const tSnap = await getDocs(
         query(collection(db, 'playlist_tracks'), where('playlistId', '==', activePlaylist.id))
       );
-      tSnap.forEach((d) => batch.delete(d.ref)); // delete all to rebuild perfectly
+      tSnap.forEach((d) => batch.delete(d.ref));
 
-      // Re-insert tracks with correct orderIndex
-      updated.forEach((t, i) => {
+      reordered.forEach((t, i) => {
         const clean: any = stripUndefined({ ...t, orderIndex: i, playlistId: activePlaylist.id });
-        delete clean.id; // remove id before inserting
-        // remove the nested tracks array if it somehow leaked
+        delete clean.id;
         delete clean.tracks;
-
         batch.set(doc(collection(db, 'playlist_tracks')), clean);
       });
-
       await batch.commit();
       loadPlaylists();
     } catch (e: any) {
       show('Erro ao reordenar músicas: ' + e.message, 'err');
     }
-  };
+  });
 
   // ─── Create Playlist ──────────────────────────────────────────────────────
   const handleCreatePlaylist = async () => {
@@ -635,19 +603,19 @@ export default function PlaylistEditor() {
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
         {Toast}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 md:gap-3 flex-wrap">
             <button
               onClick={() => setActivePlaylist(null)}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm"
+              className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm shrink-0"
             >
               <ArrowLeft className="w-4 h-4" /> Playlists
             </button>
-            <span className="text-slate-600">/</span>
-            <h1 className="text-2xl font-bold text-white">{activePlaylist.name}</h1>
-            <span className="text-slate-500 text-sm font-mono">{tracks.length} músicas</span>
+            <span className="text-slate-600 shrink-0">/</span>
+            <h1 className="text-xl md:text-2xl font-bold text-white truncate max-w-[200px] md:max-w-md">{activePlaylist.name}</h1>
+            <span className="text-slate-500 text-sm font-mono shrink-0">{tracks.length} músicas</span>
           </div>
-          <Button onClick={() => setCreatingTrack(true)} className="gap-2 shrink-0">
+          <Button onClick={() => setCreatingTrack(true)} className="gap-2 shrink-0 self-start md:self-auto">
             <Plus className="w-4 h-4" /> Adicionar Música
           </Button>
         </div>
@@ -793,67 +761,85 @@ export default function PlaylistEditor() {
             Nenhuma música nesta playlist.
           </div>
         ) : (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-            {tracks.map((track, idx) => (
-              <div
-                key={track.publicId || track.url || String(idx)}
-                draggable
-                onDragStart={(e) => {
-                  // Bloqueia o drag da linha apenas se o usuário estiver arrastando a barra de progresso
-                  if (_isSeeking) {
-                    e.preventDefault();
-                    return;
-                  }
-                  handleTrackDragStart(idx);
-                }}
-                onDragEnter={() => handleTrackDragEnter(idx)}
-                onDragEnd={handleTrackDrop}
-                onDragOver={(e) => e.preventDefault()}
-                className="flex items-center gap-3 p-4 border-b border-slate-700/50 last:border-0 hover:bg-slate-700/30 transition-colors group cursor-grab active:cursor-grabbing"
-              >
-                <div className="p-2 -ml-2">
-                  <GripVertical className="w-4 h-4 text-slate-600 flex-shrink-0" />
-                </div>
-                <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {track.coverPublicId ? (
-                    <img
-                      src={cloudinaryUrl(track.coverPublicId, { w: 80, h: 80, c: 'fill' })}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : track.cover || track.coverUrl ? (
-                    <img
-                      src={track.cover || track.coverUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Music className="w-4 h-4 text-slate-400" />
-                  )}
-                </div>
-                <div className="w-36 shrink-0">
-                  <p className="font-semibold text-white truncate text-sm">{track.title}</p>
-                  <p className="text-xs text-slate-500 truncate">
-                    {track.artist || 'Artista desconhecido'}
-                  </p>
-                </div>
-                {track.src || track.url ? (
-                  <TrackPlayer
-                    src={track.src || track.url || ''}
-                    trackId={track.publicId || track.url || String(idx)}
-                  />
-                ) : (
-                  <div className="flex-1" />
-                )}
-                <button
-                  onClick={() => handleDeleteTrack(track)}
-                  className="p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100 shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+          <DndContext onDragEnd={trackSortable.handleDragEnd}>
+            <SortableContext items={trackSortable.ids} strategy={verticalListSortingStrategy}>
+              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+              {tracksWithIds.map((track) => {
+                const tId = track.id as string;
+                return (
+                  <SortableItem key={tId} id={tId}>
+                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                        <div
+                          ref={setNodeRef}
+                          style={style}
+                          className={cn(
+                            "flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 p-3 md:p-4 border-b border-slate-700/50 last:border-0 hover:bg-slate-700/30 transition-colors group",
+                            isDragging ? "bg-slate-700 shadow-2xl z-10" : ""
+                          )}
+                        >
+                          <div 
+                            {...handleProps} 
+                            className="p-2 -ml-2 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white transition-colors"
+                          >
+                            <GripVertical className="w-4 h-4 flex-shrink-0" />
+                          </div>
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {track.coverPublicId ? (
+                              <img
+                                src={cloudinaryUrl(track.coverPublicId, { w: 80, h: 80, c: 'fill' })}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : track.cover || track.coverUrl ? (
+                              <img
+                                src={track.cover || track.coverUrl}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Music className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 md:w-48 md:flex-none">
+                            <p className="font-semibold text-white truncate text-sm">{track.title}</p>
+                            <p className="text-xs text-slate-500 truncate">
+                              {track.artist || 'Artista desconhecido'}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center justify-end shrink-0 md:hidden ml-auto">
+                            <button
+                              onClick={() => handleDeleteTrack(track)}
+                              className="p-2 text-slate-500 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="w-full md:w-auto md:flex-1 order-last md:order-none mt-2 md:mt-0 flex items-center">
+                            {track.src || track.url ? (
+                              <TrackPlayer
+                                src={track.src || track.url || ''}
+                                trackId={tId}
+                              />
+                            ) : (
+                              <div className="flex-1" />
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDeleteTrack(track)}
+                            className="hidden md:block p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100 shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </SortableItem>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     );
@@ -959,66 +945,76 @@ export default function PlaylistEditor() {
         </div>
       ) : (
         <>
-          <div className="space-y-2">
-            {playlists.map((playlist, idx) => (
-              <div key={playlist.id}>
-                <div
-                  draggable
-                  onDragStart={() => handlePlaylistDragStart(idx)}
-                  onDragEnter={() => handlePlaylistDragEnter(idx)}
-                  onDragEnd={handlePlaylistDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  className="flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors group cursor-grab active:cursor-grabbing"
-                >
-                  <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0" />
-                  {playlist.coverUrl ? (
-                    <img
-                      src={playlist.coverUrl}
-                      alt=""
-                      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
-                      <Music className="w-6 h-6 text-slate-500" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white truncate">{playlist.name}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {playlist.tracks.length} músicas
-                    </p>
-                    {playlist.description && (
-                      <p className="text-sm text-slate-400 truncate mt-0.5">
-                        {playlist.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setActivePlaylist(playlist)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
-                    >
-                      Ver Músicas <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openEditPlaylist(playlist)}
-                      className="p-2 text-slate-500 hover:text-blue-400 transition-colors opacity-50 group-hover:opacity-100"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeletePlaylist(playlist)}
-                      className="p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+          <DndContext onDragEnd={playlistSortable.handleDragEnd}>
+            <SortableContext items={playlistSortable.ids} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {playlists.map((playlist) => (
+                  <div key={playlist.id}>
+                    <SortableItem id={playlist.id}>
+                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                        <div
+                          ref={setNodeRef}
+                          style={style}
+                          className={cn(
+                            "flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl transition-colors group",
+                            isDragging ? "shadow-2xl ring-2 ring-blue-500 z-10" : "hover:border-slate-600"
+                          )}
+                        >
+                          <div {...handleProps} className="p-2 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white transition-colors flex-shrink-0">
+                            <GripVertical className="w-5 h-5" />
+                          </div>
+                          
+                          {/* Clickable area for active playlist */}
+                          <div 
+                            className="flex-1 flex items-center gap-4 min-w-0 cursor-pointer"
+                            onClick={() => setActivePlaylist(playlist)}
+                          >
+                            {playlist.coverUrl ? (
+                              <img
+                                src={playlist.coverUrl}
+                                alt=""
+                                className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                                <Music className="w-6 h-6 text-slate-500" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white truncate">{playlist.name}</p>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {playlist.tracks.length} músicas
+                              </p>
+                              {playlist.description && (
+                                <p className="text-sm text-slate-400 truncate mt-0.5">
+                                  {playlist.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
 
-                {/* Edit form expands below */}
-                {editingPlaylistId === playlist.id && (
-                  <div className="bg-slate-800/80 border border-blue-500/40 rounded-xl p-6 space-y-4 ml-9 mt-2 animate-in fade-in zoom-in-95 duration-200">
-                    <h2 className="font-bold text-white text-lg">Editar Playlist</h2>
+                          <div className="flex items-center gap-2 shrink-0 ml-auto">
+                            <button
+                              onClick={() => openEditPlaylist(playlist)}
+                              className="p-2 text-slate-500 hover:text-blue-400 transition-colors opacity-50 group-hover:opacity-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePlaylist(playlist)}
+                              className="p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </SortableItem>
+
+                    {/* Edit form expands below */}
+                    {editingPlaylistId === playlist.id && (
+                      <div className="bg-slate-800/80 border border-blue-500/40 rounded-xl p-6 space-y-4 ml-9 mt-2 animate-in fade-in zoom-in-95 duration-200">
+                        <h2 className="font-bold text-white text-lg">Editar Playlist</h2>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-300">Nome *</label>
@@ -1104,6 +1100,8 @@ export default function PlaylistEditor() {
               </div>
             ))}
           </div>
+            </SortableContext>
+          </DndContext>
         </>
       )}
     </div>

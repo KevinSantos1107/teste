@@ -17,7 +17,14 @@ import { uploadImage, cloudinaryUrl } from '../../services/cloudinary/upload';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { SideSheet } from '../../shared/ui/SideSheet';
+import { useToast } from '../../shared/ui/ToastProvider';
 import { cn } from '../../shared/utils/cn';
+import { DndContext } from '@dnd-kit/core';
+import { SortableContext, rectSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortableList } from '../../shared/hooks/useSortableList';
+import { SortableItem } from '../../shared/ui/SortableItem';
 import {
   Plus,
   Trash2,
@@ -52,49 +59,7 @@ interface Photo {
   lng?: number;
 }
 
-// ─── Drag-and-drop hook ───────────────────────────────────────────────────────
-function useDragOrder<T extends object>(items: T[], onReorder: (items: T[]) => void) {
-  const dragItem = useRef<number | null>(null);
-  const dragOver = useRef<number | null>(null);
 
-  const handleDragStart = (idx: number) => {
-    dragItem.current = idx;
-  };
-  const handleDragEnter = (idx: number) => {
-    dragOver.current = idx;
-  };
-  const handleDrop = () => {
-    if (dragItem.current === null || dragOver.current === null) return;
-    const updated = [...items];
-    const dragged = updated.splice(dragItem.current, 1)[0];
-    updated.splice(dragOver.current, 0, dragged);
-    onReorder(updated);
-    dragItem.current = null;
-    dragOver.current = null;
-  };
-
-  return { handleDragStart, handleDragEnter, handleDrop };
-}
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function useToast() {
-  const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
-  const show = (text: string, type: 'ok' | 'err' = 'ok') => {
-    setMsg({ text, type });
-    setTimeout(() => setMsg(null), 3500);
-  };
-  const Toast = msg ? (
-    <div
-      className={cn(
-        'fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-medium text-sm animate-in slide-in-from-bottom-4 duration-300',
-        msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-      )}
-    >
-      {msg.text}
-    </div>
-  ) : null;
-  return { show, Toast };
-}
 
 // ─── Upload Drop Zone ─────────────────────────────────────────────────────────
 interface DropZoneProps {
@@ -166,7 +131,7 @@ function ProgressBar({ pct }: { pct: number }) {
 // ─── ALBUM EDITOR ─────────────────────────────────────────────────────────────
 export default function AlbumEditor() {
   const { config } = useSiteConfigStore();
-  const { show, Toast } = useToast();
+  const { show } = useToast();
 
   // ─ State ─
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -352,14 +317,39 @@ export default function AlbumEditor() {
   const handleDeleteAlbum = async (album: Album) => {
     if (!confirm(`Deletar o álbum "${album.title}"? Esta ação não pode ser desfeita.`)) return;
     try {
-      // 1. Deletar todos os docs de album_photos em batch ANTES do álbum
+      // 1. Deletar todos os docs de album_photos em batch ANTES do álbum e enfileirar fotos para deleção
       const pSnap = await getDocs(
         query(collection(db, 'album_photos'), where('albumId', '==', album.id))
       );
+      
+      const deletionsQueue = [];
+      if (album.coverPublicId) {
+        deletionsQueue.push({ publicId: album.coverPublicId, createdAt: serverTimestamp() });
+      }
+
       if (!pSnap.empty) {
         const batch = writeBatch(db);
-        pSnap.forEach((d) => batch.delete(d.ref));
+        pSnap.forEach((d) => {
+          const data = d.data();
+          if (data.photos && Array.isArray(data.photos)) {
+            data.photos.forEach((p: Photo) => {
+              if (p.publicId) {
+                deletionsQueue.push({ publicId: p.publicId, createdAt: serverTimestamp() });
+              }
+            });
+          }
+          batch.delete(d.ref);
+        });
         await batch.commit();
+      }
+
+      // Salva itens na fila de deleção do Cloudinary
+      if (deletionsQueue.length > 0) {
+        const delBatch = writeBatch(db);
+        deletionsQueue.forEach(item => {
+          delBatch.set(doc(collection(db, 'cloudinary_deletions_queue')), item);
+        });
+        await delBatch.commit();
       }
 
       // 2. Só então deletar o documento do álbum
@@ -373,17 +363,18 @@ export default function AlbumEditor() {
     }
   };
 
-  // ─ Reorder albums ─
-  const albumDnd = useDragOrder(albums, async (reordered) => {
+  // ─ Reorder albums (using dnd-kit hook defined later in render) ─
+  const handleAlbumReorder = async (reordered: Album[]) => {
     const indexed = reordered.map((a, i) => ({ ...a, orderIndex: i }));
     setAlbums(indexed);
     const batch = writeBatch(db);
     indexed.forEach((a) => batch.update(doc(db, 'albums', a.id), { orderIndex: a.orderIndex }));
     await batch.commit();
-  });
+  };
+  const albumSortable = useSortableList(albums, handleAlbumReorder);
 
-  // ─ Reorder photos ─
-  const photoDnd = useDragOrder(photos, async (reordered) => {
+  // ─ Reorder photos (using dnd-kit hook defined later in render) ─
+  const handlePhotoReorder = async (reordered: Photo[]) => {
     setPhotos(reordered);
     const reorderedPhotos = reordered.map((p) => ({ ...p }));
     const pSnap = await getDocs(
@@ -391,7 +382,6 @@ export default function AlbumEditor() {
     );
     if (!pSnap.empty) {
       await updateDoc(doc(db, 'album_photos', pSnap.docs[0].id), { photos: reorderedPhotos });
-      // Delete extra pages if they exist to prevent duplicates
       if (pSnap.docs.length > 1) {
         const batch = writeBatch(db);
         for (let i = 1; i < pSnap.docs.length; i++) {
@@ -407,13 +397,20 @@ export default function AlbumEditor() {
       });
     }
     loadAlbums(); // refresh state
-  });
+  };
+  const photoSortable = useSortableList(photos.map(p => ({ ...p, id: p.publicId || p.url || p.src || Math.random().toString() })), handlePhotoReorder);
 
   // ─ Photo upload files selected ─
   const handlePhotoFiles = (files: File[]) => {
-    setUploadFiles(files);
-    setUploadPreviews(files.map((f) => URL.createObjectURL(f)));
-    setUploadProgress(files.map(() => 0));
+    setUploadFiles((prev) => [...prev, ...files]);
+    setUploadPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    setUploadProgress((prev) => [...prev, ...files.map(() => 0)]);
+  };
+
+  const handleRemoveFromQueue = (index: number) => {
+    setUploadFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadPreviews((prev) => prev.filter((_, i) => i !== index));
+    setUploadProgress((prev) => prev.filter((_, i) => i !== index));
   };
 
   // ─ Confirm photo upload ─
@@ -464,6 +461,7 @@ export default function AlbumEditor() {
       show(`${uploadFiles.length} foto(s) enviada(s) com sucesso!`);
       setUploadFiles([]);
       setUploadPreviews([]);
+      setUploadProgress([]);
       loadAlbums();
     } catch (e: any) {
       show('Erro no upload: ' + e.message, 'err');
@@ -475,6 +473,13 @@ export default function AlbumEditor() {
   const handleDeletePhoto = async (photo: Photo) => {
     if (!activeAlbum || !confirm('Deletar esta foto?')) return;
     try {
+      if (photo.publicId) {
+        await addDoc(collection(db, 'cloudinary_deletions_queue'), {
+          publicId: photo.publicId,
+          createdAt: serverTimestamp(),
+        });
+      }
+
       // Remove a foto da lista local
       const updatedPhotos = photos.filter(
         (p) => (p.publicId || p.url || p.src) !== (photo.publicId || photo.url || photo.src)
@@ -507,9 +512,9 @@ export default function AlbumEditor() {
   // RENDER: Photo editor (inside an album)
   // ─────────────────────────────────────────────────────────────────────────────
   if (activeAlbum) {
+    const uploadedCount = uploadProgress.filter(p => p === 100).length;
     return (
       <div className="space-y-6 animate-in fade-in duration-300">
-        {Toast}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveAlbum(null)}
@@ -531,29 +536,41 @@ export default function AlbumEditor() {
         ) : (
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-white">
-                {uploadFiles.length} foto(s) selecionada(s)
+              <p className="font-semibold text-white flex items-center gap-2">
+                {uploadFiles.length} foto(s) na fila
+                {uploading && <span className="text-sm font-normal text-rose-400 ml-2">Enviando {uploadedCount + 1} de {uploadFiles.length}...</span>}
               </p>
-              <button
-                onClick={() => {
-                  setUploadFiles([]);
-                  setUploadPreviews([]);
-                }}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {!uploading && (
+                <button
+                  onClick={() => {
+                    setUploadFiles([]);
+                    setUploadPreviews([]);
+                    setUploadProgress([]);
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 gap-2">
               {uploadPreviews.map((src, i) => (
                 <div
                   key={i}
-                  className="aspect-square rounded-lg overflow-hidden relative bg-slate-900"
+                  className="aspect-square rounded-lg overflow-hidden relative bg-slate-900 group"
                 >
                   <img src={src} alt="" className="w-full h-full object-cover" />
+                  {!uploading && (
+                    <button
+                      onClick={() => handleRemoveFromQueue(i)}
+                      className="absolute top-1 right-1 p-1 bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                   {uploading && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-xs text-white font-mono">
-                      {uploadProgress[i]}%
+                      {uploadProgress[i] || 0}%
                     </div>
                   )}
                 </div>
@@ -561,11 +578,11 @@ export default function AlbumEditor() {
             </div>
             {uploading && (
               <ProgressBar
-                pct={Math.round(uploadProgress.reduce((a, b) => a + b, 0) / uploadProgress.length)}
+                pct={Math.round(uploadProgress.reduce((a, b) => a + (b || 0), 0) / uploadProgress.length)}
               />
             )}
-            <div className="flex gap-3">
-              <Button onClick={handleConfirmUpload} isLoading={uploading} className="gap-2">
+            <div className="flex gap-3 mt-4 border-t border-slate-700/50 pt-4">
+              <Button onClick={handleConfirmUpload} isLoading={uploading} className="gap-2 flex-1 md:flex-none">
                 <Upload className="w-4 h-4" /> Fazer Upload
               </Button>
               <Button
@@ -573,66 +590,86 @@ export default function AlbumEditor() {
                 onClick={() => {
                   setUploadFiles([]);
                   setUploadPreviews([]);
+                  setUploadProgress([]);
                 }}
-                className="bg-slate-700 text-white"
+                className="bg-slate-700 text-white flex-1 md:flex-none"
+                disabled={uploading}
               >
-                Cancelar
+                Limpar Fila
               </Button>
+              <DropZone
+                 onFiles={handlePhotoFiles}
+                 label="Adicionar mais"
+                 accept="image/*"
+                 multiple
+              />
             </div>
           </div>
         )}
 
         {/* Photos grid */}
         {photos.length === 0 ? (
-          <div className="text-center p-12 border border-dashed border-slate-700 rounded-xl text-slate-500">
-            <ImageIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            Nenhuma foto. Use a área acima para fazer upload.
-          </div>
+          <EmptyState
+            icon={ImageIcon}
+            title="Álbum vazio"
+            description="Nenhuma foto ainda. Use a área acima para fazer upload das suas fotos."
+          />
         ) : (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {photos.map((photo, idx) => (
-                <div
-                  key={photo.publicId || photo.url || photo.src || idx}
-                  draggable
-                  onDragStart={() => photoDnd.handleDragStart(idx)}
-                  onDragEnter={() => photoDnd.handleDragEnter(idx)}
-                  onDragEnd={photoDnd.handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  className="group relative aspect-square rounded-xl overflow-hidden cursor-grab active:cursor-grabbing bg-slate-800 border border-slate-700"
-                >
-                  {photo.publicId ? (
-                    <img
-                      src={cloudinaryUrl(photo.publicId, { w: 400, q: 70 })}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
-                    />
-                  ) : photo.url || photo.src ? (
-                    <img
-                      src={photo.url || photo.src}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-slate-700 flex items-center justify-center">
-                      <ImageIcon className="w-8 h-8 text-slate-500" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button
-                      onClick={() => handleDeletePhoto(photo)}
-                      className="p-2 bg-red-500/80 rounded-full text-white hover:bg-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-4 h-4 text-white drop-shadow" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <DndContext onDragEnd={photoSortable.handleDragEnd}>
+            <SortableContext items={photoSortable.ids} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {photos.map((photo, idx) => {
+                  const pId = photo.publicId || photo.url || photo.src || String(idx);
+                  return (
+                    <SortableItem key={pId} id={pId}>
+                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                        <div
+                          ref={setNodeRef}
+                          style={style}
+                          className={cn(
+                            "group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border border-slate-700",
+                            isDragging ? "shadow-2xl shadow-rose-500/20 ring-2 ring-rose-500 z-10" : ""
+                          )}
+                        >
+                          {photo.publicId ? (
+                            <img
+                              src={cloudinaryUrl(photo.publicId, { w: 400, q: 70 })}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 pointer-events-none"
+                            />
+                          ) : photo.url || photo.src ? (
+                            <img
+                              src={photo.url || photo.src}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 pointer-events-none"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                              <ImageIcon className="w-8 h-8 text-slate-500" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo); }}
+                              className="p-2 bg-red-500/80 rounded-full text-white hover:bg-red-600 transition-colors z-20"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div 
+                            {...handleProps} 
+                            className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-black/40 rounded cursor-grab active:cursor-grabbing hover:bg-rose-500/80 z-20"
+                          >
+                            <GripVertical className="w-4 h-4 text-white drop-shadow" />
+                          </div>
+                        </div>
+                      )}
+                    </SortableItem>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     );
@@ -643,7 +680,6 @@ export default function AlbumEditor() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {Toast}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Álbuns de Fotos</h1>
@@ -655,10 +691,14 @@ export default function AlbumEditor() {
       </div>
 
       {/* Create album form */}
-      {creating && (
-        <div className="bg-slate-800 border border-rose-500/40 rounded-xl p-6 space-y-4">
-          <h2 className="font-bold text-white text-lg">Criar Novo Álbum</h2>
-          <div className="grid md:grid-cols-2 gap-4">
+      <SideSheet
+        isOpen={creating}
+        onClose={() => setCreating(false)}
+        title="Criar Novo Álbum"
+        description="Adicione as informações básicas do seu novo álbum."
+      >
+        <div className="space-y-4">
+          <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">Título *</label>
               <Input
@@ -684,22 +724,22 @@ export default function AlbumEditor() {
               value={newAlbum.description}
               onChange={(e) => setNewAlbum({ ...newAlbum, description: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-rose-500/50 focus:outline-none resize-none"
-              rows={2}
+              rows={3}
             />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Foto de Capa</label>
             {coverPreview ? (
-              <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-slate-600">
+              <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-600">
                 <img src={coverPreview} alt="" className="w-full h-full object-cover" />
                 <button
                   onClick={() => {
                     setCoverFile(null);
                     setCoverPreview(null);
                   }}
-                  className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white"
+                  className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -710,20 +750,20 @@ export default function AlbumEditor() {
               />
             )}
           </div>
-          <div className="flex gap-3 pt-2">
-            <Button onClick={handleCreateAlbum} isLoading={saving} className="gap-2">
+          <div className="flex gap-3 pt-4 border-t border-slate-800 mt-6">
+            <Button onClick={handleCreateAlbum} isLoading={saving} className="flex-1 gap-2">
               <Plus className="w-4 h-4" /> Criar Álbum
             </Button>
             <Button
               variant="secondary"
               onClick={() => setCreating(false)}
-              className="bg-slate-700 text-white"
+              className="flex-1 bg-slate-800 text-slate-300 hover:bg-slate-700"
             >
               Cancelar
             </Button>
           </div>
         </div>
-      )}
+      </SideSheet>
 
       {/* Albums list */}
       {loading ? (
@@ -731,75 +771,87 @@ export default function AlbumEditor() {
           <Spinner />
         </div>
       ) : albums.length === 0 ? (
-        <div className="text-center p-12 border border-dashed border-slate-700 rounded-xl text-slate-500">
-          Nenhum álbum criado ainda.
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="Nenhum álbum criado"
+          description="Crie seu primeiro álbum para começar a adicionar fotos aos seus momentos inesquecíveis."
+          actionLabel="Criar Primeiro Álbum"
+          onAction={() => setCreating(true)}
+        />
       ) : (
         <>
-          <div className="space-y-2">
-            {albums.map((album, idx) => (
-              <div key={album.id}>
-                <div
-                  draggable
-                  onDragStart={() => albumDnd.handleDragStart(idx)}
-                  onDragEnter={() => albumDnd.handleDragEnter(idx)}
-                  onDragEnd={albumDnd.handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  className="flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors group cursor-grab active:cursor-grabbing"
-                >
-                  <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0 hover:text-slate-400 cursor-grab active:cursor-grabbing" />
+          <DndContext onDragEnd={albumSortable.handleDragEnd}>
+            <SortableContext items={albumSortable.ids} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {albums.map((album) => (
+                  <div key={album.id}>
+                    <SortableItem id={album.id}>
+                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                        <div
+                          ref={setNodeRef}
+                          style={style}
+                          className={cn(
+                            "flex items-center gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl transition-colors group",
+                            isDragging ? "shadow-2xl shadow-blue-500/10 ring-2 ring-blue-500 z-10" : "hover:border-slate-600"
+                          )}
+                        >
+                          <div {...handleProps} className="p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
+                            <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0 hover:text-slate-400" />
+                          </div>
 
-                  {/* Área clicável para abrir o álbum */}
-                  <div
-                    className="flex-1 min-w-0 flex items-center gap-4 cursor-pointer group/click"
-                    onClick={() => setActiveAlbum(album)}
-                  >
-                    {album.coverPublicId ? (
-                      <img
-                        src={cloudinaryUrl(album.coverPublicId, { w: 80, h: 80, c: 'fill', q: 70 })}
-                        alt=""
-                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity"
-                      />
-                    ) : album.coverUrl ? (
-                      <img
-                        src={album.coverUrl}
-                        alt=""
-                        className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 group-hover/click:bg-slate-600 transition-colors">
-                        <ImageIcon className="w-6 h-6 text-slate-500" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white truncate group-hover/click:text-rose-400 transition-colors">
-                        {album.title}
-                      </p>
-                      <p className="text-xs text-slate-500 font-mono mt-0.5">{album.date}</p>
-                      {album.description && (
-                        <p className="text-sm text-slate-400 truncate mt-0.5">
-                          {album.description}
-                        </p>
+                          {/* Área clicável para abrir o álbum */}
+                          <div
+                            className="flex-1 min-w-0 flex items-center gap-4 cursor-pointer group/click"
+                            onClick={() => setActiveAlbum(album)}
+                          >
+                            {album.coverPublicId ? (
+                              <img
+                                src={cloudinaryUrl(album.coverPublicId, { w: 80, h: 80, c: 'fill', q: 70 })}
+                                alt=""
+                                className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity"
+                              />
+                            ) : album.coverUrl ? (
+                              <img
+                                src={album.coverUrl}
+                                alt=""
+                                className="w-14 h-14 rounded-lg object-cover flex-shrink-0 group-hover/click:opacity-80 transition-opacity"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0 group-hover/click:bg-slate-600 transition-colors">
+                                <ImageIcon className="w-6 h-6 text-slate-500" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white truncate group-hover/click:text-rose-400 transition-colors">
+                                {album.title}
+                              </p>
+                              <p className="text-xs text-slate-500 font-mono mt-0.5">{album.date}</p>
+                              {album.description && (
+                                <p className="text-sm text-slate-400 truncate mt-0.5">
+                                  {album.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Ações (Editar e Deletar) */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => openEdit(album)}
+                              className="p-2 text-slate-500 hover:text-blue-400 transition-colors opacity-50 group-hover:opacity-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAlbum(album)}
+                              className="p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Ações (Editar e Deletar) */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => openEdit(album)}
-                      className="p-2 text-slate-500 hover:text-blue-400 transition-colors opacity-50 group-hover:opacity-100"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAlbum(album)}
-                      className="p-2 text-slate-500 hover:text-red-400 transition-colors opacity-50 group-hover:opacity-100"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                    </SortableItem>
 
                 {/* Edit form expands below the album row */}
                 {editingAlbumId === album.id && (
@@ -887,7 +939,9 @@ export default function AlbumEditor() {
                 )}
               </div>
             ))}
-          </div>
+              </div>
+            </SortableContext>
+          </DndContext>
         </>
       )}
     </div>

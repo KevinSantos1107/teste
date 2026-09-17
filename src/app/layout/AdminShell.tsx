@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase/config';
+import { ToastProvider } from '../../shared/ui/ToastProvider';
 import {
   LogOut,
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   History,
   Menu,
   X,
+  ExternalLink,
 } from 'lucide-react';
 
 export function AdminShell() {
@@ -43,8 +45,9 @@ export function AdminShell() {
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-900 text-slate-100 font-sans">
-      {/* Overlay do Mobile */}
+    <ToastProvider>
+      <div className="h-[100dvh] w-full flex bg-slate-900 text-slate-100 font-sans overflow-hidden">
+        {/* Overlay do Mobile */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
@@ -114,6 +117,15 @@ export function AdminShell() {
               </p>
             </div>
           </div>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors mb-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Ver Site
+          </a>
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
@@ -125,7 +137,7 @@ export function AdminShell() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden bg-slate-900">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-900">
         {/* Mobile Header */}
         <header className="h-16 md:hidden flex items-center justify-between px-4 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-3">
@@ -147,5 +159,6 @@ export function AdminShell() {
         </div>
       </main>
     </div>
+    </ToastProvider>
   );
 }

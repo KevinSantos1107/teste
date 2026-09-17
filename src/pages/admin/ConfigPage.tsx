@@ -7,9 +7,12 @@ import { Input } from '../../shared/ui/Input';
 import { Save } from 'lucide-react';
 import type { SiteConfig } from '../../config/siteConfig.schema';
 
+import { useToast } from '../../shared/ui/ToastProvider';
+
 export default function ConfigPage() {
   const { config, updateConfig } = useSiteConfigStore();
   const { user } = useAuth();
+  const { show } = useToast();
 
   const [formData, setFormData] = useState<Partial<SiteConfig>>({
     couple: config?.couple,
@@ -19,20 +22,17 @@ export default function ConfigPage() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
   if (!config) return null;
 
   const handleSave = async () => {
     const siteId = user?.siteId || 'meu-site';
     setIsSaving(true);
-    setMessage('');
     try {
       await updateConfig(siteId, formData);
-      setMessage('Configurações salvas com sucesso!');
-      setTimeout(() => setMessage(''), 3000);
+      show('Configurações salvas com sucesso!');
     } catch (err: any) {
-      setMessage('Erro ao salvar: ' + err.message);
+      show('Erro ao salvar: ' + err.message, 'err');
     } finally {
       setIsSaving(false);
     }
@@ -139,13 +139,6 @@ export default function ConfigPage() {
         <Button onClick={handleSave} isLoading={isSaving} className="gap-2 px-8">
           <Save className="w-4 h-4" /> Salvar Alterações
         </Button>
-        {message && (
-          <span
-            className={message.includes('Erro') ? 'text-red-400 text-sm' : 'text-green-400 text-sm'}
-          >
-            {message}
-          </span>
-        )}
       </div>
     </div>
   );

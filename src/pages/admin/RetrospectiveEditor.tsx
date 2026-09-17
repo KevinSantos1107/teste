@@ -14,7 +14,7 @@ import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
-import { cn } from '../../shared/utils/cn';
+import { useToast } from '../../shared/ui/ToastProvider';
 import { Save, Settings2, Music } from 'lucide-react';
 
 interface RetroV2Config {
@@ -26,28 +26,9 @@ interface RetroV2Config {
   outroMessage?: string;
 }
 
-function useToast() {
-  const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
-  const show = (text: string, type: 'ok' | 'err' = 'ok') => {
-    setMsg({ text, type });
-    setTimeout(() => setMsg(null), 3500);
-  };
-  const Toast = msg ? (
-    <div
-      className={cn(
-        'fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-medium text-sm animate-in slide-in-from-bottom-4 duration-300',
-        msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-      )}
-    >
-      {msg.text}
-    </div>
-  ) : null;
-  return { show, Toast };
-}
-
 export default function RetrospectiveEditor() {
   const { config: siteConfig } = useSiteConfigStore();
-  const { show, Toast } = useToast();
+  const { show } = useToast();
   const siteId = siteConfig?.id || 'meu-site';
 
   const [loading, setLoading] = useState(true);
@@ -150,7 +131,6 @@ export default function RetrospectiveEditor() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {Toast}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Retrospectiva</h1>

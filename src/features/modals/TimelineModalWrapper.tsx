@@ -7,10 +7,10 @@ import type { TimelineEvent } from '../timeline/Timeline';
 export function TimelineModalWrapper({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetched, setFetched] = useState(false);
+  
 
   useEffect(() => {
-    if (isOpen && !fetched) {
+    if (isOpen) {
       const fetchEvents = async () => {
         setLoading(true);
         try {
@@ -33,7 +33,7 @@ export function TimelineModalWrapper({ isOpen, onClose }: { isOpen: boolean; onC
           });
           loaded.sort((a: any, b: any) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
           setEvents(loaded);
-          setFetched(true);
+          
         } catch (e) {
           console.error('Erro ao carregar timeline:', e);
         } finally {
@@ -42,7 +42,7 @@ export function TimelineModalWrapper({ isOpen, onClose }: { isOpen: boolean; onC
       };
       fetchEvents();
     }
-  }, [isOpen, fetched]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

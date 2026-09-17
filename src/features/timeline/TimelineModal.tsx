@@ -101,10 +101,9 @@ export function TimelineModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetched, setFetched] = useState(false);
+  
 
   const fetchEvents = async () => {
-    if (fetched) return;
     setLoading(true);
     try {
       const snap = await getDocs(query(collection(db, 'timeline')));
@@ -126,7 +125,7 @@ export function TimelineModal() {
       });
       loaded.sort((a: any, b: any) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
       setEvents(loaded);
-      setFetched(true);
+      
     } catch (e) {
       console.error('Erro ao carregar timeline:', e);
     } finally {

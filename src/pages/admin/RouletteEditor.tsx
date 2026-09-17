@@ -5,7 +5,9 @@ import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
-import { cn } from '../../shared/utils/cn';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { SideSheet } from '../../shared/ui/SideSheet';
+import { useToast } from '../../shared/ui/ToastProvider';
 import { Plus, Trash2, Dices } from 'lucide-react';
 
 interface Wheel {
@@ -14,28 +16,9 @@ interface Wheel {
   options: string[];
 }
 
-function useToast() {
-  const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
-  const show = (text: string, type: 'ok' | 'err' = 'ok') => {
-    setMsg({ text, type });
-    setTimeout(() => setMsg(null), 3500);
-  };
-  const Toast = msg ? (
-    <div
-      className={cn(
-        'fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl font-medium text-sm animate-in slide-in-from-bottom-4 duration-300',
-        msg.type === 'ok' ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-      )}
-    >
-      {msg.text}
-    </div>
-  ) : null;
-  return { show, Toast };
-}
-
 export default function RouletteEditor() {
   const { config } = useSiteConfigStore();
-  const { show, Toast } = useToast();
+  const { show } = useToast();
   const siteId = config?.id || 'meu-site';
 
   const [wheels, setWheels] = useState<Wheel[]>([]);
@@ -115,7 +98,6 @@ export default function RouletteEditor() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {Toast}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Roleta de Perguntas</h1>
@@ -126,9 +108,13 @@ export default function RouletteEditor() {
         </Button>
       </div>
 
-      {creating && (
-        <div className="bg-slate-800 border border-rose-500/40 rounded-xl p-6 space-y-4">
-          <h2 className="font-bold text-white text-lg">Nova Roleta</h2>
+      <SideSheet
+        isOpen={creating}
+        onClose={() => setCreating(false)}
+        title="Nova Roleta"
+        description="Configure a pergunta e as opções que aparecerão na roleta."
+      >
+        <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Pergunta *</label>
             <Input
@@ -146,7 +132,7 @@ export default function RouletteEditor() {
               value={newWheel.options}
               onChange={(e) => setNewWheel({ ...newWheel, options: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-rose-500/50 focus:outline-none resize-none"
-              rows={3}
+              rows={5}
               placeholder="Ex: Cinema, Jantar romântico, Passeio no parque, Assistir série"
             />
             <p className="text-xs text-slate-500">
@@ -160,30 +146,33 @@ export default function RouletteEditor() {
               opções
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button onClick={handleCreate} isLoading={saving} className="gap-2">
+          <div className="flex gap-3 pt-6 border-t border-slate-800 mt-8">
+            <Button onClick={handleCreate} isLoading={saving} className="flex-1 gap-2">
               <Plus className="w-4 h-4" /> Criar Roleta
             </Button>
             <Button
               variant="secondary"
               onClick={() => setCreating(false)}
-              className="bg-slate-700 text-white"
+              className="flex-1 bg-slate-800 text-slate-300 hover:bg-slate-700"
             >
               Cancelar
             </Button>
           </div>
         </div>
-      )}
+      </SideSheet>
 
       {loading ? (
         <div className="flex justify-center p-12">
           <Spinner />
         </div>
       ) : wheels.length === 0 ? (
-        <div className="text-center p-12 border border-dashed border-slate-700 rounded-xl text-slate-500">
-          <Dices className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          Nenhuma roleta cadastrada.
-        </div>
+        <EmptyState
+          icon={Dices}
+          title="Nenhuma roleta cadastrada"
+          description="Crie roletas com perguntas e opções divertidas para brincar com seu amor."
+          actionLabel="Criar Primeira Roleta"
+          onAction={() => setCreating(true)}
+        />
       ) : (
         <div className="space-y-4">
           {wheels.map((wheel) => (
