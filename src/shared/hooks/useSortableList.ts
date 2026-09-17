@@ -1,10 +1,17 @@
 /**
  * useSortableList — hook reutilizável para listas sortáveis com @dnd-kit/sortable.
  *
- * Encapsula DragEndEvent, arrayMove e a lógica de onReorder para deixar
- * os componentes limpos. Retorna os props necessários para DndContext e SortableContext.
+ * PointerSensor cobre mouse no desktop.
+ * TouchSensor cobre toque no mobile/tablet com delay de 250ms para não conflitar com scroll.
+ * MouseSensor foi removido pois PointerSensor já o cobre e causava conflito interno (M_ID error).
  */
 import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  TouchSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
 export function useSortableList<T extends { id: string }>(
@@ -12,6 +19,18 @@ export function useSortableList<T extends { id: string }>(
   onReorder: (reordered: T[]) => void
 ) {
   const ids = items.map((item) => item.id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -22,5 +41,5 @@ export function useSortableList<T extends { id: string }>(
     onReorder(reordered);
   };
 
-  return { ids, handleDragEnd };
+  return { ids, handleDragEnd, sensors };
 }

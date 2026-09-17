@@ -761,14 +761,14 @@ export default function PlaylistEditor() {
             Nenhuma música nesta playlist.
           </div>
         ) : (
-          <DndContext onDragEnd={trackSortable.handleDragEnd}>
+          <DndContext sensors={trackSortable.sensors} onDragEnd={trackSortable.handleDragEnd}>
             <SortableContext items={trackSortable.ids} strategy={verticalListSortingStrategy}>
               <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
               {tracksWithIds.map((track) => {
                 const tId = track.id as string;
                 return (
-                  <SortableItem key={tId} id={tId}>
-                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                    <SortableItem key={tId} id={tId}>
+                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
                         <div
                           ref={setNodeRef}
                           style={style}
@@ -779,6 +779,7 @@ export default function PlaylistEditor() {
                         >
                           <div 
                             {...handleProps} 
+                            style={handleStyle}
                             className="p-2 -ml-2 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white transition-colors"
                           >
                             <GripVertical className="w-4 h-4 flex-shrink-0" />
@@ -945,13 +946,13 @@ export default function PlaylistEditor() {
         </div>
       ) : (
         <>
-          <DndContext onDragEnd={playlistSortable.handleDragEnd}>
+          <DndContext sensors={playlistSortable.sensors} onDragEnd={playlistSortable.handleDragEnd}>
             <SortableContext items={playlistSortable.ids} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {playlists.map((playlist) => (
                   <div key={playlist.id}>
                     <SortableItem id={playlist.id}>
-                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
                         <div
                           ref={setNodeRef}
                           style={style}
@@ -960,7 +961,7 @@ export default function PlaylistEditor() {
                             isDragging ? "shadow-2xl ring-2 ring-blue-500 z-10" : "hover:border-slate-600"
                           )}
                         >
-                          <div {...handleProps} className="p-2 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white transition-colors flex-shrink-0">
+                          <div {...handleProps} style={handleStyle} className="p-2 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white transition-colors flex-shrink-0">
                             <GripVertical className="w-5 h-5" />
                           </div>
                           

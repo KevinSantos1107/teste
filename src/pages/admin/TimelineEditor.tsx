@@ -397,13 +397,13 @@ export default function TimelineEditor() {
         />
       ) : (
         <>
-          <DndContext onDragEnd={eventSortable.handleDragEnd}>
+          <DndContext sensors={eventSortable.sensors} onDragEnd={eventSortable.handleDragEnd}>
             <SortableContext items={eventSortable.ids} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {events.map((event) => (
                   <div key={event.id}>
                     <SortableItem id={event.id}>
-                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
                         <div
                           ref={setNodeRef}
                           style={style}
@@ -412,7 +412,7 @@ export default function TimelineEditor() {
                             isDragging ? "shadow-2xl shadow-rose-500/10 ring-2 ring-rose-500 z-10" : "hover:border-slate-600"
                           )}
                         >
-                          <div {...handleProps} className="mt-1 p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
+                          <div {...handleProps} style={handleStyle} className="mt-1 p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
                             <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0" />
                           </div>
                           <div className="w-16 h-16 rounded overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700/50">

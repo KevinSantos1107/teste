@@ -615,14 +615,14 @@ export default function AlbumEditor() {
             description="Nenhuma foto ainda. Use a área acima para fazer upload das suas fotos."
           />
         ) : (
-          <DndContext onDragEnd={photoSortable.handleDragEnd}>
+          <DndContext sensors={photoSortable.sensors} onDragEnd={photoSortable.handleDragEnd}>
             <SortableContext items={photoSortable.ids} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {photos.map((photo, idx) => {
                   const pId = photo.publicId || photo.url || photo.src || String(idx);
                   return (
                     <SortableItem key={pId} id={pId}>
-                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
                         <div
                           ref={setNodeRef}
                           style={style}
@@ -658,6 +658,7 @@ export default function AlbumEditor() {
                           </div>
                           <div 
                             {...handleProps} 
+                            style={handleStyle}
                             className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-black/40 rounded cursor-grab active:cursor-grabbing hover:bg-rose-500/80 z-20"
                           >
                             <GripVertical className="w-4 h-4 text-white drop-shadow" />
@@ -780,13 +781,13 @@ export default function AlbumEditor() {
         />
       ) : (
         <>
-          <DndContext onDragEnd={albumSortable.handleDragEnd}>
+          <DndContext sensors={albumSortable.sensors} onDragEnd={albumSortable.handleDragEnd}>
             <SortableContext items={albumSortable.ids} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {albums.map((album) => (
                   <div key={album.id}>
                     <SortableItem id={album.id}>
-                      {({ isDragging, setNodeRef, style, handleProps }) => (
+                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
                         <div
                           ref={setNodeRef}
                           style={style}
@@ -795,7 +796,7 @@ export default function AlbumEditor() {
                             isDragging ? "shadow-2xl shadow-blue-500/10 ring-2 ring-blue-500 z-10" : "hover:border-slate-600"
                           )}
                         >
-                          <div {...handleProps} className="p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
+                          <div {...handleProps} style={handleStyle} className="p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
                             <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0 hover:text-slate-400" />
                           </div>
 
