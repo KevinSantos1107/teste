@@ -89,6 +89,19 @@ function stripUndefined<T extends object>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 }
 
+interface TrackSlot {
+  id: string;
+  file: File;
+  title: string;
+  artist: string;
+  coverFile: File | null;
+  coverPreview: string | null;
+  uploading: boolean;
+  progress: number;
+  done: boolean;
+  error: string | null;
+}
+
 interface Track {
   id?: string;
   publicId?: string;
@@ -247,17 +260,15 @@ export default function PlaylistEditor() {
   const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Track upload
+  // Track upload — multi-slot system
   const [creatingTrack, setCreatingTrack] = useState(false);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [trackCoverFile, setTrackCoverFile] = useState<File | null>(null);
-  const [trackCoverPreview, setTrackCoverPreview] = useState<string | null>(null);
-  const [newTrack, setNewTrack] = useState({ title: '', artist: '' });
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [trackSlots, setTrackSlots] = useState<TrackSlot[]>([]);
+  const [expandedSlotId, setExpandedSlotId] = useState<string | null>(null);
+  const cancelControllers = useRef<Map<string, AbortController>>(new Map());
 
   const audioInputRef = useRef<HTMLInputElement>(null);
-  const trackCoverRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const coverSlotIdRef = useRef<string | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const editCoverRef = useRef<HTMLInputElement>(null);
 
@@ -486,99 +497,156 @@ export default function PlaylistEditor() {
     }
   };
 
-  // ─── Audio select with ID3 extraction ────────────────────────────────────
-  const handleAudioSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setAudioFile(file);
-
-    // Fallback: parse artist and title from "Artist - Title.mp3" format
-    let nameFromFile = file.name.replace(/\.[^.]+$/, '');
-    let parsedArtist = '';
-    let parsedTitle = nameFromFile;
-    if (nameFromFile.includes(' - ')) {
-      const parts = nameFromFile.split(' - ');
-      parsedArtist = parts[0].trim();
-      parsedTitle = parts.slice(1).join(' - ').trim();
-    } else {
-      parsedTitle = parsedTitle.replace(/[-_]/g, ' ');
+  // ─── Multi-slot audio handlers ────────────────────────────────────────────
+  const parseFilename = (filename: string) => {
+    const name = filename.replace(/\.[^.]+$/, '');
+    if (name.includes(' - ')) {
+      const parts = name.split(' - ');
+      return { parsedArtist: parts[0].trim(), parsedTitle: parts.slice(1).join(' - ').trim() };
     }
-
-    const tags = await readMp3Tags(file);
-    setNewTrack((t) => ({
-      ...t,
-      title: tags.title || t.title || parsedTitle,
-      artist: tags.artist || t.artist || parsedArtist,
-    }));
-    if (tags.coverUrl) setTrackCoverPreview(tags.coverUrl);
+    return { parsedArtist: '', parsedTitle: name.replace(/[-_]/g, ' ') };
   };
 
-  const handleTrackCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setTrackCoverFile(file);
-    setTrackCoverPreview(URL.createObjectURL(file));
+  const handleAudioFilesSelect = async (files: FileList) => {
+    const newSlots: TrackSlot[] = [];
+    for (const file of Array.from(files)) {
+      const { parsedArtist, parsedTitle } = parseFilename(file.name);
+      const id = crypto.randomUUID();
+      newSlots.push({
+        id, file,
+        title: parsedTitle, artist: parsedArtist,
+        coverFile: null, coverPreview: null,
+        uploading: false, progress: 0, done: false, error: null,
+      });
+      // Read ID3 tags async — updates the slot when ready
+      readMp3Tags(file).then((tags) => {
+        setTrackSlots((prev) =>
+          prev.map((s) =>
+            s.id === id
+              ? {
+                  ...s,
+                  title: tags.title || s.title,
+                  artist: tags.artist || s.artist,
+                  coverPreview: tags.coverUrl || s.coverPreview,
+                }
+              : s
+          )
+        );
+      });
+    }
+    setTrackSlots((prev) => [...prev, ...newSlots]);
+    if (newSlots.length > 0) setExpandedSlotId(newSlots[0].id);
   };
 
-  // ─── Upload Track ─────────────────────────────────────────────────────────
-  const handleUploadTrack = async () => {
-    if (!activePlaylist || !audioFile || !newTrack.title) {
-      show('Selecione um arquivo MP3 e informe o título', 'err');
-      return;
-    }
-    setUploading(true);
+  const handleSlotCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const slotId = coverSlotIdRef.current;
+    if (!file || !slotId) return;
+    const preview = URL.createObjectURL(file);
+    setTrackSlots((prev) =>
+      prev.map((s) => (s.id === slotId ? { ...s, coverFile: file, coverPreview: preview } : s))
+    );
+    e.target.value = '';
+  };
+
+  const openCoverPickerForSlot = (slotId: string) => {
+    coverSlotIdRef.current = slotId;
+    coverInputRef.current?.click();
+  };
+
+  const removeSlot = (slotId: string) => {
+    cancelControllers.current.get(slotId)?.abort();
+    cancelControllers.current.delete(slotId);
+    setTrackSlots((prev) => prev.filter((s) => s.id !== slotId));
+    if (expandedSlotId === slotId) setExpandedSlotId(null);
+  };
+
+  const cancelSlotUpload = (slotId: string) => {
+    cancelControllers.current.get(slotId)?.abort();
+  };
+
+  const uploadSlot = async (slot: TrackSlot) => {
+    if (!activePlaylist || !slot.title) return;
+    const controller = new AbortController();
+    cancelControllers.current.set(slot.id, controller);
+    setTrackSlots((prev) =>
+      prev.map((s) => (s.id === slot.id ? { ...s, uploading: true, error: null, progress: 0 } : s))
+    );
     try {
-      const audioRes = await uploadAudio(audioFile, `${siteId}/music`, setUploadProgress);
+      const audioRes = await uploadAudio(
+        slot.file,
+        `${siteId}/music`,
+        (pct) => setTrackSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, progress: pct } : s))),
+        controller.signal
+      );
 
       let coverUrl: string | undefined;
       let coverPublicId: string | undefined;
 
-      // If ID3 cover was extracted (blob URL), upload it to Cloudinary
-      if (trackCoverFile) {
-        const coverRes = await uploadImage(trackCoverFile, `${siteId}/music/covers`);
+      if (slot.coverFile) {
+        const coverRes = await uploadImage(slot.coverFile, `${siteId}/music/covers`, undefined, controller.signal);
         coverPublicId = coverRes.publicId;
         coverUrl = coverRes.secureUrl;
-      } else if (trackCoverPreview && trackCoverPreview.startsWith('blob:')) {
-        // Convert blob URL to File and upload
+      } else if (slot.coverPreview?.startsWith('blob:')) {
         try {
-          const blobRes = await fetch(trackCoverPreview);
+          const blobRes = await fetch(slot.coverPreview);
           const blob = await blobRes.blob();
           const blobFile = new File([blob], 'cover.jpg', { type: blob.type });
-          const coverRes = await uploadImage(blobFile, `${siteId}/music/covers`);
+          const coverRes = await uploadImage(blobFile, `${siteId}/music/covers`, undefined, controller.signal);
           coverPublicId = coverRes.publicId;
           coverUrl = coverRes.secureUrl;
-        } catch {
-          /* ignore cover upload error */
-        }
+        } catch { /* ignore cover error */ }
       }
 
-      const addedTrack = stripUndefined({
-        title: newTrack.title,
-        artist: newTrack.artist || undefined,
-        src: audioRes.secureUrl,
-        url: audioRes.secureUrl,
-        publicId: audioRes.publicId,
-        cover: coverUrl,
-        coverPublicId,
-        date: new Date().toISOString(),
-        orderIndex: tracks.length,
-        playlistId: activePlaylist.id,
-      });
+      await addDoc(
+        collection(db, 'playlist_tracks'),
+        stripUndefined({
+          title: slot.title,
+          artist: slot.artist || undefined,
+          src: audioRes.secureUrl,
+          url: audioRes.secureUrl,
+          publicId: audioRes.publicId,
+          cover: coverUrl,
+          coverPublicId,
+          date: new Date().toISOString(),
+          orderIndex: tracks.length,
+          playlistId: activePlaylist.id,
+        })
+      );
 
-      await addDoc(collection(db, 'playlist_tracks'), addedTrack);
-
-      show('Música adicionada com sucesso!');
-      setAudioFile(null);
-      setTrackCoverFile(null);
-      setTrackCoverPreview(null);
-      setNewTrack({ title: '', artist: '' });
-      setCreatingTrack(false);
-      setUploadProgress(0);
+      setTrackSlots((prev) =>
+        prev.map((s) => (s.id === slot.id ? { ...s, uploading: false, done: true, progress: 100 } : s))
+      );
       loadPlaylists();
     } catch (e: any) {
-      show('Erro no upload: ' + e.message, 'err');
+      if (e.name === 'AbortError') {
+        setTrackSlots((prev) =>
+          prev.map((s) => (s.id === slot.id ? { ...s, uploading: false, progress: 0 } : s))
+        );
+      } else {
+        setTrackSlots((prev) =>
+          prev.map((s) => (s.id === slot.id ? { ...s, uploading: false, error: e.message } : s))
+        );
+      }
+    } finally {
+      cancelControllers.current.delete(slot.id);
     }
-    setUploading(false);
+  };
+
+  const uploadAllSlots = async () => {
+    const pending = trackSlots.filter((s) => !s.done && !s.uploading && s.title);
+    for (const slot of pending) {
+      await uploadSlot(slot);
+    }
+  };
+
+  const resetCreating = () => {
+    // Cancel any running uploads
+    cancelControllers.current.forEach((c) => c.abort());
+    cancelControllers.current.clear();
+    setTrackSlots([]);
+    setExpandedSlotId(null);
+    setCreatingTrack(false);
   };
 
   // ─── Delete Track ─────────────────────────────────────────────────────────
@@ -633,139 +701,220 @@ export default function PlaylistEditor() {
         </div>
 
         {creatingTrack && (
-          <div className="bg-slate-800 border border-rose-500/40 rounded-xl p-6 space-y-4">
-            <h2 className="font-bold text-white text-lg">Nova Música</h2>
-
-            {/* MP3 picker FIRST — fills fields via ID3 */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Arquivo MP3 *</label>
-              <div
-                onClick={() => audioInputRef.current?.click()}
-                className={cn(
-                  'border-2 border-dashed rounded-xl p-5 flex items-center gap-3 cursor-pointer transition-all',
-                  audioFile
-                    ? 'border-emerald-500/50 bg-emerald-500/5'
-                    : 'border-slate-600 hover:border-slate-400 bg-slate-900/40'
+          <div className="bg-slate-800 border border-rose-500/30 rounded-xl p-4 space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-white text-base">Adicionar Músicas</h2>
+              <div className="flex items-center gap-2">
+                {trackSlots.some((s) => !s.done && !s.uploading) && trackSlots.length > 0 && (
+                  <Button
+                    onClick={uploadAllSlots}
+                    className="gap-1.5 text-xs py-1.5 px-3 h-auto"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Enviar Todas ({trackSlots.filter((s) => !s.done && !s.uploading).length})
+                  </Button>
                 )}
-              >
-                <Music
-                  className={cn('w-6 h-6', audioFile ? 'text-emerald-400' : 'text-slate-500')}
-                />
-                <span className={cn('text-sm', audioFile ? 'text-emerald-300' : 'text-slate-400')}>
-                  {audioFile
-                    ? audioFile.name
-                    : 'Clique para selecionar o arquivo MP3 (campos serão preenchidos automaticamente)'}
-                </span>
-              </div>
-              <input
-                ref={audioInputRef}
-                type="file"
-                className="hidden"
-                accept="audio/mp3,audio/mpeg,audio/*"
-                onChange={handleAudioSelect}
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Título *</label>
-                <Input
-                  value={newTrack.title}
-                  onChange={(e) => setNewTrack({ ...newTrack, title: e.target.value })}
-                  className="bg-slate-900 border-slate-700 text-slate-200"
-                  placeholder="Ex: Perfeito"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-300">Artista</label>
-                <Input
-                  value={newTrack.artist}
-                  onChange={(e) => setNewTrack({ ...newTrack, artist: e.target.value })}
-                  className="bg-slate-900 border-slate-700 text-slate-200"
-                  placeholder="Ex: Ed Sheeran"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">
-                Capa da Música (Opcional — extraída automaticamente do MP3)
-              </label>
-              {trackCoverPreview ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={trackCoverPreview}
-                    alt=""
-                    className="w-16 h-16 rounded-lg object-cover border border-slate-600"
-                  />
-                  <div>
-                    <p className="text-xs text-emerald-400 mb-1">✓ Capa extraída do MP3</p>
-                    <button
-                      onClick={() => {
-                        setTrackCoverFile(null);
-                        setTrackCoverPreview(null);
-                      }}
-                      className="text-slate-400 hover:text-white text-xs flex items-center gap-1"
-                    >
-                      <X className="w-3 h-3" /> Remover
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => trackCoverRef.current?.click()}
-                  className="border border-dashed border-slate-600 rounded-xl p-4 flex items-center gap-2 cursor-pointer hover:border-slate-400 transition-colors"
+                <button
+                  onClick={resetCreating}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
                 >
-                  <Upload className="w-5 h-5 text-slate-500" />
-                  <span className="text-slate-400 text-sm">
-                    Clique para selecionar uma capa manualmente
-                  </span>
-                </div>
-              )}
-              <input
-                ref={trackCoverRef}
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleTrackCoverSelect}
-              />
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {uploading && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-slate-400">
-                  <span>Enviando...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-1.5">
-                  <div
-                    className="h-full bg-rose-500 transition-all rounded-full"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
+            {/* Drop zone */}
+            <div
+              onClick={() => audioInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-600 hover:border-slate-400 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition-all bg-slate-900/40"
+            >
+              <Music className="w-5 h-5 text-slate-500 shrink-0" />
+              <span className="text-sm text-slate-400">
+                {trackSlots.length === 0
+                  ? 'Clique para selecionar MP3s (pode selecionar vários ao mesmo tempo)'
+                  : `Clique para adicionar mais músicas`}
+              </span>
+            </div>
+            <input
+              ref={audioInputRef}
+              type="file"
+              className="hidden"
+              accept="audio/mp3,audio/mpeg,audio/*"
+              multiple
+              onChange={(e) => e.target.files && handleAudioFilesSelect(e.target.files)}
+            />
+            <input
+              ref={coverInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleSlotCoverSelect}
+            />
+
+            {/* Slot accordion list */}
+            {trackSlots.length > 0 && (
+              <div className="space-y-1.5 max-h-[55vh] overflow-y-auto pr-0.5">
+                {trackSlots.map((slot) => {
+                  const isExpanded = expandedSlotId === slot.id;
+                  return (
+                    <div
+                      key={slot.id}
+                      className={cn(
+                        'border rounded-xl overflow-hidden transition-colors',
+                        slot.done
+                          ? 'border-emerald-500/30 bg-emerald-500/5'
+                          : slot.error
+                          ? 'border-red-500/40 bg-red-500/5'
+                          : 'border-slate-700 bg-slate-900'
+                      )}
+                    >
+                      {/* Collapsed row — always visible */}
+                      <div
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-white/5 transition-colors"
+                        onClick={() => !slot.done && setExpandedSlotId(isExpanded ? null : slot.id)}
+                      >
+                        {/* Thumbnail */}
+                        <div className="w-8 h-8 rounded flex-shrink-0 bg-slate-700 flex items-center justify-center overflow-hidden">
+                          {slot.coverPreview ? (
+                            <img src={slot.coverPreview} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <Music className="w-4 h-4 text-slate-500" />
+                          )}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate leading-tight">
+                            {slot.title || slot.file.name}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {slot.artist || 'Artista não encontrado'}
+                          </p>
+                        </div>
+                        {/* Status / actions */}
+                        {slot.done ? (
+                          <span className="text-emerald-400 text-xs flex items-center gap-1 shrink-0">
+                            ✓ Enviada
+                          </span>
+                        ) : slot.uploading ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-slate-400 font-mono w-9 text-right">{slot.progress}%</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); cancelSlotUpload(slot.id); }}
+                              className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                              title="Cancelar upload"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : slot.error ? (
+                          <span className="text-xs text-red-400 shrink-0">Erro</span>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeSlot(slot.id); }}
+                            className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-red-500/10 transition-colors shrink-0"
+                            title="Remover"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Progress bar while uploading */}
+                      {slot.uploading && (
+                        <div className="h-0.5 bg-slate-700 mx-3 mb-2 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-rose-500 transition-all duration-300 rounded-full"
+                            style={{ width: `${slot.progress}%` }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Expanded form */}
+                      {isExpanded && !slot.done && (
+                        <div className="px-3 pb-3 border-t border-slate-700/50 pt-3 space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs font-medium text-slate-400 block mb-1">Título *</label>
+                              <Input
+                                value={slot.title}
+                                onChange={(e) =>
+                                  setTrackSlots((prev) =>
+                                    prev.map((s) => (s.id === slot.id ? { ...s, title: e.target.value } : s))
+                                  )
+                                }
+                                className="bg-slate-800 border-slate-600 text-slate-200 text-sm h-8"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-400 block mb-1">Artista</label>
+                              <Input
+                                value={slot.artist}
+                                onChange={(e) =>
+                                  setTrackSlots((prev) =>
+                                    prev.map((s) => (s.id === slot.id ? { ...s, artist: e.target.value } : s))
+                                  )
+                                }
+                                className="bg-slate-800 border-slate-600 text-slate-200 text-sm h-8"
+                              />
+                            </div>
+                          </div>
+                          {/* Cover */}
+                          {slot.coverPreview ? (
+                            <div className="flex items-center gap-3">
+                              <img src={slot.coverPreview} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                              <div>
+                                <p className="text-xs text-emerald-400">✓ Capa detectada</p>
+                                <button
+                                  onClick={() =>
+                                    setTrackSlots((prev) =>
+                                      prev.map((s) => (s.id === slot.id ? { ...s, coverFile: null, coverPreview: null } : s))
+                                    )
+                                  }
+                                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 mt-0.5"
+                                >
+                                  <X className="w-3 h-3" /> Remover capa
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => openCoverPickerForSlot(slot.id)}
+                              className="flex items-center gap-2 text-xs text-slate-400 hover:text-white border border-dashed border-slate-600 hover:border-slate-400 rounded-lg px-3 py-2 w-full transition-colors"
+                            >
+                              <Upload className="w-3.5 h-3.5" /> Selecionar capa manualmente
+                            </button>
+                          )}
+                          {slot.error && (
+                            <p className="text-xs text-red-400">Erro: {slot.error}</p>
+                          )}
+                          <Button
+                            onClick={() => uploadSlot(slot)}
+                            disabled={slot.uploading || !slot.title}
+                            className="w-full gap-2 text-sm py-2 h-auto"
+                          >
+                            <Upload className="w-3.5 h-3.5" /> Enviar esta música
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              <Button onClick={handleUploadTrack} isLoading={uploading} className="gap-2">
-                <Upload className="w-4 h-4" /> Enviar Música
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setCreatingTrack(false);
-                  setAudioFile(null);
-                  setTrackCoverFile(null);
-                  setTrackCoverPreview(null);
-                  setNewTrack({ title: '', artist: '' });
-                }}
-                className="bg-slate-700 text-white"
+            {/* Footer when all done */}
+            {trackSlots.length > 0 && trackSlots.every((s) => s.done) && (
+              <button
+                onClick={resetCreating}
+                className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors"
               >
-                Cancelar
-              </Button>
-            </div>
+                ✓ Todas enviadas — Fechar
+              </button>
+            )}
           </div>
         )}
+
 
         {tracks.length === 0 ? (
           <div className="text-center p-12 border border-dashed border-slate-700 rounded-xl text-slate-500">

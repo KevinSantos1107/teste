@@ -42,7 +42,8 @@ async function fileToBase64Jpeg(file: File, maxWidth = 1600, quality = 0.88): Pr
 export async function uploadImage(
   file: File,
   folder?: string,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  signal?: AbortSignal
 ): Promise<CloudinaryUploadResult> {
   const base64 = await fileToBase64Jpeg(file);
 
@@ -59,6 +60,13 @@ export async function uploadImage(
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
       };
+    }
+
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        xhr.abort();
+        reject(new DOMException('Upload cancelado', 'AbortError'));
+      });
     }
 
     xhr.onload = () => {
@@ -88,7 +96,8 @@ export async function uploadImage(
 export async function uploadAudio(
   file: File,
   folder?: string,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  signal?: AbortSignal
 ): Promise<CloudinaryUploadResult> {
   const formData = new FormData();
   formData.append('file', file);
@@ -103,6 +112,13 @@ export async function uploadAudio(
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
       };
+    }
+
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        xhr.abort();
+        reject(new DOMException('Upload cancelado', 'AbortError'));
+      });
     }
 
     xhr.onload = () => {
