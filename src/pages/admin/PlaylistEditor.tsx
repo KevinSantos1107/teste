@@ -42,31 +42,43 @@ import {
   Save,
 } from 'lucide-react';
 
+// @ts-ignore
+import * as jsmediatags from 'jsmediatags/dist/jsmediatags.min.js';
+
 // Helper: extract ID3 tags from MP3 file
 function readMp3Tags(file: File): Promise<{ title?: string; artist?: string; coverUrl?: string }> {
   return new Promise((resolve) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const jsmediatags = (window as any).jsmediatags;
       if (!jsmediatags) {
+        console.error('jsmediatags module not found!');
         resolve({});
         return;
       }
       jsmediatags.read(file, {
         onSuccess: (tag: any) => {
+          console.log('ID3 tags lidas com sucesso:', tag.tags);
           const tags = tag.tags;
           let coverUrl: string | undefined;
           if (tags.picture) {
-            const { data, format } = tags.picture;
-            const bytes = new Uint8Array(data);
-            const blob = new Blob([bytes], { type: format });
-            coverUrl = URL.createObjectURL(blob);
+            try {
+              const { data, format } = tags.picture;
+              const bytes = new Uint8Array(data);
+              const blob = new Blob([bytes], { type: format });
+              coverUrl = URL.createObjectURL(blob);
+              console.log('Capa extraída com sucesso:', coverUrl);
+            } catch (e) {
+              console.error('Erro ao processar a capa:', e);
+            }
           }
           resolve({ title: tags.title, artist: tags.artist, coverUrl });
         },
-        onError: () => resolve({}),
+        onError: (error: any) => {
+          console.error('Erro ao ler tags ID3:', error);
+          resolve({});
+        },
       });
-    } catch {
+    } catch (e) {
+      console.error('Exceção geral ao tentar ler ID3:', e);
       resolve({});
     }
   });

@@ -7,7 +7,6 @@ import {
   deleteDoc,
   doc,
   updateDoc,
-  writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
@@ -20,11 +19,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { SideSheet } from '../../shared/ui/SideSheet';
 import { useToast } from '../../shared/ui/ToastProvider';
 import { cn } from '../../shared/utils/cn';
-import { DndContext } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { useSortableList } from '../../shared/hooks/useSortableList';
-import { SortableItem } from '../../shared/ui/SortableItem';
-import { Plus, Trash2, GripVertical, Edit2, X, Upload, CheckCircle, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Upload, CheckCircle, Calendar } from 'lucide-react';
 
 interface TimelineEvent {
   id: string;
@@ -36,8 +31,6 @@ interface TimelineEvent {
   photoUrl?: string;
   isSecret?: boolean;
   secretMessage?: string;
-  side?: 'left' | 'right';
-  orderIndex: number;
 }
 
 const emptyEvent = (): Partial<TimelineEvent> => ({
@@ -46,7 +39,6 @@ const emptyEvent = (): Partial<TimelineEvent> => ({
   description: '',
   location: '',
   isSecret: false,
-  side: 'left',
 });
 
 export default function TimelineEditor() {
@@ -80,16 +72,13 @@ export default function TimelineEditor() {
           description: data.caption || data.description,
           location: data.location,
           publicId: data.publicId,
-          // site antigo usa campo "photo" e "photoLarge" = URL completa
           photoUrl: data.photoLarge || data.photo || data.photoUrl,
           isSecret: !!(data.secret || data.isSecret),
           secretMessage: typeof data.secret === 'string' ? data.secret : (data.secretMessage || ''),
-          side: data.side || 'left',
-          orderIndex: data.orderIndex ?? 0,
         });
       });
-      // Sort local (igual ao site antigo)
-      loaded.sort((a, b) => a.orderIndex - b.orderIndex);
+      // Ordena por data — igual ao site principal (automático e intercalado)
+      loaded.sort((a, b) => a.date.localeCompare(b.date));
       setEvents(loaded);
     } catch {
       show('Erro ao carregar eventos', 'err');
@@ -100,15 +89,6 @@ export default function TimelineEditor() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
-
-  const handleEventReorder = async (reordered: TimelineEvent[]) => {
-    const indexed = reordered.map((e, i) => ({ ...e, orderIndex: i }));
-    setEvents(indexed);
-    const batch = writeBatch(db);
-    indexed.forEach((e) => batch.update(doc(db, 'timeline', e.id), { orderIndex: e.orderIndex }));
-    await batch.commit();
-  };
-  const eventSortable = useSortableList(events, handleEventReorder);
 
   const openNew = () => {
     setForm(emptyEvent());
@@ -165,7 +145,6 @@ export default function TimelineEditor() {
         location: form.location || '',
         // Se houver texto na secretMessage, salva como string (site antigo), senão salva o boolean
         secret: form.secretMessage ? form.secretMessage : (form.isSecret || false),
-        side: form.side || 'left',
         photo: photoUrl || null, // campo do site antigo
         publicId: publicId || null,
         updatedAt: serverTimestamp(),
@@ -175,7 +154,6 @@ export default function TimelineEditor() {
         // Salva na coleção raiz "timeline" (igual ao site antigo)
         await addDoc(collection(db, 'timeline'), {
           ...payload,
-          orderIndex: events.length,
           createdAt: serverTimestamp(),
         });
         show('Evento criado!');
@@ -246,27 +224,14 @@ export default function TimelineEditor() {
             rows={4}
           />
         </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Localização</label>
-            <Input
-              value={form.location || ''}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              className="bg-slate-900 border-slate-700 text-slate-200"
-              placeholder="Ex: Paris, França"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Lado na Timeline</label>
-            <select
-              value={form.side || 'left'}
-              onChange={(e) => setForm({ ...form, side: e.target.value as 'left' | 'right' })}
-              className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-rose-500/50 focus:outline-none"
-            >
-              <option value="left">Esquerda</option>
-              <option value="right">Direita</option>
-            </select>
-          </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-slate-300">Localização</label>
+          <Input
+            value={form.location || ''}
+            onChange={(e) => setForm({ ...form, location: e.target.value })}
+            className="bg-slate-900 border-slate-700 text-slate-200"
+            placeholder="Ex: Paris, França"
+          />
         </div>
         {/* Photo upload */}
         <div className="space-y-2">
@@ -374,7 +339,10 @@ export default function TimelineEditor() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Nossa História</h1>
-          <p className="text-slate-400 mt-1">Gerencie os eventos exibidos na Linha do Tempo.</p>
+          <p className="text-slate-400 mt-1">
+            Gerencie os eventos da Linha do Tempo.{' '}
+            <span className="text-slate-500 text-xs">Os eventos são ordenados por data automaticamente.</span>
+          </p>
         </div>
         <Button onClick={openNew} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" /> Novo Evento
@@ -396,80 +364,61 @@ export default function TimelineEditor() {
           onAction={openNew}
         />
       ) : (
-        <>
-          <DndContext sensors={eventSortable.sensors} onDragEnd={eventSortable.handleDragEnd}>
-            <SortableContext items={eventSortable.ids} strategy={verticalListSortingStrategy}>
-              <div className="space-y-2">
-                {events.map((event) => (
-                  <div key={event.id}>
-                    <SortableItem id={event.id}>
-                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
-                        <div
-                          ref={setNodeRef}
-                          style={style}
-                          className={cn(
-                            "flex items-start gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl transition-colors group",
-                            isDragging ? "shadow-2xl shadow-rose-500/10 ring-2 ring-rose-500 z-10" : "hover:border-slate-600"
-                          )}
-                        >
-                          <div {...handleProps} style={handleStyle} className="mt-1 p-1 -ml-1 cursor-grab active:cursor-grabbing hover:bg-slate-700 rounded">
-                            <GripVertical className="w-5 h-5 text-slate-600 flex-shrink-0" />
-                          </div>
-                          <div className="w-16 h-16 rounded overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700/50">
-                            {event.publicId ? (
-                              <img
-                                src={cloudinaryUrl(event.publicId, { w: 100, h: 100, c: 'fill' })}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : event.photoUrl ? (
-                              <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-600">
-                                <Calendar className="w-5 h-5" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <h3 className="font-bold text-white">{event.title}</h3>
-                              <span className="text-xs font-mono bg-slate-700 text-slate-400 px-2 py-0.5 rounded">
-                                {event.date}
-                              </span>
-                              {event.isSecret && (
-                                <span className="text-xs bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded">
-                                  secreto
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-slate-400 line-clamp-2">{event.description}</p>
-                            {event.location && (
-                              <p className="text-xs text-slate-500 mt-1">📍 {event.location}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => openEdit(event)}
-                              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(event)}
-                              className="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </SortableItem>
+        <div className="space-y-2">
+          {events.map((event) => (
+            <div
+              key={event.id}
+              className="flex items-start gap-4 p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-slate-600 transition-colors group"
+            >
+              <div className="w-16 h-16 rounded overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700/50">
+                {event.publicId ? (
+                  <img
+                    src={cloudinaryUrl(event.publicId, { w: 100, h: 100, c: 'fill' })}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : event.photoUrl ? (
+                  <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <Calendar className="w-5 h-5" />
                   </div>
-                ))}
+                )}
               </div>
-            </SortableContext>
-          </DndContext>
-        </>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 className="font-bold text-white">{event.title}</h3>
+                  <span className="text-xs font-mono bg-slate-700 text-slate-400 px-2 py-0.5 rounded">
+                    {event.date}
+                  </span>
+                  {event.isSecret && (
+                    <span className="text-xs bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded">
+                      secreto
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-400 line-clamp-2">{event.description}</p>
+                {event.location && (
+                  <p className="text-xs text-slate-500 mt-1">📍 {event.location}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1 shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => openEdit(event)}
+                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(event)}
+                  className="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-700 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
