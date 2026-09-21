@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { cn } from '../../shared/utils/cn';
 import { imagePreloader } from './ImagePreloader';
-import { cloudinaryUrl } from '../../services/cloudinary/upload';
+import { cloudinaryUrl, cloudinaryResponsiveSrcSet } from '../../services/cloudinary/upload';
 
 interface Photo {
   id?: string;
@@ -34,14 +34,19 @@ function getPhotoUrl(photo: Photo): string {
   if (photo.src || photo.url) return (photo.src || photo.url) as string;
   if (photo.publicId) {
     if (photo.publicId.startsWith('http')) return photo.publicId;
-    // Otimiza para tela cheia: auto format, fl_progressive, quality auto
-    return cloudinaryUrl(photo.publicId, { f: 'auto', q: 'auto' as any });
+    // Full-screen viewer: cap at 1200px wide (enough for most mobile/desktop screens)
+    return cloudinaryUrl(photo.publicId, { w: 1200 });
   }
   return '';
 }
 
+function getPhotoSrcSet(photo: Photo): string | undefined {
+  if (!photo.publicId || photo.publicId.startsWith('http')) return undefined;
+  return cloudinaryResponsiveSrcSet(photo.publicId, [600, 900, 1200]);
+}
+
 // ─── Foto com Pinch to Zoom e Pan ─────────────────────────────────────────────
-function ZoomableImage({ src, alt }: { src: string; alt: string }) {
+function ZoomableImage({ src, srcSet, alt }: { src: string; srcSet?: string; alt: string }) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
@@ -203,6 +208,8 @@ function ZoomableImage({ src, alt }: { src: string; alt: string }) {
     >
       <img
         src={src}
+        srcSet={srcSet}
+        sizes="(max-width: 768px) 100vw, 90vw"
         alt={alt}
         draggable={false}
         className="max-w-full max-h-full object-contain pointer-events-none"
@@ -221,6 +228,7 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
   if (!album) return <div className="w-full h-full bg-black" />;
   const photo = album.photos[photoIndex];
   const url = photo ? getPhotoUrl(photo) : '';
+  const srcSet = photo ? getPhotoSrcSet(photo) : undefined;
   const caption = photo?.caption || photo?.description;
 
   return (
@@ -229,7 +237,10 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
       <div className="absolute top-4 inset-x-0 z-50 flex gap-[3px] px-4 drop-shadow-md pointer-events-none">
         {album.photos.map((_, i) => (
           <div key={i} className="flex-1 h-[3px] bg-white/25 rounded-full overflow-hidden">
-            <div className={cn('h-full bg-white rounded-full transition-all duration-200', i <= photoIndex ? 'w-full' : 'w-0')} />
+            <div className={cn(
+              'h-full bg-white rounded-full transition-transform duration-200 origin-left',
+              i <= photoIndex ? 'scale-x-100' : 'scale-x-0'
+            )} />
           </div>
         ))}
       </div>
@@ -240,7 +251,7 @@ function AlbumPanel({ album, photoIndex }: { album: Album | undefined; photoInde
       </div>
 
       {/* Foto customizada com Zoom & Pan isolados */}
-      {url && <ZoomableImage src={url} alt={caption || `Foto ${photoIndex + 1}`} />}
+      {url && <ZoomableImage src={url} srcSet={srcSet} alt={caption || `Foto ${photoIndex + 1}`} />}
 
       {/* Legenda */}
       {caption && (
@@ -467,6 +478,10 @@ export function AlbumViewerModal({ albums, initialAlbumIndex, onClose, onAlbumCh
   // ── Render ────────────────────────────────────────────────────────────────
   return createPortal(
     <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
       style={{ backgroundColor: bgColor }}
       className="fixed inset-0 z-[99999] touch-none"
       onPointerDown={onPointerDown}

@@ -173,6 +173,7 @@ export function HamburgerMenu() {
             </h2>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Fechar menu"
               className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
@@ -192,7 +193,7 @@ export function HamburgerMenu() {
               </button>
 
               <div className={cn(
-                'overflow-hidden transition-all duration-300',
+                'overflow-hidden transition-opacity duration-300',
                 isNavOpen ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
               )}>
                 <div className="flex flex-col gap-0.5 mt-1">
@@ -223,7 +224,7 @@ export function HamburgerMenu() {
               </button>
 
               <div className={cn(
-                'overflow-hidden transition-all duration-300',
+                'overflow-hidden transition-opacity duration-300',
                 isInterOpen ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
               )}>
                 <div className="flex flex-col gap-0.5 mt-1">
@@ -257,7 +258,7 @@ export function HamburgerMenu() {
               </button>
 
               <div className={cn(
-                'overflow-hidden transition-all duration-300',
+                'overflow-hidden transition-opacity duration-300',
                 isThemeOpen ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'
               )}>
                 <div className="grid grid-cols-4 gap-3 mt-3 px-3 pb-3">

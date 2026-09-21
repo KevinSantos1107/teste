@@ -4,7 +4,8 @@ import { db } from '../../services/firebase/config';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { AlbumViewerModal } from './AlbumViewerModal';
 import { Images } from 'lucide-react';
-import { cloudinaryUrl } from '../../services/cloudinary/upload';
+import { cloudinaryUrl, cloudinaryResponsiveSrcSet } from '../../services/cloudinary/upload';
+import { AnimatePresence } from 'framer-motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -239,8 +240,14 @@ export function AlbumCarousel() {
   const getCover = (album: Album): string | null => {
     if (album.cover || album.coverThumb || album.coverLarge)
       return album.cover || album.coverThumb || album.coverLarge || null;
-    if (album.coverPublicId) return cloudinaryUrl(album.coverPublicId, { w: 600 });
+    if (album.coverPublicId) return cloudinaryUrl(album.coverPublicId, { w: 300 });
     return null;
+  };
+
+  // Generates a srcset for carousel card images (card width = 240px)
+  const getCoverSrcSet = (album: Album): string | null => {
+    if (!album.coverPublicId) return null;
+    return cloudinaryResponsiveSrcSet(album.coverPublicId, [300, 480, 600]);
   };
 
   const CARD_W = 240;
@@ -276,6 +283,8 @@ export function AlbumCarousel() {
             const isActive = dist === 0;
             const coverSrc = getCover(album);
 
+            const coverSrcSet = getCoverSrcSet(album);
+
             return (
               <div
                 key={album.id}
@@ -302,7 +311,10 @@ export function AlbumCarousel() {
                   {coverSrc ? (
                     <img
                       src={coverSrc}
+                      srcSet={coverSrcSet || undefined}
+                      sizes="240px"
                       alt={album.title}
+                      loading="lazy"
                       className={`w-full h-full object-cover transition-transform duration-700 ${isActive ? 'group-hover:scale-105' : ''}`}
                       draggable={false}
                     />
@@ -331,15 +343,17 @@ export function AlbumCarousel() {
         </div>
       </div>
 
-      {/* Modal — interface preservada exatamente como estava */}
-      {selectedAlbumIndex !== null && (
-        <AlbumViewerModal
-          albums={albums}
-          initialAlbumIndex={selectedAlbumIndex}
-          onClose={() => setSelectedAlbumIndex(null)}
-          onAlbumChange={(idx) => setActiveIndex(circularIndex(idx, albums.length))}
-        />
-      )}
+      {/* Modal — com AnimatePresence para fade suave */}
+      <AnimatePresence>
+        {selectedAlbumIndex !== null && (
+          <AlbumViewerModal
+            albums={albums}
+            initialAlbumIndex={selectedAlbumIndex}
+            onClose={() => setSelectedAlbumIndex(null)}
+            onAlbumChange={(idx) => setActiveIndex(circularIndex(idx, albums.length))}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

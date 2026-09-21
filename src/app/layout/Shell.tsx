@@ -4,9 +4,11 @@ import { cn } from '../../shared/utils/cn';
 import { SplashScreen } from '../../features/core/SplashScreen';
 import { HamburgerMenu } from '../../features/core/HamburgerMenu';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
-import { RetroShell } from '../../features/retrospective-v2/components/RetroShell';
-import { AudioEngine } from '../../features/player/AudioEngine';
+import { lazy, Suspense } from 'react';
 import { GlobalModals } from '../../features/modals/GlobalModals';
+
+const RetroShell = lazy(() => import('../../features/retrospective-v2/components/RetroShell').then(m => ({ default: m.RetroShell })));
+const AudioEngine = lazy(() => import('../../features/player/AudioEngine').then(m => ({ default: m.AudioEngine })));
 
 export function Shell() {
   const [showSplash, setShowSplash] = useState(true);
@@ -40,14 +42,19 @@ export function Shell() {
             showSplash ? "opacity-0 pointer-events-none fixed inset-0" : "opacity-100 animate-in fade-in"
           )}
         >
-          <RetroShell />
+          <Suspense fallback={null}>
+            <RetroShell />
+          </Suspense>
+          
           <HamburgerMenu />
 
           <main className="flex-1">
             <Outlet />
           </main>
 
-          <AudioEngine />
+          <Suspense fallback={null}>
+            <AudioEngine />
+          </Suspense>
           <GlobalModals />
         </div>
       )}

@@ -3,8 +3,10 @@ import { Heart, ChevronDown, RefreshCw, Sparkles, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSiteConfigStore } from '../store/siteConfigStore';
 import { useThemeStore } from '../store/useThemeStore';
-import { PlaylistTabs } from '../features/playlist/PlaylistTabs';
-import { AlbumCarousel } from '../features/album/AlbumCarousel';
+import { lazy, Suspense } from 'react';
+
+const PlaylistTabs = lazy(() => import('../features/playlist/PlaylistTabs').then(m => ({ default: m.PlaylistTabs })));
+const AlbumCarousel = lazy(() => import('../features/album/AlbumCarousel').then(m => ({ default: m.AlbumCarousel })));
 import { useModalsStore } from '../store/useModalsStore';
 import {
   differenceInSeconds,
@@ -959,11 +961,18 @@ export default function Home() {
 
           <div className="relative rounded-[2.5rem] overflow-hidden border border-[var(--theme-primary)]/30 bg-white/[0.03] backdrop-blur-2xl shadow-[0_0_50px_rgba(var(--theme-primary-rgb),0.2),inset_0_0_25px_rgba(var(--theme-primary-rgb),0.08)] transition-all duration-500 hover:border-[var(--theme-primary)]/50 hover:shadow-[0_0_70px_rgba(var(--theme-primary-rgb),0.35),inset_0_0_35px_rgba(var(--theme-primary-rgb),0.15)] group">
 
-            {/* ── Imagem de Capa ── */}
+            {/* ── Imagem de Capa (LCP) ── */}
             <div className="relative w-full aspect-[16/10] overflow-hidden">
               <img
                 src="/capa_principal.jpg"
-                alt="Kevin & Iara"
+                alt={config.couple
+                  ? `${config.couple.partner1.name} & ${config.couple.partner2.name}`
+                  : 'Capa do site'
+                }
+                width={1498}
+                height={936}
+                fetchPriority="high"
+                decoding="async"
                 className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110"
               />
               {/* Gradient overlay from bottom */}
@@ -1069,7 +1078,9 @@ export default function Home() {
             </h2>
           </div>
           <div className="relative z-10 px-4 max-w-4xl mx-auto">
-            <PlaylistTabs />
+            <Suspense fallback={null}>
+              <PlaylistTabs />
+            </Suspense>
           </div>
         </motion.section>
       )}
@@ -1094,7 +1105,9 @@ export default function Home() {
             </h2>
           </div>
           <div className="drop-shadow-[0_0_40px_rgba(var(--theme-primary-rgb),0.3)]">
-            <AlbumCarousel />
+            <Suspense fallback={null}>
+              <AlbumCarousel />
+            </Suspense>
           </div>
         </motion.section>
       )}

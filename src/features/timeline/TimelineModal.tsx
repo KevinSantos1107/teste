@@ -6,6 +6,7 @@ import { Timeline } from './Timeline';
 import type { TimelineEvent } from './Timeline';
 import { X, Clock } from 'lucide-react';
 import { Spinner } from '../../shared/ui/Spinner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Modal via Portal (bypasses overflow-x-hidden stacking context) ────────────
 export function TimelineModalContent({
@@ -30,7 +31,11 @@ export function TimelineModalContent({
   }, [onClose]);
 
   const modal = (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: 'fixed',
@@ -90,7 +95,7 @@ export function TimelineModalContent({
           <Timeline events={events} />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 
   return createPortal(modal, document.body);
@@ -176,13 +181,15 @@ export function TimelineModal() {
       </button>
 
       {/* Modal via Portal — renderizado direto no document.body */}
-      {isOpen && (
-        <TimelineModalContent
-          events={events}
-          loading={loading}
-          onClose={handleClose}
-        />
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <TimelineModalContent
+            events={events}
+            loading={loading}
+            onClose={handleClose}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

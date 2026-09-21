@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useSiteConfigStore } from '../store/siteConfigStore';
 import { router } from './router';
-import { AuthProvider } from '../features/auth/AuthContext';
 
 export default function App() {
   const { config, isLoading, error, loadConfig } = useSiteConfigStore();
@@ -12,6 +11,25 @@ export default function App() {
     const siteId = import.meta.env.VITE_SITE_ID || 'meu-site';
     loadConfig(siteId);
   }, [loadConfig]);
+
+  // Inject dynamic <title> and <meta description> from siteConfig once loaded
+  useEffect(() => {
+    if (!config) return;
+    const couple = config.couple;
+    if (couple) {
+      const title = `${couple.partner1.name} & ${couple.partner2.name}`;
+      document.title = title;
+      const desc = (config as any).seo?.description
+        || `O nosso espaço especial — ${title}`;
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', desc);
+    }
+  }, [config]);
 
   // Removido o if(isLoading) para que o SplashScreen cuide de toda a UI de loading inicial
 
@@ -28,8 +46,6 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <RouterProvider router={router} />
   );
 }

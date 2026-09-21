@@ -143,12 +143,31 @@ export async function uploadAudio(
 /** Generate an optimised Cloudinary image URL */
 export function cloudinaryUrl(
   publicId: string,
-  opts: { w?: number; h?: number; q?: number; c?: string; f?: string } = {}
+  opts: { w?: number; h?: number; q?: number | 'auto'; c?: string; f?: string; dpr?: number } = {}
 ): string {
-  const { w, h, q = 82, c = 'limit', f = 'auto' } = opts;
+  const { w, h, q = 'auto', c = 'limit', f = 'auto', dpr } = opts;
   const transforms: string[] = [];
   if (w) transforms.push(`w_${w}`);
   if (h) transforms.push(`h_${h}`);
+  if (dpr) transforms.push(`dpr_${dpr}`);
   transforms.push(`c_${c}`, `q_${q}`, `f_${f}`, 'fl_progressive');
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transforms.join(',')}/${publicId}`;
+}
+
+/**
+ * Generates a responsive srcset string for Cloudinary images.
+ * Produces multiple widths for different viewports/device pixel ratios.
+ *
+ * @param publicId  - Cloudinary public ID
+ * @param widths    - Array of pixel widths, e.g. [400, 800, 1200]
+ * @param opts      - Base options (quality, format, crop, etc.)
+ */
+export function cloudinaryResponsiveSrcSet(
+  publicId: string,
+  widths: number[] = [400, 800, 1200],
+  opts: { q?: number | 'auto'; c?: string; f?: string } = {}
+): string {
+  return widths
+    .map((w) => `${cloudinaryUrl(publicId, { ...opts, w })} ${w}w`)
+    .join(', ');
 }

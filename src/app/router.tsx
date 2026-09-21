@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { Shell } from './layout/Shell';
 import { AdminShell } from './layout/AdminShell';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
+import { AuthProvider } from '../features/auth/AuthContext';
 import { Spinner } from '../shared/ui/Spinner';
 
 // Lazy load pages
@@ -18,6 +19,7 @@ const PlaylistEditor = lazy(() => import('../pages/admin/PlaylistEditor'));
 const RouletteEditor = lazy(() => import('../pages/admin/RouletteEditor'));
 const StarMapEditor = lazy(() => import('../pages/admin/StarMapEditor'));
 const RetrospectiveEditor = lazy(() => import('../pages/admin/RetrospectiveEditor'));
+const SharePage = lazy(() => import('../pages/admin/SharePage'));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense
@@ -53,17 +55,21 @@ export const router = createBrowserRouter([
   {
     path: '/admin/login',
     element: (
-      <SuspenseWrapper>
-        <LoginPage />
-      </SuspenseWrapper>
+      <AuthProvider>
+        <SuspenseWrapper>
+          <LoginPage />
+        </SuspenseWrapper>
+      </AuthProvider>
     ),
   },
   {
     path: '/admin',
     element: (
-      <ProtectedRoute>
-        <AdminShell />
-      </ProtectedRoute>
+      <AuthProvider>
+        <ProtectedRoute>
+          <AdminShell />
+        </ProtectedRoute>
+      </AuthProvider>
     ),
     children: [
       {
@@ -127,6 +133,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <RetrospectiveEditor />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'share',
+        element: (
+          <SuspenseWrapper>
+            <SharePage />
           </SuspenseWrapper>
         ),
       },

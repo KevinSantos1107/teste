@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cld } from '../../services/cloudinary/config';
 import { cn } from '../../shared/utils/cn';
+import { AdvancedImage, placeholder, lazyload } from '@cloudinary/react';
 
 interface CloudinaryImageProps {
   publicId: string;
@@ -34,6 +35,7 @@ export function CloudinaryImage({
       <img
         src={publicId}
         alt={alt}
+        loading="lazy"
         className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
         style={style}
         onLoad={handleLoad}
@@ -41,16 +43,16 @@ export function CloudinaryImage({
     );
   }
 
-  // Cloudinary publicId → gera URL otimizada
+  // Cloudinary publicId → gera URL otimizada com Lazy Load e Blur Up
   const myImage = cld.image(publicId);
   myImage.format('auto').quality('auto');
-  const url = myImage.toURL();
 
   return (
-    <img
-      src={url}
+    <AdvancedImage
+      cldImg={myImage}
+      plugins={[lazyload(), placeholder({ mode: 'blur' })]}
       alt={alt}
-      className={cn('object-cover transition-opacity duration-500', loaded ? 'opacity-100' : 'opacity-0', className)}
+      className={cn('object-cover', className)}
       style={style}
       onLoad={handleLoad}
     />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/AuthContext';
 import { signOut } from 'firebase/auth';
-import { auth } from '../../services/firebase/config';
+import { auth } from '../../services/firebase/auth';
 import { ToastProvider } from '../../shared/ui/ToastProvider';
 import {
   LogOut,
@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ExternalLink,
+  Share2,
 } from 'lucide-react';
 
 export function AdminShell() {
@@ -42,6 +43,7 @@ export function AdminShell() {
     { label: 'Músicas', icon: Music, path: '/admin/playlist' },
     { label: 'Roleta', icon: LayoutDashboard, path: '/admin/roulette' },
     { label: 'Mapa de Estrelas', icon: LayoutDashboard, path: '/admin/starmap' },
+    { label: 'Compartilhar', icon: Share2, path: '/admin/share' },
   ];
 
   return (
@@ -72,6 +74,7 @@ export function AdminShell() {
           </div>
           <button
             className="md:hidden text-slate-400 hover:text-white"
+            aria-label="Fechar menu"
             onClick={() => setIsMobileMenuOpen(false)}
           >
             <X className="w-5 h-5" />
@@ -143,13 +146,14 @@ export function AdminShell() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Abrir menu de navegação"
               className="text-slate-400 hover:text-white p-1"
             >
               <Menu className="w-6 h-6" />
             </button>
             <span className="font-serif font-bold text-white">Engine Admin</span>
           </div>
-          <button onClick={handleLogout} className="text-red-400 p-1">
+          <button onClick={handleLogout} aria-label="Sair do painel" className="text-red-400 p-1">
             <LogOut className="w-5 h-5" />
           </button>
         </header>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, getIdTokenResult } from 'firebase/auth';
-import { auth } from '../../services/firebase/config';
+import { auth } from '../../services/firebase/auth';
 
 export type Role = 'super_admin' | 'site_admin' | null;
 

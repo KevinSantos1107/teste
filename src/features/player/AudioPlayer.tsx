@@ -127,6 +127,7 @@ export function AudioPlayer() {
           <div className="flex items-center gap-4">
             <button
               onClick={toggleShuffle}
+              aria-label={isShuffle ? 'Desativar aleatório' : 'Ativar aleatório'}
               className={cn(
                 'text-theme-text-secondary hover:text-theme-text transition',
                 isShuffle && 'text-theme-primary'
@@ -136,12 +137,14 @@ export function AudioPlayer() {
             </button>
             <button
               onClick={previousTrack}
+              aria-label="Faixa anterior"
               className="text-theme-text-secondary hover:text-theme-text transition"
             >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
             <button
               onClick={togglePlayPause}
+              aria-label={isPlaying ? 'Pausar música' : 'Reproduzir música'}
               className="w-10 h-10 rounded-full bg-[var(--theme-primary)] text-white flex items-center justify-center hover:bg-[var(--theme-secondary)] transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_var(--theme-primary)]"
               disabled={isLoading}
             >
@@ -155,12 +158,14 @@ export function AudioPlayer() {
             </button>
             <button
               onClick={nextTrack}
+              aria-label="Próxima faixa"
               className="text-theme-text-secondary hover:text-theme-text transition"
             >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
             <button
               onClick={toggleRepeat}
+              aria-label={isRepeat ? 'Desativar repetição' : 'Ativar repetição'}
               className={cn(
                 'text-theme-text-secondary hover:text-theme-text transition',
                 isRepeat && 'text-theme-primary'
@@ -178,6 +183,7 @@ export function AudioPlayer() {
               max={duration || 100}
               value={currentTime}
               onChange={handleProgressChange}
+              aria-label="Progresso da música"
               className="flex-1 h-1.5 bg-theme-card-border rounded-lg appearance-none cursor-pointer accent-theme-primary"
             />
             <span>{formatTime(duration)}</span>
@@ -230,12 +236,14 @@ export function AudioPlayer() {
 
           <button
             onClick={() => setIsPlaylistOpen(true)}
+            aria-label="Abrir lista de reprodução"
             className="text-theme-text-secondary hover:text-theme-text transition"
           >
             <ListMusic className="w-5 h-5" />
           </button>
           <button
             onClick={toggleMute}
+            aria-label={isMuted || volume === 0 ? 'Ativar som' : 'Silenciar'}
             className="text-theme-text-secondary hover:text-theme-text transition"
           >
             {isMuted || volume === 0 ? (
@@ -251,6 +259,7 @@ export function AudioPlayer() {
             step={0.01}
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
+            aria-label="Volume"
             className="w-20 h-1.5 bg-theme-card-border rounded-lg appearance-none cursor-pointer accent-theme-primary hidden md:block"
           />
         </div>
