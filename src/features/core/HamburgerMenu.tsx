@@ -76,9 +76,10 @@ const INTERACTIVE_ITEMS: {
   modal: ModalType;
   Icon: React.ElementType;
 }[] = [
-  { modal: 'word-game',  label: 'Jogo de Palavras', Icon: Gamepad2 },
-  { modal: 'snake',      label: 'Cobrinha',          Icon: Worm },
-  { modal: 'star-map',   label: 'Mapa das Estrelas', Icon: Stars },
+  { modal: 'word-game',   label: 'Jogo de Palavras', Icon: Gamepad2 },
+  { modal: 'snake',       label: 'Cobrinha',          Icon: Worm },
+  { modal: 'star-map',    label: 'Mapa das Estrelas', Icon: Stars },
+  { modal: 'couple-quiz', label: 'Quiz do Casal',     Icon: MessageCircleHeart },
 ];
 
 export function HamburgerMenu() {

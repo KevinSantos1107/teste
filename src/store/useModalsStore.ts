@@ -5,6 +5,7 @@ export type ModalType =
   | 'snake'
   | 'star-map'
   | 'timeline'
+  | 'couple-quiz'
   | null;
 
 interface ModalsState {

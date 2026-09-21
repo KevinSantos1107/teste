@@ -20,6 +20,7 @@ const RouletteEditor = lazy(() => import('../pages/admin/RouletteEditor'));
 const StarMapEditor = lazy(() => import('../pages/admin/StarMapEditor'));
 const RetrospectiveEditor = lazy(() => import('../pages/admin/RetrospectiveEditor'));
 const SharePage = lazy(() => import('../pages/admin/SharePage'));
+const QuizEditor = lazy(() => import('../pages/admin/QuizEditor'));
 
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense
@@ -141,6 +142,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <SharePage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'quiz',
+        element: (
+          <SuspenseWrapper>
+            <QuizEditor />
           </SuspenseWrapper>
         ),
       },

@@ -43,6 +43,7 @@ export function AdminShell() {
     { label: 'Músicas', icon: Music, path: '/admin/playlist' },
     { label: 'Roleta', icon: LayoutDashboard, path: '/admin/roulette' },
     { label: 'Mapa de Estrelas', icon: LayoutDashboard, path: '/admin/starmap' },
+    { label: 'Quiz do Casal', icon: Settings, path: '/admin/quiz' },
     { label: 'Compartilhar', icon: Share2, path: '/admin/share' },
   ];
 
