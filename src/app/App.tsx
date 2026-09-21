@@ -19,8 +19,10 @@ export default function App() {
     if (couple) {
       const title = `${couple.partner1.name} & ${couple.partner2.name}`;
       document.title = title;
-      const desc = (config as any).seo?.description
-        || `O nosso espaço especial — ${title}`;
+      
+      const desc = (config as any).seo?.description || `O nosso espaço especial — ${title}`;
+      
+      // Update or create Description
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement('meta');
@@ -28,6 +30,21 @@ export default function App() {
         document.head.appendChild(metaDesc);
       }
       metaDesc.setAttribute('content', desc);
+
+      // OpenGraph Tags
+      const updateOgTag = (property: string, content: string) => {
+        let tag = document.querySelector(`meta[property="${property}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('property', property);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      updateOgTag('og:title', title);
+      updateOgTag('og:description', desc);
+      updateOgTag('og:type', 'website');
     }
   }, [config]);
 
