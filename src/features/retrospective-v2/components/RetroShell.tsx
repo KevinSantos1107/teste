@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { X, Volume2, VolumeX } from 'lucide-react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { Volume2, VolumeX } from 'lucide-react';
 import { useRetroV2Store } from '../store/useRetroV2Store';
 import { IntroSlide } from './slides/01-IntroSlide';
 import { TimeSlide } from './slides/02-TimeSlide';
@@ -109,18 +110,39 @@ export function RetroShell() {
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   }, []);
 
+  const y = useMotionValue(0);
+  const scale = useTransform(y, [-300, 0, 300], [0.85, 1, 0.85]);
+
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (gesture.current.pointerId !== e.pointerId) return;
-    const dx = Math.abs(e.clientX - gesture.current.startX);
-    const dy = Math.abs(e.clientY - gesture.current.startY);
-    if (dx > 8 || dy > 8) gesture.current.moved = true;
-  }, []);
+    const dx = e.clientX - gesture.current.startX;
+    const dy = e.clientY - gesture.current.startY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      gesture.current.moved = true;
+    }
+    // Only animate vertical pull down if it's more vertical than horizontal
+    if (Math.abs(dy) > Math.abs(dx)) {
+      y.set(dy);
+    }
+  }, [y]);
 
   const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (gesture.current.pointerId !== e.pointerId) return;
 
     const { startX, moved } = gesture.current;
+    const startY = gesture.current.startY;
     gesture.current.pointerId = null;
+
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+
+    // Swipe vertical para fechar com animação
+    if (Math.abs(dy) > Math.abs(dx) && dy > 100) {
+      animate(y, window.innerHeight, { duration: 0.25 }).then(closeRetro);
+      return;
+    } else {
+      animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
+    }
 
     // Slide 0 (Intro) não navega por clique — só pelo botão "Começar"
     if (currentSlide === 0) return;
@@ -133,53 +155,61 @@ export function RetroShell() {
       return;
     }
 
-    // Swipe horizontal
-    const dx = e.clientX - startX;
-    const dy = e.clientY - gesture.current.startY;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
       if (dx < 0) nextSlide();
       else prevSlide();
     }
-  }, [currentSlide, nextSlide, prevSlide]);
+  }, [currentSlide, nextSlide, prevSlide, closeRetro, y]);
 
   const onPointerCancel = useCallback(() => {
     gesture.current.pointerId = null;
-  }, []);
+    animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
+  }, [y]);
+
+  // Reset y when closed/opened
+  useEffect(() => {
+    if (!isOpen) {
+      y.set(0);
+    }
+  }, [isOpen, y]);
 
   if (!isOpen) return null;
 
 
+  const bgOpacity = useTransform(y, [-300, 0, 300], [0, 1, 0]);
+
   return (
-    <div
+    <motion.div
       className="retro-v2-modal"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: 'none', backgroundColor: 'transparent' }}
     >
-      {/* Barra de progresso — estilo Instagram Stories */}
-      {currentSlide > 0 && (
-        <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-2 pt-2 pointer-events-none">
-          {Array.from({ length: TOTAL_SLIDES - 1 }).map((_, i) => (
-            <div key={i} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white transition-all duration-300"
-                style={{ width: i + 1 <= currentSlide ? '100%' : '0%' }}
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      <motion.div 
+        className="absolute inset-0"
+        style={{ backgroundColor: 'black', opacity: bgOpacity }} 
+      />
 
-      {/* Controles do topo — X e mudo */}
+      <motion.div className="w-full h-full relative" style={{ y, scale }}>
+        {/* Barra de progresso — estilo Instagram Stories */}
+        {currentSlide > 0 && (
+          <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 px-2 pt-2 pointer-events-none">
+            {Array.from({ length: TOTAL_SLIDES - 1 }).map((_, i) => (
+              <div key={i} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white transition-all duration-300"
+                  style={{ width: i + 1 <= currentSlide ? '100%' : '0%' }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+      {/* Controles do topo — apenas mudo (X removido) */}
       <div className="absolute top-5 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
-        <button
-          onClick={(e) => { e.stopPropagation(); closeRetro(); }}
-          className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center pointer-events-auto active:scale-95 transition-transform border border-white/10"
-        >
-          <X className="w-4 h-4 text-white" />
-        </button>
+        <div /> {/* Espaçador */}
 
         {currentSlide > 0 && (
           <button
@@ -257,8 +287,7 @@ export function RetroShell() {
           />
         </div>
       </div>
-
-    
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

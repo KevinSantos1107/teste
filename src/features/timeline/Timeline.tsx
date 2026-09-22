@@ -1,128 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { MapPin, Heart } from 'lucide-react';
 import { CloudinaryImage } from '../album/CloudinaryImage';
 import { cn } from '../../shared/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// ─── Scratch Card ────────────────────────────────────────────────────────────
-function ScratchCard({ text, isEven }: { text: string; isEven: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isRevealed, setIsRevealed] = useState(false);
-  const isDrawing = useRef(false);
-
-  // Draw the scratch surface on mount
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const W = canvas.width;
-    const H = canvas.height;
-
-    // Gradient background
-    const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, '#4a1060');
-    grad.addColorStop(0.5, '#7c1fa8');
-    grad.addColorStop(1, '#4a1060');
-    ctx.fillStyle = grad;
-    ctx.roundRect(0, 0, W, H, 12);
-    ctx.fill();
-
-    // Shimmer stripe
-    const shimmer = ctx.createLinearGradient(0, 0, W, 0);
-    shimmer.addColorStop(0, 'rgba(255,255,255,0)');
-    shimmer.addColorStop(0.5, 'rgba(255,255,255,0.12)');
-    shimmer.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = shimmer;
-    ctx.fillRect(0, 0, W, H);
-
-    // Repeating emoji pattern
-    ctx.font = '11px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.textAlign = 'center';
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 8; col++) {
-        ctx.fillText(col % 2 === 0 ? '💕' : '✨', col * 36 + 20, row * 22 + 16);
-      }
-    }
-
-    // Hint text
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.textAlign = 'center';
-    ctx.fillText('🔮 Risque para revelar', W / 2, H / 2 + 4);
-  }, []);
-
-  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (e.clientX - rect.left) * (canvas.width / rect.width),
-      y: (e.clientY - rect.top) * (canvas.height / rect.height),
-    };
-  };
-
-  const scratch = (x: number, y: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(x, y, 22, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sample just a portion of pixels for performance
-    const sample = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let transparent = 0;
-    for (let i = 3; i < sample.data.length; i += 16) {
-      if (sample.data[i] < 128) transparent++;
-    }
-    const pct = (transparent / (sample.data.length / 64)) * 100;
-    if (pct > 55) setIsRevealed(true);
-  };
-
-  return (
-    <div className={cn('w-full mt-1', isEven ? 'flex flex-col items-end' : 'flex flex-col items-start')}>
-      <div className="relative w-full">
-        {/* Message underneath */}
-        <div className={cn(
-          'text-[10px] md:text-xs text-theme-text-secondary/90 italic font-light p-2.5 md:p-3 rounded-xl bg-black/20 border border-white/5',
-          isEven ? 'text-right' : 'text-left'
-        )}>
-          {text}
-        </div>
-
-        {/* Canvas overlay */}
-        <AnimatePresence>
-          {!isRevealed && (
-            <motion.canvas
-              ref={canvasRef}
-              width={260}
-              height={70}
-              exit={{ opacity: 0, transition: { duration: 0.5 } }}
-              className="absolute inset-0 w-full h-full rounded-xl cursor-crosshair touch-none"
-              style={{ borderRadius: '0.75rem' }}
-              onPointerDown={(e) => {
-                isDrawing.current = true;
-                (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
-                scratch(getPos(e).x, getPos(e).y);
-              }}
-              onPointerMove={(e) => {
-                if (isDrawing.current) scratch(getPos(e).x, getPos(e).y);
-              }}
-              onPointerUp={() => { isDrawing.current = false; }}
-              onPointerCancel={() => { isDrawing.current = false; }}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-// ─────────────────────────────────────────────────────────────────────────────
 
 export interface TimelineEvent {
   id: string;
@@ -139,7 +19,7 @@ interface TimelineProps {
   events: TimelineEvent[];
 }
 
-function TimelineItem({ event, index, isLast }: { event: TimelineEvent; index: number; isLast: boolean }) {
+function TimelineItem({ event, index }: { event: TimelineEvent; index: number }) {
   const isEven = index % 2 === 0;
   const [isActive, setIsActive] = useState(false);
   const [isSecretOpen, setIsSecretOpen] = useState(false);
@@ -259,42 +139,36 @@ function TimelineItem({ event, index, isLast }: { event: TimelineEvent; index: n
 
           {/* Mensagem Secreta */}
           {event.secretMessage && (
-            isLast ? (
-              // Último evento → raspadinha
-              <ScratchCard text={event.secretMessage} isEven={isEven} />
-            ) : (
-              // Demais eventos → botão revelar normal
-              <div className={cn("w-full mt-1", isEven ? "flex flex-col items-end" : "flex flex-col items-start")}>
-                <div
-                  onClick={handleSecretClick}
-                  className={cn(
-                    "text-[9px] md:text-xs transition-colors flex items-center gap-1.5 py-1",
-                    isSecretOpen ? "text-theme-primary" : "text-theme-text-secondary/50 hover:text-theme-primary/80"
-                  )}
-                >
-                  <Heart className={cn("w-2.5 h-2.5 md:w-3 md:h-3 transition-transform duration-300", isSecretOpen ? "fill-theme-primary scale-110" : "")} />
-                  <span className="italic">{isSecretOpen ? 'Ocultar' : 'Revelar'}</span>
-                </div>
-                <AnimatePresence>
-                  {isSecretOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0, y: -5 }}
-                      animate={{ opacity: 1, height: 'auto', y: 0 }}
-                      exit={{ opacity: 0, height: 0, y: -5 }}
-                      transition={{ duration: 0.3 }}
-                      className="overflow-hidden w-full"
-                    >
-                      <div className={cn(
-                        "mt-2 text-[10px] md:text-xs text-theme-text-secondary/90 italic font-light p-2.5 md:p-3 rounded-xl bg-black/20 border border-white/5",
-                        isEven ? "text-right rounded-tr-sm" : "text-left rounded-tl-sm"
-                      )}>
-                        {event.secretMessage}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            <div className={cn("w-full mt-1", isEven ? "flex flex-col items-end" : "flex flex-col items-start")}>
+              <div
+                onClick={handleSecretClick}
+                className={cn(
+                  "text-[9px] md:text-xs transition-colors flex items-center gap-1.5 py-1",
+                  isSecretOpen ? "text-theme-primary" : "text-theme-text-secondary/50 hover:text-theme-primary/80"
+                )}
+              >
+                <Heart className={cn("w-2.5 h-2.5 md:w-3 md:h-3 transition-transform duration-300", isSecretOpen ? "fill-theme-primary scale-110" : "")} />
+                <span className="italic">{isSecretOpen ? 'Ocultar' : 'Revelar'}</span>
               </div>
-            )
+              <AnimatePresence>
+                {isSecretOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -5 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden w-full"
+                  >
+                    <div className={cn(
+                      "mt-2 text-[10px] md:text-xs text-theme-text-secondary/90 italic font-light p-2.5 md:p-3 rounded-xl bg-black/20 border border-white/5",
+                      isEven ? "text-right rounded-tr-sm" : "text-left rounded-tl-sm"
+                    )}>
+                      {event.secretMessage}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
         </motion.div>
       </div>
@@ -374,12 +248,7 @@ export function Timeline({ events }: TimelineProps) {
         {/* Lista de Eventos */}
         <div className="space-y-6 md:space-y-12 relative z-10">
           {sortedEvents.map((event, index) => (
-            <TimelineItem
-              key={event.id}
-              event={event}
-              index={index}
-              isLast={index === sortedEvents.length - 1}
-            />
+            <TimelineItem key={event.id} event={event} index={index} />
           ))}
         </div>
       </div>
