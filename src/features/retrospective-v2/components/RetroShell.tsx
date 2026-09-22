@@ -172,11 +172,10 @@ export function RetroShell() {
       y.set(0);
     }
   }, [isOpen, y]);
+  const bgOpacity = useTransform(y, [-300, 0, 300], [0, 1, 0]);
 
   if (!isOpen) return null;
 
-
-  const bgOpacity = useTransform(y, [-300, 0, 300], [0, 1, 0]);
 
   return (
     <motion.div

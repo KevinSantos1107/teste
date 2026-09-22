@@ -100,15 +100,17 @@ function ScratchCard({ text }: { text: string }) {
             exit={{ opacity: 0, scale: 0.95, filter: 'blur(10px)', transition: { duration: 0.8 } }}
             className="absolute inset-0 w-full h-full rounded-2xl cursor-crosshair touch-none shadow-lg"
             onPointerDown={(e) => {
+              e.stopPropagation();
               isDrawing.current = true;
               (e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId);
               scratch(getPos(e).x, getPos(e).y);
             }}
             onPointerMove={(e) => {
+              e.stopPropagation();
               if (isDrawing.current) scratch(getPos(e).x, getPos(e).y);
             }}
-            onPointerUp={() => { isDrawing.current = false; }}
-            onPointerCancel={() => { isDrawing.current = false; }}
+            onPointerUp={(e) => { e.stopPropagation(); isDrawing.current = false; }}
+            onPointerCancel={(e) => { e.stopPropagation(); isDrawing.current = false; }}
           />
         )}
       </AnimatePresence>
