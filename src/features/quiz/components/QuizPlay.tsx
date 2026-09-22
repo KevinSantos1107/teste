@@ -44,11 +44,30 @@ export function QuizPlay() {
 
   // Framer Motion animation controls for smooth continuous bar
   const barControls = useAnimation();
+  
+  const isAnimatingRef = useRef(false);
+
+  const stopTimer = () => {
+    barControls.stop(); // freezes bar at current position
+    if (intervalRef.current) clearInterval(intervalRef.current);
+  };
+
+  const handleTimeUp = () => {
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
+    stopTimer();
+    setIsAnimating(true);
+    setSelectedOptionId('__timeout__');
+    setEarnedPoints(-50);
+    answerQuestion(false, -50);
+    setTimeout(() => advanceQuestion(), 1800);
+  };
 
   // Reset and start everything when question changes
   useEffect(() => {
     setSelectedOptionId(null);
     setIsAnimating(false);
+    isAnimatingRef.current = false;
     setDisplayTime(TIMER_SECONDS);
     setEarnedPoints(null);
     startTimeRef.current = Date.now();
@@ -60,42 +79,21 @@ export function QuizPlay() {
       transition: { duration: TIMER_SECONDS, ease: 'linear' },
     });
 
-    // 1-second interval just for the digit counter
+    // Interval for both the digit counter and the exact timeout trigger
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
       const remaining = Math.max(0, Math.ceil(TIMER_SECONDS - elapsed));
       setDisplayTime(remaining);
-    }, 500);
+      
+      if (remaining <= 0 && !isAnimatingRef.current) {
+        handleTimeUp();
+      }
+    }, 250); // Checks more frequently for precision
 
-    // Hard timeout for auto-fail
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      handleTimeUp();
-    }, TIMER_SECONDS * 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    return () => stopTimer();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
-
-  const stopTimer = () => {
-    barControls.stop(); // freezes bar at current position
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  };
-
-  const handleTimeUp = () => {
-    if (isAnimating) return;
-    stopTimer();
-    setIsAnimating(true);
-    setSelectedOptionId('__timeout__');
-    setEarnedPoints(-50);
-    answerQuestion(false, -50);
-    setTimeout(() => advanceQuestion(), 1800);
-  };
 
   if (!question) return null;
 
@@ -242,7 +240,18 @@ export function QuizPlay() {
                   className="text-center flex flex-col items-center gap-1"
                 >
                   {selectedOptionId === '__timeout__' ? (
-                    <p className="text-yellow-300 font-bold">Tempo esgotado! ⏱️</p>
+                    <>
+                      <p className="text-yellow-300 font-bold">Tempo esgotado! ⏱️</p>
+                      {earnedPoints !== null && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="text-xs font-mono text-red-400"
+                        >
+                          {earnedPoints} pts
+                        </motion.span>
+                      )}
+                    </>
                   ) : isCorrectOption(selectedOptionId) ? (
                     <>
                       <p className="text-green-400 font-bold">Você lembra mesmo! ❤️</p>
