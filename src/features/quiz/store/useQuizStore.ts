@@ -29,13 +29,34 @@ interface QuizState {
   currentCombo: number;
   maxCombo: number;
 
+  // Stats
+  personalBest: number;
+  highestCombo: number;
+  gamesPlayed: number;
+
   // Actions
   loadQuizData: (siteId: string) => Promise<void>;
   startGame: () => void;
-  answerQuestion: (isCorrect: boolean) => void;
+  answerQuestion: (isCorrect: boolean, points?: number) => void;
   advanceQuestion: () => void;
   resetGame: () => void;
 }
+
+const LOCAL_STATS_KEY = 'romantic_engine_quiz_stats';
+
+function loadLocalStats() {
+  try {
+    const data = localStorage.getItem(LOCAL_STATS_KEY);
+    if (data) return JSON.parse(data);
+  } catch (e) {}
+  return { personalBest: 0, highestCombo: 0, gamesPlayed: 0 };
+}
+
+function saveLocalStats(stats: { personalBest: number, highestCombo: number, gamesPlayed: number }) {
+  localStorage.setItem(LOCAL_STATS_KEY, JSON.stringify(stats));
+}
+
+const initialStats = loadLocalStats();
 
 export const useQuizStore = create<QuizState>((set, get) => ({
   config: DEFAULT_QUIZ_CONFIG,
@@ -51,6 +72,10 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   wrongAnswers: 0,
   currentCombo: 0,
   maxCombo: 0,
+  
+  personalBest: initialStats.personalBest,
+  highestCombo: initialStats.highestCombo,
+  gamesPlayed: initialStats.gamesPlayed,
 
   loadQuizData: async (siteId: string) => {
     set({ isLoading: true, error: null });
@@ -91,9 +116,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       const qQuery = query(qRef, orderBy('order', 'asc'));
       const qSnap = await getDocs(qQuery);
 
-      let loadedQuestions = qSnap.docs
-        .map(d => ({ id: d.id, ...d.data() } as QuizQuestion))
-        .filter(q => q.active);
+      let loadedQuestions = qSnap.docs.map(d => ({ id: d.id, ...d.data() } as QuizQuestion));
 
       if (loadedConfig.shuffleQuestions) {
         loadedQuestions = shuffleArray(loadedQuestions);
@@ -124,7 +147,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     });
   },
 
-  answerQuestion: (isCorrect: boolean) => {
+  answerQuestion: (isCorrect: boolean, points?: number) => {
     const state = get();
     const config = state.config;
 
@@ -133,8 +156,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     let newMaxCombo = state.maxCombo;
 
     if (isCorrect) {
-      const qPoints = state.questions[state.currentIndex]?.points || config.pointsCorrect;
-      newScore += qPoints;
+      const basePoints = points ?? config.pointsCorrect;
+      newScore += basePoints;
       newCombo += 1;
       if (newCombo >= 5) newScore += config.combo5;
       else if (newCombo >= 3) newScore += config.combo3;
@@ -142,6 +165,10 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       if (newCombo > newMaxCombo) newMaxCombo = newCombo;
     } else {
       newCombo = 0;
+      // Apply penalty if provided (e.g. timeout = -50)
+      if (points !== undefined && points < 0) {
+        newScore = Math.max(0, newScore + points);
+      }
     }
 
     set({
@@ -157,7 +184,22 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     const state = get();
     const nextIndex = state.currentIndex + 1;
     if (nextIndex >= state.questions.length) {
-      set({ gameState: 'result' });
+      const newGamesPlayed = state.gamesPlayed + 1;
+      const newPersonalBest = Math.max(state.personalBest, state.score);
+      const newHighestCombo = Math.max(state.highestCombo, state.maxCombo);
+      
+      saveLocalStats({
+        personalBest: newPersonalBest,
+        highestCombo: newHighestCombo,
+        gamesPlayed: newGamesPlayed
+      });
+
+      set({ 
+        gameState: 'result',
+        personalBest: newPersonalBest,
+        highestCombo: newHighestCombo,
+        gamesPlayed: newGamesPlayed
+      });
     } else {
       set({ currentIndex: nextIndex });
     }

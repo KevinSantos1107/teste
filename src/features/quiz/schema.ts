@@ -30,6 +30,10 @@ export interface QuizConfig {
     good: string;     // 50-79%
     bad: string;      // 0-49%
   };
+  secretReward?: {
+    type: 'none' | 'message' | 'photo';
+    content: string; // The text or the image URL
+  };
 }
 
 export const DEFAULT_QUIZ_CONFIG: QuizConfig = {
@@ -46,5 +50,9 @@ export const DEFAULT_QUIZ_CONFIG: QuizConfig = {
     great: "Quase perfeito! Você conhece muito bem a nossa história.",
     good: "Tem algumas memórias para revisar... melhor começarmos a relembrar juntos.",
     bad: "Precisamos urgentemente de uma sessão de lembranças. ❤️",
+  },
+  secretReward: {
+    type: 'none',
+    content: ''
   }
 };

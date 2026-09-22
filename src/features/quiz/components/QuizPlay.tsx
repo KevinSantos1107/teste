@@ -1,7 +1,28 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, Flame } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { CheckCircle2, XCircle, Flame, Clock } from 'lucide-react';
 import { useQuizStore } from '../store/useQuizStore';
+
+const TIMER_SECONDS = 20;
+
+// Points based on elapsed seconds (how fast the user answered)
+function getPoints(elapsedSeconds: number): number {
+  if (elapsedSeconds <= 2)  return 100;
+  if (elapsedSeconds <= 5)  return 95;
+  if (elapsedSeconds <= 8)  return 90;
+  if (elapsedSeconds <= 11) return 80;
+  if (elapsedSeconds <= 14) return 70;
+  if (elapsedSeconds <= 16) return 60;
+  if (elapsedSeconds <= 18) return 50;
+  if (elapsedSeconds <= 19) return 40;
+  return 30; // answered exactly at 20s
+}
+
+// Color based on fraction remaining (1 = green, 0 = red)
+function timerColor(fraction: number): string {
+  const hue = Math.round(fraction * 120); // 120 = green, 0 = red
+  return `hsl(${hue}, 85%, 55%)`;
+}
 
 export function QuizPlay() {
   const { 
@@ -13,35 +34,95 @@ export function QuizPlay() {
   
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  
+  const [displayTime, setDisplayTime] = useState(TIMER_SECONDS);
+  const [earnedPoints, setEarnedPoints] = useState<number | null>(null);
+
+  // Track exact start time for precise elapsed calculation
+  const startTimeRef = useRef<number>(Date.now());
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Framer Motion animation controls for smooth continuous bar
+  const barControls = useAnimation();
+
+  // Reset and start everything when question changes
   useEffect(() => {
     setSelectedOptionId(null);
     setIsAnimating(false);
+    setDisplayTime(TIMER_SECONDS);
+    setEarnedPoints(null);
+    startTimeRef.current = Date.now();
+
+    // Restart smooth bar animation from 100% → 0% over exactly TIMER_SECONDS
+    barControls.set({ width: '100%' });
+    barControls.start({
+      width: '0%',
+      transition: { duration: TIMER_SECONDS, ease: 'linear' },
+    });
+
+    // 1-second interval just for the digit counter
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const remaining = Math.max(0, Math.ceil(TIMER_SECONDS - elapsed));
+      setDisplayTime(remaining);
+    }, 500);
+
+    // Hard timeout for auto-fail
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      handleTimeUp();
+    }, TIMER_SECONDS * 1000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
+
+  const stopTimer = () => {
+    barControls.stop(); // freezes bar at current position
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  };
+
+  const handleTimeUp = () => {
+    if (isAnimating) return;
+    stopTimer();
+    setIsAnimating(true);
+    setSelectedOptionId('__timeout__');
+    setEarnedPoints(-50);
+    answerQuestion(false, -50);
+    setTimeout(() => advanceQuestion(), 1800);
+  };
 
   if (!question) return null;
 
   const handleOptionClick = (optionId: string) => {
     if (isAnimating) return;
-    
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    stopTimer();
+
     setSelectedOptionId(optionId);
     setIsAnimating(true);
-    
+
     const isCorrect = optionId === question.correctOptionId;
-    answerQuestion(isCorrect);
-    
-    // Pause before advancing to let user see animation
-    setTimeout(() => {
-      advanceQuestion();
-    }, 1800);
+    const pts = isCorrect ? getPoints(elapsed) : 0;
+    setEarnedPoints(isCorrect ? pts : null);
+    answerQuestion(isCorrect, pts);
+
+    setTimeout(() => advanceQuestion(), 1800);
   };
 
   const isCorrectOption = (id: string) => id === question.correctOptionId;
-  
+  const timerFraction = displayTime / TIMER_SECONDS;
+  const color = timerColor(timerFraction);
+
   return (
     <div className="flex-1 flex flex-col h-full w-full max-w-lg mx-auto">
-      {/* Header Info */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
         <div className="text-white/60 font-mono text-sm">
           Pergunta {currentIndex + 1} / {questions.length}
         </div>
@@ -61,15 +142,29 @@ export function QuizPlay() {
           </div>
         </div>
       </div>
-      
-      {/* Progress Bar */}
-      <div className="w-full h-1.5 bg-white/10 rounded-full mb-8 overflow-hidden">
-        <motion.div 
-          className="h-full bg-[var(--theme-primary)]"
-          initial={{ width: `${(currentIndex / questions.length) * 100}%` }}
-          animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-          transition={{ duration: 0.3 }}
-        />
+
+      {/* Timer — continuous bar + digit */}
+      <div className="flex items-center gap-3 mb-4">
+        <Clock className="w-4 h-4 shrink-0 transition-colors duration-500" style={{ color }} />
+        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full rounded-full"
+            animate={barControls}
+            style={{ backgroundColor: color }}
+          />
+        </div>
+        <AnimatePresence mode="popLayout">
+          <motion.span
+            key={displayTime}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="font-mono text-sm font-bold w-6 text-right tabular-nums"
+            style={{ color }}
+          >
+            {displayTime}
+          </motion.span>
+        </AnimatePresence>
       </div>
 
       {/* Question */}
@@ -81,7 +176,7 @@ export function QuizPlay() {
           exit={{ opacity: 0, x: -20 }}
           className="flex-1 flex flex-col justify-center"
         >
-          <h3 className="text-2xl md:text-3xl font-serif font-bold text-white mb-10 text-center leading-tight">
+          <h3 className="text-2xl md:text-3xl font-serif font-bold text-white mb-8 text-center leading-tight">
             {question.question}
           </h3>
 
@@ -93,7 +188,6 @@ export function QuizPlay() {
               const revealRight = isAnimating && isCorrectOption(opt.id) && !isSelected;
               
               let btnClass = "relative w-full p-4 rounded-2xl text-left transition-all border border-white/10 overflow-hidden ";
-              
               if (!isAnimating) {
                 btnClass += "bg-white/5 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98]";
               } else if (isRight || revealRight) {
@@ -126,7 +220,6 @@ export function QuizPlay() {
                       </motion.div>
                     )}
                   </div>
-                  
                   {isRight && (
                     <motion.div 
                       initial={{ opacity: 0 }} 
@@ -139,17 +232,30 @@ export function QuizPlay() {
             })}
           </div>
 
-          {/* Feedback message */}
-          <div className="h-12 mt-6 flex items-center justify-center">
+          {/* Feedback */}
+          <div className="h-14 mt-4 flex items-center justify-center">
             <AnimatePresence>
               {isAnimating && selectedOptionId && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center"
+                  className="text-center flex flex-col items-center gap-1"
                 >
-                  {isCorrectOption(selectedOptionId) ? (
-                    <p className="text-green-400 font-bold">Você lembra mesmo! ❤️</p>
+                  {selectedOptionId === '__timeout__' ? (
+                    <p className="text-yellow-300 font-bold">Tempo esgotado! ⏱️</p>
+                  ) : isCorrectOption(selectedOptionId) ? (
+                    <>
+                      <p className="text-green-400 font-bold">Você lembra mesmo! ❤️</p>
+                      {earnedPoints !== null && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="text-xs font-mono text-green-300"
+                        >
+                          +{earnedPoints} pts
+                        </motion.span>
+                      )}
+                    </>
                   ) : (
                     <p className="text-red-300">Quase! Essa memória escapou 😅</p>
                   )}
