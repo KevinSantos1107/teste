@@ -5,17 +5,10 @@ import { useQuizStore } from '../store/useQuizStore';
 
 const TIMER_SECONDS = 20;
 
-// Points based on elapsed seconds (how fast the user answered)
+// Points based on remaining time (linear calculation)
 function getPoints(elapsedSeconds: number): number {
-  if (elapsedSeconds <= 2)  return 100;
-  if (elapsedSeconds <= 5)  return 95;
-  if (elapsedSeconds <= 8)  return 90;
-  if (elapsedSeconds <= 11) return 80;
-  if (elapsedSeconds <= 14) return 70;
-  if (elapsedSeconds <= 16) return 60;
-  if (elapsedSeconds <= 18) return 50;
-  if (elapsedSeconds <= 19) return 40;
-  return 30; // answered exactly at 20s
+  const timeLeft = Math.max(0, TIMER_SECONDS - elapsedSeconds);
+  return Math.max(30, Math.round((timeLeft / TIMER_SECONDS) * 100));
 }
 
 // Color based on fraction remaining (1 = green, 0 = red)
@@ -39,7 +32,6 @@ export function QuizPlay() {
 
   // Track exact start time for precise elapsed calculation
   const startTimeRef = useRef<number>(Date.now());
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Framer Motion animation controls for smooth continuous bar
@@ -98,10 +90,11 @@ export function QuizPlay() {
   if (!question) return null;
 
   const handleOptionClick = (optionId: string) => {
-    if (isAnimating) return;
+    if (isAnimatingRef.current) return;
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
     stopTimer();
 
+    isAnimatingRef.current = true;
     setSelectedOptionId(optionId);
     setIsAnimating(true);
 
@@ -183,7 +176,8 @@ export function QuizPlay() {
               const isSelected = selectedOptionId === opt.id;
               const isRight = isSelected && isCorrectOption(opt.id);
               const isWrong = isSelected && !isCorrectOption(opt.id);
-              const revealRight = isAnimating && isCorrectOption(opt.id) && !isSelected;
+              // Only reveal right answer if user actually clicked an option, not on timeout
+              const revealRight = isAnimating && isCorrectOption(opt.id) && !isSelected && selectedOptionId !== '__timeout__';
               
               let btnClass = "relative w-full p-4 rounded-2xl text-left transition-all border border-white/10 overflow-hidden ";
               if (!isAnimating) {
