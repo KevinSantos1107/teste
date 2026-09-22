@@ -199,9 +199,6 @@ export function RouletteSlide() {
         >
           Onde Sair
         </motion.h2>
-        <p className="text-white/60 text-xs sm:text-sm font-medium tracking-wide uppercase">
-          Gire com o dedo ou segure o botão
-        </p>
       </div>
 
       <div className="relative z-10 flex items-center justify-center w-full max-w-[260px] sm:max-w-[320px] aspect-square my-4">
