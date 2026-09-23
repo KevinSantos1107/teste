@@ -36,8 +36,8 @@ export function PlayerAuthInit() {
                 ? 'Bem-vinda de volta, Princesa ❤️' 
                 : 'Bem-vindo, Kevin 👑';
               
-              // Mostra a notificação estilizada e fecha após 5 segundos
               setWelcomeMsg(msg);
+              sessionStorage.setItem('greeted', 'true');
               setTimeout(() => setWelcomeMsg(null), 5000);
             }
           } else {
@@ -50,6 +50,19 @@ export function PlayerAuthInit() {
           // Remove token from URL securely sem refresh
           const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
           window.history.replaceState({ path: newUrl }, '', newUrl);
+        }
+      } else {
+        // Se não tem token na URL, verifica se já é um jogador conhecido (salvo no Zustand/localStorage)
+        // e se ainda não foi saudado nesta sessão (aba do navegador)
+        const currentPlayer = usePlayerStore.getState().player;
+        if (currentPlayer !== 'visitante' && !sessionStorage.getItem('greeted')) {
+          const msg = currentPlayer === 'iara' 
+            ? 'Bem-vinda de volta, Princesa ❤️' 
+            : 'Bem-vindo, Kevin 👑';
+          
+          setWelcomeMsg(msg);
+          sessionStorage.setItem('greeted', 'true');
+          setTimeout(() => setWelcomeMsg(null), 5000);
         }
       }
 
