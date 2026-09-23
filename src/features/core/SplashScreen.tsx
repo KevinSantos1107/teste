@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart } from 'lucide-react';
 
@@ -32,32 +32,33 @@ export function SplashScreen({
   const name1 = parts[0] || 'Kevin';
   const name2 = parts[1] || 'Iara';
 
+  const currentProgressRef = useRef(0);
+  const startRef = useRef(performance.now());
+
   useEffect(() => {
     let raf: number;
-    const start = performance.now();
-    let currentProgress = 0;
 
     const tick = (now: number) => {
       if (phase !== 'in') return;
       
-      const elapsed = now - start;
+      const elapsed = now - startRef.current;
 
       if (!isReady) {
         // Fase 1: Carregamento simulado (assintótico até 90%)
         // Demora cerca de 3 segundos para chegar em ~90%
-        currentProgress = 90 * (1 - Math.exp(-elapsed / 1200));
-        setProgress(Math.round(currentProgress));
+        currentProgressRef.current = 90 * (1 - Math.exp(-elapsed / 1200));
+        setProgress(Math.round(currentProgressRef.current));
         raf = requestAnimationFrame(tick);
       } else {
-        // Fase 2: isReady é true! Dispara para 100% rapidamente
-        currentProgress += (100 - currentProgress) * 0.15;
+        // Fase 2: isReady é true! Dispara para 100% rapidamente a partir de onde parou
+        currentProgressRef.current += (100 - currentProgressRef.current) * 0.15;
         
         // Garante que o visual sempre ande pelo menos um pouquinho por frame
-        if (currentProgress > 99) currentProgress = 100;
+        if (currentProgressRef.current > 99) currentProgressRef.current = 100;
         
-        setProgress(Math.round(currentProgress));
+        setProgress(Math.round(currentProgressRef.current));
 
-        if (currentProgress < 100) {
+        if (currentProgressRef.current < 100) {
           raf = requestAnimationFrame(tick);
         } else {
           // Chegou a 100% de verdade, fazemos o fade out

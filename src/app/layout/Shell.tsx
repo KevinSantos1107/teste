@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { cn } from '../../shared/utils/cn';
 import { SplashScreen } from '../../features/core/SplashScreen';
@@ -21,6 +21,18 @@ export function Shell() {
     ? `${config.couple.partner1.name} & ${config.couple.partner2.name}`
     : 'Kevin & Iara';
 
+  // Previne rolagem do body enquanto a splash screen estiver ativa
+  useEffect(() => {
+    if (showSplash) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showSplash]);
+
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-700 font-sans relative">
       
@@ -33,13 +45,12 @@ export function Shell() {
         />
       )}
 
-      {/* Renderiza o site por baixo apenas quando as configurações estiverem prontas. 
-          Usamos opacity para que as imagens já comecem a carregar em background sem o usuário ver */}
+      {/* Renderiza o site por baixo apenas quando as configurações estiverem prontas. */}
       {isReady && (
         <div 
           className={cn(
-            "flex flex-col min-h-screen transition-opacity duration-1000",
-            showSplash ? "opacity-0 pointer-events-none fixed inset-0" : "opacity-100 animate-in fade-in"
+            "flex flex-col min-h-screen",
+            showSplash ? "pointer-events-none h-screen overflow-hidden" : ""
           )}
         >
           <Suspense fallback={null}>
