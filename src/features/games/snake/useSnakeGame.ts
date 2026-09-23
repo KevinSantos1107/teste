@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { saveRecordIfBetter } from '../../../services/gameRecords';
 import { usePlayerStore } from '../../../store/usePlayerStore';
 
