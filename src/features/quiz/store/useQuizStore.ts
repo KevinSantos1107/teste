@@ -200,7 +200,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       // Persiste no Firestore só para jogadores identificados
       const currentPlayer = usePlayerStore.getState().player;
       if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
-        saveRecordIfBetter('quiz', currentPlayer, state.score);
+        import('../../../services/gameRecords').then(({ saveQuizRecordIfBetter }) => {
+          saveQuizRecordIfBetter(currentPlayer, newPersonalBest, newHighestCombo);
+        });
       }
 
       set({ 
@@ -242,10 +244,10 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     const player = usePlayerStore.getState().player;
     if (player === 'kevin' || player === 'iara') {
       try {
-        const { getRecord } = await import('../../../services/gameRecords');
-        const score = await getRecord('quiz', player);
-        if (score !== null) {
-          set({ personalBest: score });
+        const { getQuizRecord } = await import('../../../services/gameRecords');
+        const record = await getQuizRecord(player);
+        if (record) {
+          set({ personalBest: record.score, highestCombo: record.highestCombo });
         }
       } catch (e) {
         console.error('Erro ao sincronizar stats do quiz:', e);
