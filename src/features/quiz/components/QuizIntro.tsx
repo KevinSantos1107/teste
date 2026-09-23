@@ -31,7 +31,7 @@ export function QuizIntro() {
         Vamos descobrir se você realmente lembra de cada detalhe dessa nossa jornada ❤️
       </p>
 
-      {gamesPlayed > 0 && (
+      {(personalBest > 0 || highestCombo > 0) && (
         <div className="flex flex-wrap items-center justify-center gap-4 mb-10 w-full max-w-sm">
           <div className="flex-1 min-w-[140px] bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center">
             <Trophy className="w-5 h-5 text-yellow-400 mb-1" />
@@ -50,7 +50,7 @@ export function QuizIntro() {
         onClick={startGame}
         className="px-8 py-4 bg-[var(--theme-primary)] hover:bg-[var(--theme-accent)] text-white font-bold rounded-2xl shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.4)] transition-all hover:scale-105 active:scale-95 text-lg"
       >
-        {gamesPlayed > 0 ? 'Jogar Novamente' : 'Começar o Quiz'}
+        {(personalBest > 0 || gamesPlayed > 0) ? 'Jogar Novamente' : 'Começar o Quiz'}
       </button>
     </motion.div>
   );
