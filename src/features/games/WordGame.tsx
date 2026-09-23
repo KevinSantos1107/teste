@@ -3,6 +3,8 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { cn } from '../../shared/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
+import { saveRecordIfBetter } from '../../services/gameRecords';
+import { usePlayerStore } from '../../store/usePlayerStore';
 import {
   Heart,
   HeartCrack,
@@ -308,6 +310,11 @@ export function WordGame() {
   // Ref to avoid stale closure in handleKey setTimeout callbacks
   const statsRef = useRef<GameStats>(stats);
   useEffect(() => { statsRef.current = stats; }, [stats]);
+  
+  // Jogador atual (leitura direta do store — não causa re-render desnecessário)
+  const player = usePlayerStore((s) => s.player);
+  const playerRef = useRef(player);
+  useEffect(() => { playerRef.current = player; }, [player]);
 
   // ── Load Dictionary ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -593,6 +600,13 @@ export function WordGame() {
             setStats(newStats);
             saveStats(newStats);
             setBounceRow(rowIdx);
+            
+            // Pontuação: quanto menos tentativas, mais pontos (1ª tentativa = 6pts, 6ª = 1pt)
+            const wordScore = MAX_ATTEMPTS - attemptIdx;
+            const currentPlayer = playerRef.current;
+            if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
+              saveRecordIfBetter('word', currentPlayer, wordScore);
+            }
             
             setTimeout(() => {
               setWon(true);

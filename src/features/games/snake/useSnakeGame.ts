@@ -1,4 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
+import { saveRecordIfBetter } from '../../../services/gameRecords';
+import { usePlayerStore } from '../../../store/usePlayerStore';
 
 export const COLS = 17;
 export const ROWS = 15;
@@ -67,6 +69,9 @@ export function useSnakeGame() {
   const [phaseState, setPhaseState] = useState<GamePhase>('menu');
   const [scoreState, setScoreState] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  
+  // Ref to current player — avoids stale closures in the game loop
+  const playerRef = useRef(usePlayerStore.getState().player);
   
   const [highScoreState, setHighScoreState] = useState(() => {
     try { return parseInt(localStorage.getItem('snake2-hs') ?? '0') || 0; } catch { return 0; }
@@ -205,6 +210,11 @@ export function useSnakeGame() {
       if (s.score > s.highScore) {
         s.highScore = s.score;
         try { localStorage.setItem('snake2-hs', String(s.highScore)); } catch {}
+        // Persiste no Firestore só para jogadores identificados
+        const player = playerRef.current;
+        if (player === 'kevin' || player === 'iara') {
+          saveRecordIfBetter('snake', player, s.highScore);
+        }
       }
       s.food = randomFood(s.snake);
       s.spawnedParticlesForThisEat = false;
