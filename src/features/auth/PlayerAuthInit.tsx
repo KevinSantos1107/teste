@@ -17,7 +17,17 @@ export function PlayerAuthInit() {
     initRef.current = true;
 
     const initAuth = async () => {
-      // 1. Check for token in URL
+      let uid = '';
+      // 1. Perform anonymous auth immediately so we have a UID for rules
+      try {
+        const userCredential = await signInAnonymously(auth);
+        uid = userCredential.user.uid;
+        setUid(uid);
+      } catch (error) {
+        console.error('Erro ao autenticar anonimamente:', error);
+      }
+
+      // 2. Check for token in URL
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
 
@@ -30,6 +40,15 @@ export function PlayerAuthInit() {
           if (tokenSnap.exists()) {
             const data = tokenSnap.data();
             if (data.player === 'kevin' || data.player === 'iara') {
+              // Grava o vínculo no Firestore usando o token como prova de identidade (Fase 3)
+              if (uid) {
+                const { setDoc } = await import('firebase/firestore');
+                await setDoc(doc(db, 'player_links', uid), {
+                  player: data.player,
+                  tokenId: token
+                });
+              }
+
               setPlayer(data.player);
               
               const msg = data.player === 'iara' 
@@ -64,14 +83,6 @@ export function PlayerAuthInit() {
           sessionStorage.setItem('greeted', 'true');
           setTimeout(() => setWelcomeMsg(null), 5000);
         }
-      }
-
-      // 2. Perform anonymous auth to link session for Firestore rules (Phase 3)
-      try {
-        const userCredential = await signInAnonymously(auth);
-        setUid(userCredential.user.uid);
-      } catch (error) {
-        console.error('Erro ao autenticar anonimamente:', error);
       }
     };
 

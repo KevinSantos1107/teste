@@ -15,12 +15,21 @@ service cloud.firestore {
 
     // Recordes dos mini-games (um documento por jogador por jogo: ex "snake_kevin")
     // - Qualquer um pode ler (necessário para exibir o ranking)
-    // - Só o usuário autenticado pode escrever — e apenas o documento do seu próprio jogador
-    // NOTA: neste estágio o campo "player" ainda é validado no frontend.
-    // A Fase 3 adicionará a regra de vínculo uid<->player no Firestore para proteção total.
+    // - Só o usuário autenticado, com a UID registrada em player_links batendo com o campo 'player', pode escrever
     match /game_records/{recordId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null
+                   && exists(/databases/$(database)/documents/player_links/$(request.auth.uid))
+                   && get(/databases/$(database)/documents/player_links/$(request.auth.uid)).data.player == request.resource.data.player;
+    }
+
+    // Vínculo entre a UID anônima e o jogador (criado no login com token mágico)
+    match /player_links/{uid} {
+      allow read: if request.auth.uid == uid;
+      // Para criar o vínculo, o usuário precisa comprovar a identidade fornecendo um token válido
+      allow write: if request.auth.uid == uid 
+                   && exists(/databases/$(database)/documents/player_tokens/$(request.resource.data.tokenId))
+                   && get(/databases/$(database)/documents/player_tokens/$(request.resource.data.tokenId)).data.player == request.resource.data.player;
     }
 
     // Sites configuration and public data
