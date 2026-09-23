@@ -2,20 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
+    // Regra geral: Permite leitura e escrita para TODO O SITE (Albuns, Timeline, Playlists, etc),
+    // EXCETO para as 3 coleções sensíveis que estamos protegendo agora.
+    match /{col}/{document=**} {
+      allow read, write: if col != 'player_tokens' 
+                         && col != 'game_records' 
+                         && col != 'player_links';
     }
 
-    // Tokens mágicos para login de jogadores (permite apenas leitura do documento específico, sem listagem)
+    // 🔒 PROTEÇÕES ESPECÍFICAS 🔒 //
+
+    // 1. Tokens mágicos de login
     match /player_tokens/{tokenId} {
       allow get: if true;
       allow list, write: if false;
     }
 
-    // Recordes dos mini-games (um documento por jogador por jogo: ex "snake_kevin")
-    // - Qualquer um pode ler (necessário para exibir o ranking)
-    // - Só o usuário autenticado, com a UID registrada em player_links batendo com o campo 'player', pode escrever
+    // 2. Recordes dos mini-games
     match /game_records/{recordId} {
       allow read: if true;
       allow write: if request.auth != null
@@ -23,38 +26,12 @@ service cloud.firestore {
                    && get(/databases/$(database)/documents/player_links/$(request.auth.uid)).data.player == request.resource.data.player;
     }
 
-    // Vínculo entre a UID anônima e o jogador (criado no login com token mágico)
+    // 3. Vínculo entre a UID anônima e o jogador
     match /player_links/{uid} {
       allow read: if request.auth.uid == uid;
-      // Para criar o vínculo, o usuário precisa comprovar a identidade fornecendo um token válido
       allow write: if request.auth.uid == uid 
                    && exists(/databases/$(database)/documents/player_tokens/$(request.resource.data.tokenId))
                    && get(/databases/$(database)/documents/player_tokens/$(request.resource.data.tokenId)).data.player == request.resource.data.player;
-    }
-
-    // Sites configuration and public data
-    match /sites/{siteId} {
-      // Anyone can read the site configuration (needed for visitors to see the site)
-      allow read: if true;
-      
-      // Only super_admin can create/update/delete any site
-      // Or a specific site_admin can edit their own site
-      allow write: if request.auth != null && (
-        request.auth.token.role == 'super_admin' || 
-        request.auth.token.site_admin == siteId
-      );
-
-      // Collections inside the site (album, timeline, playlist)
-      match /{collectionName}/{docId} {
-        // Anyone can read public content
-        allow read: if true;
-        
-        // Same write rules as the parent site
-        allow write: if request.auth != null && (
-          request.auth.token.role == 'super_admin' || 
-          request.auth.token.site_admin == siteId
-        );
-      }
     }
   }
 }

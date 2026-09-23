@@ -273,3 +273,18 @@ export async function getWordRanking(): Promise<{
   ]);
   return { kevin, iara };
 }
+
+/**
+ * Lê os recordes do Quiz para ambos os jogadores.
+ * Usa 2 leituras fixas.
+ */
+export async function getQuizRanking(): Promise<{
+  kevin: QuizRecord | null;
+  iara: QuizRecord | null;
+}> {
+  const [kevin, iara] = await Promise.all([
+    getQuizRecord('kevin'),
+    getQuizRecord('iara'),
+  ]);
+  return { kevin, iara };
+}

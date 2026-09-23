@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Volume2, VolumeX, Pause, Play } from 'lucide-react';
+import { Volume2, VolumeX, Pause, Play, Trophy } from 'lucide-react';
 import { useThemeStore } from '../../../store/useThemeStore';
 import { SNAKE_THEMES } from './snakeTheme';
 import { useSnakeGame, COLS, ROWS } from './useSnakeGame';
 import type { Point, Particle } from './useSnakeGame';
+import { RankingModal } from '../ranking/RankingModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN_SWIPE_PX = 12; // Minimum pixels to register a swipe direction change
@@ -13,6 +14,8 @@ export function SnakeGame() {
     g, phase, score, highScore, audioEnabled,
     startGame, pauseToggle, goMenu, queueDir, toggleAudio, tick
   } = useSnakeGame();
+
+  const [showRanking, setShowRanking] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -353,6 +356,13 @@ export function SnakeGame() {
 
         <div className="flex gap-3 items-center">
           <button
+            onClick={() => setShowRanking(true)}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors opacity-70 hover:opacity-100"
+            title="Ranking"
+          >
+            <Trophy size={18} />
+          </button>
+          <button
             onClick={toggleAudio}
             className="p-2 rounded-full hover:bg-white/10 transition-colors opacity-70 hover:opacity-100"
           >
@@ -449,6 +459,12 @@ export function SnakeGame() {
           </div>
         )}
       </div>
+
+      <RankingModal
+        isOpen={showRanking}
+        onClose={() => setShowRanking(false)}
+        initialGame="snake"
+      />
     </div>
   );
 }

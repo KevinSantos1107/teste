@@ -5,6 +5,7 @@ import { cn } from '../../shared/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { saveWordGameResult } from '../../services/gameRecords';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { RankingModal } from './ranking/RankingModal';
 import {
   Heart,
   HeartCrack,
@@ -303,6 +304,7 @@ export function WordGame() {
   const [lastTypedIdx, setLastTypedIdx] = useState(-1);
   const [revealProgress, setRevealProgress] = useState(-1);
   const [showStats, setShowStats] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   const [cursorPos, setCursorPos] = useState(0);
 
   // Stats & Streak (initial state is empty, will be hydrated from DB)
@@ -815,19 +817,32 @@ export function WordGame() {
           <span className="text-xs uppercase tracking-wide font-semibold text-white/40">Palavras</span>
         </div>
 
-        {/* Streak / Stats button */}
-        <button
-          onClick={() => setShowStats(true)}
-          className={cn(
-            'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition-all duration-300 border',
-            'bg-white/[0.03] border-white/10 hover:border-[var(--theme-primary)] hover:shadow-[0_0_12px_rgba(var(--theme-primary-rgb),0.2)]',
-            stats.currentStreak > 0 &&
-              'border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.2)]'
-          )}
-        >
-          <Flame className="w-3.5 h-3.5 text-orange-400" />
-          <span className="text-white/80 text-xs">{stats.currentStreak}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Trophy / Ranking button */}
+          <button
+            onClick={() => setShowRanking(true)}
+            className={cn(
+              'flex items-center justify-center rounded-full w-8 h-8 transition-all duration-300 border',
+              'bg-white/[0.03] border-white/10 hover:border-yellow-400 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]'
+            )}
+          >
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+          </button>
+
+          {/* Streak / Stats button */}
+          <button
+            onClick={() => setShowStats(true)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition-all duration-300 border',
+              'bg-white/[0.03] border-white/10 hover:border-[var(--theme-primary)] hover:shadow-[0_0_12px_rgba(var(--theme-primary-rgb),0.2)]',
+              stats.currentStreak > 0 &&
+                'border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.2)]'
+            )}
+          >
+            <Flame className="w-3.5 h-3.5 text-orange-400" />
+            <span className="text-white/80 text-xs">{stats.currentStreak}</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Question ───────────────────────────────────────────────────────── */}
@@ -1366,6 +1381,12 @@ export function WordGame() {
           30%, 70% { transform: translateX(6px); }
         }
       `}</style>
+
+      <RankingModal
+        isOpen={showRanking}
+        onClose={() => setShowRanking(false)}
+        initialGame="word"
+      />
     </div>
   );
 }
