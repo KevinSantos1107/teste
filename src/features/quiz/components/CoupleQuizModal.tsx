@@ -11,13 +11,16 @@ export function CoupleQuizModal({ isOpen, onClose }: { isOpen: boolean; onClose:
   const { config: siteConfig } = useSiteConfigStore();
   const siteId = siteConfig?.id || 'meu-site';
   
-  const { isReady, isLoading, error, loadQuizData, gameState, config } = useQuizStore();
+  const { isReady, isLoading, error, loadQuizData, gameState, config, syncQuizStats } = useQuizStore();
 
   useEffect(() => {
-    if (isOpen && !isReady && !isLoading) {
-      loadQuizData(siteId);
+    if (isOpen) {
+      syncQuizStats();
+      if (!isReady && !isLoading) {
+        loadQuizData(siteId);
+      }
     }
-  }, [isOpen, isReady, isLoading, loadQuizData, siteId]);
+  }, [isOpen, isReady, isLoading, loadQuizData, siteId, syncQuizStats]);
 
   return (
     <FullScreenOverlay

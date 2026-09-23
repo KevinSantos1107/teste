@@ -42,6 +42,7 @@ interface QuizState {
   answerQuestion: (isCorrect: boolean, points?: number) => void;
   advanceQuestion: () => void;
   resetGame: () => void;
+  syncQuizStats: () => Promise<void>;
 }
 
 const LOCAL_STATS_KEY = 'romantic_engine_quiz_stats';
@@ -235,5 +236,20 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       currentCombo: 0,
       maxCombo: 0,
     });
+  },
+
+  syncQuizStats: async () => {
+    const player = usePlayerStore.getState().player;
+    if (player === 'kevin' || player === 'iara') {
+      try {
+        const { getRecord } = await import('../../../services/gameRecords');
+        const score = await getRecord('quiz', player);
+        if (score !== null) {
+          set({ personalBest: score });
+        }
+      } catch (e) {
+        console.error('Erro ao sincronizar stats do quiz:', e);
+      }
+    }
   },
 }));

@@ -7,9 +7,11 @@ type PlayerName = 'kevin' | 'iara';
 // Estrutura do recorde do jogo de palavras (acumulativo)
 export interface WordRecord {
   score: number;      // pontuação total acumulada
+  gamesPlayed: number;// total de jogos jogados
   wins: number;       // total de vitórias
   streak: number;     // sequência atual de vitórias
   bestStreak: number; // melhor sequência de todos os tempos
+  winsByAttempt: number[]; // vitórias por tentativa (índice 0 a 5)
 }
 
 // Estrutura genérica de recorde (snake, quiz)
@@ -75,9 +77,11 @@ export async function getWordRecord(
       const d = snap.data();
       return {
         score: d.score ?? 0,
+        gamesPlayed: d.gamesPlayed ?? d.wins ?? 0,
         wins: d.wins ?? 0,
         streak: d.streak ?? 0,
         bestStreak: d.bestStreak ?? 0,
+        winsByAttempt: d.winsByAttempt ?? [0,0,0,0,0,0],
       };
     }
     return null;
@@ -97,9 +101,7 @@ export async function saveRecordIfBetter(
   newScore: number
 ): Promise<boolean> {
   try {
-    // Garante que o Firebase Auth já terminou antes de tentar gravar
     await waitForAuth();
-
     const ref = doc(db, 'game_records', recordDocId(game, player));
     const snap = await getDoc(ref);
     const currentScore = snap.exists() ? (snap.data().score as number) : -1;
@@ -110,7 +112,7 @@ export async function saveRecordIfBetter(
         player,
         score: newScore,
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
       return true;
     }
     return false;
@@ -121,18 +123,19 @@ export async function saveRecordIfBetter(
 }
 
 /**
- * Salva o resultado de uma partida do jogo da palavra.
- * Sempre incrementa a pontuação acumulada e atualiza streak.
+ * Salva o resultado de uma partida do jogo da palavra (vitória ou derrota).
+ * Sempre atualiza as métricas acumuladas.
  */
 export async function saveWordGameResult(
   player: PlayerName,
   roundScore: number,
+  isWin: boolean,
   currentStreak: number,
-  bestStreak: number
+  bestStreak: number,
+  winsByAttempt: number[]
 ): Promise<void> {
   try {
     await waitForAuth();
-
     const ref = doc(db, 'game_records', recordDocId('word', player));
     const snap = await getDoc(ref);
 
@@ -142,19 +145,23 @@ export async function saveWordGameResult(
         game: 'word',
         player,
         score: (data.score ?? 0) + roundScore,
-        wins: (data.wins ?? 0) + 1,
+        gamesPlayed: (data.gamesPlayed ?? data.wins ?? 0) + 1,
+        wins: (data.wins ?? 0) + (isWin ? 1 : 0),
         streak: currentStreak,
         bestStreak: Math.max(data.bestStreak ?? 0, bestStreak),
+        winsByAttempt,
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
     } else {
       await setDoc(ref, {
         game: 'word',
         player,
         score: roundScore,
-        wins: 1,
+        gamesPlayed: 1,
+        wins: isWin ? 1 : 0,
         streak: currentStreak,
         bestStreak: bestStreak,
+        winsByAttempt,
         updatedAt: serverTimestamp(),
       });
     }

@@ -77,6 +77,22 @@ export function useSnakeGame() {
     try { return parseInt(localStorage.getItem('snake2-hs') ?? '0') || 0; } catch { return 0; }
   });
 
+  // Sync high score from DB
+  useEffect(() => {
+    const p = usePlayerStore.getState().player;
+    playerRef.current = p;
+    if (p === 'kevin' || p === 'iara') {
+      import('../../../services/gameRecords').then(({ getRecord }) => {
+        getRecord('snake', p).then(score => {
+          if (score !== null) {
+            setHighScoreState(score);
+            g.current.highScore = score;
+          }
+        });
+      });
+    }
+  }, []);
+
   // Single source of truth for the engine loop
   const g = useRef<GameState>({
     snake: [{ x: 6, y: 7 }, { x: 5, y: 7 }, { x: 4, y: 7 }],

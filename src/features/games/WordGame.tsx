@@ -305,16 +305,37 @@ export function WordGame() {
   const [showStats, setShowStats] = useState(false);
   const [cursorPos, setCursorPos] = useState(0);
 
-  // Stats & Streak
-  const [stats, setStats] = useState<GameStats>(loadStats);
-  // Ref to avoid stale closure in handleKey setTimeout callbacks
+  // Stats & Streak (initial state is empty, will be hydrated from DB)
+  const [stats, setStats] = useState<GameStats>({ gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] });
   const statsRef = useRef<GameStats>(stats);
   useEffect(() => { statsRef.current = stats; }, [stats]);
   
-  // Jogador atual (leitura direta do store — não causa re-render desnecessário)
+  // Jogador atual
   const player = usePlayerStore((s) => s.player);
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
+
+  // Sync stats from Firestore instead of localStorage
+  useEffect(() => {
+    if (player === 'kevin' || player === 'iara') {
+      import('../../services/gameRecords').then(({ getWordRecord }) => {
+        getWordRecord(player).then(record => {
+          if (record) {
+            setStats({
+              gamesPlayed: record.gamesPlayed,
+              wins: record.wins,
+              currentStreak: record.streak,
+              bestStreak: record.bestStreak,
+              winsByAttempt: record.winsByAttempt
+            });
+          }
+        });
+      });
+    } else {
+      // Visitante usa estado vazio / sem persistência
+      setStats({ gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] });
+    }
+  }, [player]);
 
   // ── Load Dictionary ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -598,16 +619,21 @@ export function WordGame() {
               winsByAttempt: newWinsByAttempt,
             };
             setStats(newStats);
-            saveStats(newStats);
+            setStats(newStats);
             setBounceRow(rowIdx);
             
             // Pontuação: quanto menos tentativas, mais pontos (1ª tentativa = 6pts, 6ª = 1pt)
             const wordScore = MAX_ATTEMPTS - attemptIdx;
             const currentPlayer = playerRef.current;
             if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
-              const newStreak = latestStats.currentStreak + 1;
-              const newBestStreak = Math.max(latestStats.bestStreak, newStreak);
-              saveWordGameResult(currentPlayer, wordScore, newStreak, newBestStreak);
+              saveWordGameResult(
+                currentPlayer,
+                wordScore,
+                true, // isWin
+                newStats.currentStreak,
+                newStats.bestStreak,
+                newWinsByAttempt
+              );
             }
             
             setTimeout(() => {
@@ -624,7 +650,18 @@ export function WordGame() {
               currentStreak: 0,
             };
             setStats(newStats);
-            saveStats(newStats);
+            
+            const currentPlayer = playerRef.current;
+            if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
+              saveWordGameResult(
+                currentPlayer,
+                0, // roundScore
+                false, // isWin
+                0, // currentStreak is broken
+                newStats.bestStreak,
+                newStats.winsByAttempt
+              );
+            }
             setWon(false);
             setGameOver(true);
             clearActiveGame();
