@@ -1,8 +1,26 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../services/firebase/config';
+import { db, auth } from '../services/firebase/config';
 
 export type GameId = 'snake' | 'word';
 type PlayerName = 'kevin' | 'iara';
+
+// Aguarda o Firebase Auth terminar a inicialização antes de qualquer operação
+function waitForAuth(): Promise<void> {
+  return new Promise((resolve) => {
+    if (auth.currentUser) {
+      resolve();
+      return;
+    }
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) {
+        unsub();
+        resolve();
+      }
+    });
+    // Timeout de segurança: não trava para sempre se o auth falhar
+    setTimeout(resolve, 5000);
+  });
+}
 
 // Formato fixo do documento: "snake_kevin", "word_iara", etc.
 function recordDocId(game: GameId, player: PlayerName): string {
@@ -40,6 +58,9 @@ export async function saveRecordIfBetter(
   newScore: number
 ): Promise<boolean> {
   try {
+    // Garante que o Firebase Auth já terminou antes de tentar gravar
+    await waitForAuth();
+
     const ref = doc(db, 'game_records', recordDocId(game, player));
     const snap = await getDoc(ref);
     const currentScore = snap.exists() ? (snap.data().score as number) : -1;
