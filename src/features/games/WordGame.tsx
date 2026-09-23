@@ -3,7 +3,7 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../../services/firebase/config';
 import { cn } from '../../shared/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
-import { saveRecordIfBetter } from '../../services/gameRecords';
+import { saveWordGameResult } from '../../services/gameRecords';
 import { usePlayerStore } from '../../store/usePlayerStore';
 import {
   Heart,
@@ -605,7 +605,9 @@ export function WordGame() {
             const wordScore = MAX_ATTEMPTS - attemptIdx;
             const currentPlayer = playerRef.current;
             if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
-              saveRecordIfBetter('word', currentPlayer, wordScore);
+              const newStreak = latestStats.currentStreak + 1;
+              const newBestStreak = Math.max(latestStats.bestStreak, newStreak);
+              saveWordGameResult(currentPlayer, wordScore, newStreak, newBestStreak);
             }
             
             setTimeout(() => {
