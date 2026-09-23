@@ -3,6 +3,8 @@ import { collection, doc, getDoc, getDocs, query, orderBy } from 'firebase/fires
 import { db } from '../../../services/firebase/config';
 import type { QuizQuestion, QuizConfig } from '../schema';
 import { DEFAULT_QUIZ_CONFIG } from '../schema';
+import { saveRecordIfBetter } from '../../../services/gameRecords';
+import { usePlayerStore } from '../../../store/usePlayerStore';
 
 function shuffleArray<T>(array: T[]): T[] {
   const newArr = [...array];
@@ -193,6 +195,12 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         highestCombo: newHighestCombo,
         gamesPlayed: newGamesPlayed
       });
+
+      // Persiste no Firestore só para jogadores identificados
+      const currentPlayer = usePlayerStore.getState().player;
+      if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
+        saveRecordIfBetter('quiz', currentPlayer, state.score);
+      }
 
       set({ 
         gameState: 'result',

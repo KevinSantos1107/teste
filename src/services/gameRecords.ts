@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './firebase/config';
 
-export type GameId = 'snake' | 'word';
+export type GameId = 'snake' | 'word' | 'quiz';
 type PlayerName = 'kevin' | 'iara';
 
 // Aguarda o Firebase Auth terminar a inicialização antes de qualquer operação
