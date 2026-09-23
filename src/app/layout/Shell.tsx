@@ -6,6 +6,7 @@ import { HamburgerMenu } from '../../features/core/HamburgerMenu';
 import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { lazy, Suspense } from 'react';
 import { GlobalModals } from '../../features/modals/GlobalModals';
+import { PlayerAuthInit } from '../../features/auth/PlayerAuthInit';
 
 const RetroShell = lazy(() => import('../../features/retrospective-v2/components/RetroShell').then(m => ({ default: m.RetroShell })));
 const AudioEngine = lazy(() => import('../../features/player/AudioEngine').then(m => ({ default: m.AudioEngine })));
@@ -35,6 +36,7 @@ export function Shell() {
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-text transition-colors duration-700 font-sans relative">
+      <PlayerAuthInit />
       
       {/* Splash Screen fica sobreposto até terminar sua animação de saída */}
       {showSplash && (

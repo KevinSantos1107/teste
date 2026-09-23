@@ -7,6 +7,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Tokens mágicos para login de jogadores (permite apenas leitura do documento específico, sem listagem)
+    match /player_tokens/{tokenId} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
     // Sites configuration and public data
     match /sites/{siteId} {
       // Anyone can read the site configuration (needed for visitors to see the site)
