@@ -822,9 +822,11 @@ export function WordGame() {
           <button
             onClick={() => setShowRanking(true)}
             className={cn(
-              'flex items-center justify-center rounded-full w-8 h-8 transition-all duration-300 border',
-              'bg-white/[0.03] border-white/10 hover:border-yellow-400 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]'
+              'flex items-center justify-center rounded-full w-9 h-9 transition-all duration-300 border',
+              'bg-white/[0.03] border-white/10 hover:border-yellow-400 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)] active:scale-90'
             )}
+            title="Ranking do Casal"
+            style={{ touchAction: 'manipulation' }}
           >
             <Trophy className="w-3.5 h-3.5 text-yellow-400" />
           </button>

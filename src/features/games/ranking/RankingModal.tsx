@@ -32,7 +32,7 @@ function PlayerColumn({
 }) {
   return (
     <div
-      className={`flex-1 rounded-2xl p-4 flex flex-col items-center gap-3 transition-all ${
+      className={`flex-1 min-w-0 rounded-2xl p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 transition-all ${
         isWinner
           ? 'bg-white/10 border border-yellow-400/40 shadow-[0_0_20px_rgba(250,204,21,0.15)]'
           : 'bg-white/5 border border-white/10'
@@ -42,12 +42,12 @@ function PlayerColumn({
         {avatar}
         {isWinner && (
           <Crown
-            className="absolute -top-3 -right-3 w-5 h-5 text-yellow-400"
+            className="absolute -top-3 -right-3 w-4 h-4 sm:w-5 sm:h-5 text-yellow-400"
             fill="currentColor"
           />
         )}
       </div>
-      <span className="text-sm font-semibold text-white/80 tracking-wide">{name}</span>
+      <span className="text-xs sm:text-sm font-semibold text-white/80 tracking-wide">{name}</span>
       {children}
     </div>
   );
@@ -56,17 +56,17 @@ function PlayerColumn({
 function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="w-full text-center">
-      <div className="text-white/40 text-[10px] uppercase tracking-widest mb-0.5">{label}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">{label}</div>
+      <div className="text-xl sm:text-2xl font-bold text-white">{value}</div>
     </div>
   );
 }
 
 function Divider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 my-1">
+    <div className="flex items-center gap-2 my-1 w-full">
       <div className="flex-1 h-px bg-white/10" />
-      <span className="text-white/30 text-[10px] uppercase tracking-widest">{label}</span>
+      <span className="text-white/30 text-[9px] sm:text-[10px] uppercase tracking-widest">{label}</span>
       <div className="flex-1 h-px bg-white/10" />
     </div>
   );
@@ -76,7 +76,7 @@ function LoadingRow() {
   return (
     <div className="flex gap-3">
       {[0, 1].map(i => (
-        <div key={i} className="flex-1 h-28 rounded-2xl bg-white/5 animate-pulse" />
+        <div key={i} className="flex-1 h-24 sm:h-28 rounded-2xl bg-white/5 animate-pulse" />
       ))}
     </div>
   );
@@ -99,23 +99,23 @@ function SnakeTab() {
   const iaraWins = iaraScore > kevinScore;
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2 sm:gap-3">
       <PlayerColumn
         name="Kevin"
         isWinner={kevinWins}
-        avatar={<div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-2xl">👑</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
       >
         <StatRow label="Recorde" value={kevinScore} />
       </PlayerColumn>
 
-      <div className="flex flex-col items-center justify-center gap-1 text-white/30">
+      <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
         <span className="text-xs font-bold">VS</span>
       </div>
 
       <PlayerColumn
         name="Iara"
         isWinner={iaraWins}
-        avatar={<div className="w-12 h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-2xl">🌸</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
       >
         <StatRow label="Recorde" value={iaraScore} />
       </PlayerColumn>
@@ -140,12 +140,12 @@ function WordTab() {
   const iaraWins = iaraScore > kevinScore;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-3">
+    <div className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex gap-2 sm:gap-3">
         <PlayerColumn
           name="Kevin"
           isWinner={kevinWins}
-          avatar={<div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-2xl">👑</div>}
+          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
         >
           <StatRow label="Pontuação" value={kevinScore} />
           <Divider label="detalhes" />
@@ -154,14 +154,14 @@ function WordTab() {
           <StatRow label="Melhor Seq." value={k?.bestStreak ?? 0} />
         </PlayerColumn>
 
-        <div className="flex flex-col items-center justify-center gap-1 text-white/30">
+        <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
           <span className="text-xs font-bold">VS</span>
         </div>
 
         <PlayerColumn
           name="Iara"
           isWinner={iaraWins}
-          avatar={<div className="w-12 h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-2xl">🌸</div>}
+          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
         >
           <StatRow label="Pontuação" value={iaraScore} />
           <Divider label="detalhes" />
@@ -173,40 +173,40 @@ function WordTab() {
 
       {/* Distribuição de tentativas */}
       {(k?.winsByAttempt || i?.winsByAttempt) && (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-          <p className="text-white/40 text-[10px] uppercase tracking-widest text-center mb-3">Distribuição de Vitórias</p>
-          <div className="flex flex-col gap-1.5">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4">
+          <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest text-center mb-2 sm:mb-3">Distribuição de Vitórias</p>
+          <div className="flex flex-col gap-1 sm:gap-1.5">
             {[1, 2, 3, 4, 5, 6].map((n, idx) => {
               const kv = k?.winsByAttempt?.[idx] ?? 0;
               const iv = i?.winsByAttempt?.[idx] ?? 0;
               const maxVal = Math.max(kv, iv, 1);
               return (
-                <div key={n} className="flex items-center gap-2 text-xs">
-                  <span className="text-white/40 w-4 text-right">{n}</span>
+                <div key={n} className="flex items-center gap-1.5 sm:gap-2 text-xs">
+                  <span className="text-white/40 w-3 sm:w-4 text-right shrink-0">{n}</span>
                   {/* Kevin bar (left) */}
                   <div className="flex-1 flex justify-end">
                     <div
-                      className="h-4 rounded bg-purple-500/60 transition-all duration-500 flex items-center justify-end pr-1"
-                      style={{ width: `${(kv / maxVal) * 100}%`, minWidth: kv > 0 ? '1.5rem' : '0' }}
+                      className="h-3.5 sm:h-4 rounded bg-purple-500/60 transition-all duration-500 flex items-center justify-end pr-1"
+                      style={{ width: `${(kv / maxVal) * 100}%`, minWidth: kv > 0 ? '1.25rem' : '0' }}
                     >
-                      {kv > 0 && <span className="text-white text-[10px] font-bold">{kv}</span>}
+                      {kv > 0 && <span className="text-white text-[9px] font-bold">{kv}</span>}
                     </div>
                   </div>
-                  <Heart className="w-3 h-3 text-white/20 flex-shrink-0" />
+                  <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/20 flex-shrink-0" />
                   {/* Iara bar (right) */}
                   <div className="flex-1">
                     <div
-                      className="h-4 rounded bg-pink-500/60 transition-all duration-500 flex items-center pl-1"
-                      style={{ width: `${(iv / maxVal) * 100}%`, minWidth: iv > 0 ? '1.5rem' : '0' }}
+                      className="h-3.5 sm:h-4 rounded bg-pink-500/60 transition-all duration-500 flex items-center pl-1"
+                      style={{ width: `${(iv / maxVal) * 100}%`, minWidth: iv > 0 ? '1.25rem' : '0' }}
                     >
-                      {iv > 0 && <span className="text-white text-[10px] font-bold">{iv}</span>}
+                      {iv > 0 && <span className="text-white text-[9px] font-bold">{iv}</span>}
                     </div>
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex justify-between mt-2 text-[10px]">
+          <div className="flex justify-between mt-2 text-[9px] sm:text-[10px]">
             <span className="text-purple-400">■ Kevin</span>
             <span className="text-pink-400">■ Iara</span>
           </div>
@@ -233,25 +233,25 @@ function QuizTab() {
   const iaraWins = iaraScore > kevinScore;
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2 sm:gap-3">
       <PlayerColumn
         name="Kevin"
         isWinner={kevinWins}
-        avatar={<div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-2xl">👑</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
       >
         <StatRow label="Recorde" value={kevinScore} />
         <Divider label="combo" />
         <StatRow label="Maior Combo" value={`x${k?.highestCombo ?? 0}`} />
       </PlayerColumn>
 
-      <div className="flex flex-col items-center justify-center gap-1 text-white/30">
+      <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
         <span className="text-xs font-bold">VS</span>
       </div>
 
       <PlayerColumn
         name="Iara"
         isWinner={iaraWins}
-        avatar={<div className="w-12 h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-2xl">🌸</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
       >
         <StatRow label="Recorde" value={iaraScore} />
         <Divider label="combo" />
@@ -285,58 +285,65 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Panel */}
+      {/* Panel — drawer on mobile, centered card on sm+ */}
       <motion.div
-        initial={{ opacity: 0, y: 60 }}
+        initial={{ opacity: 0, y: 80 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 60 }}
-        transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-        className="relative z-10 w-full sm:max-w-md bg-[#0d0d1a] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden"
+        exit={{ opacity: 0, y: 80 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+        className="relative z-10 w-full sm:max-w-md bg-[#0d0d1a] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"
+        style={{ maxHeight: 'calc(92dvh)' }}
       >
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center justify-between px-4 sm:px-5 pt-3 sm:pt-5 pb-2 sm:pb-3 shrink-0">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <h2 className="text-lg font-bold text-white">Ranking do Casal</h2>
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+            <h2 className="text-base sm:text-lg font-bold text-white">Ranking do Casal</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+            aria-label="Fechar"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-5 pb-3">
+        {/* Tabs — always show label, not hidden on mobile */}
+        <div className="flex gap-1 px-4 sm:px-5 pb-2 sm:pb-3 shrink-0">
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 px-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                 activeTab === tab.id
                   ? 'bg-white/15 text-white shadow-inner'
                   : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
             >
               <span>{tab.emoji}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Tab Content */}
-        <div className="px-5 pb-6 max-h-[70vh] overflow-y-auto">
+        {/* Tab Content — scrollable */}
+        <div className="px-4 sm:px-5 pb-5 sm:pb-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}

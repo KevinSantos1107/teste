@@ -357,8 +357,9 @@ export function SnakeGame() {
         <div className="flex gap-3 items-center">
           <button
             onClick={() => setShowRanking(true)}
-            className="p-2 rounded-full hover:bg-white/10 transition-colors opacity-70 hover:opacity-100"
-            title="Ranking"
+            className="p-2 rounded-full hover:bg-white/10 transition-colors opacity-70 hover:opacity-100 active:scale-90"
+            title="Ranking do Casal"
+            style={{ touchAction: 'manipulation' }}
           >
             <Trophy size={18} />
           </button>

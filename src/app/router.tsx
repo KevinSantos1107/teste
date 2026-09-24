@@ -7,7 +7,7 @@ import { AuthProvider } from '../features/auth/AuthContext';
 import { Spinner } from '../shared/ui/Spinner';
 
 // Lazy load pages
-const Home = lazy(() => import('../pages/Home'));
+import Home from '../pages/Home';
 const LoginPage = lazy(() => import('../features/auth/LoginPage'));
 
 // Lazy load admin pages
@@ -41,11 +41,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: (
-          <SuspenseWrapper>
-            <Home />
-          </SuspenseWrapper>
-        ),
+        element: <Home />,
       },
       {
         path: '*',
