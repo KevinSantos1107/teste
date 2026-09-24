@@ -3,8 +3,10 @@ import type { SiteConfig } from '../siteConfig.schema';
 export const meuSiteConfig: SiteConfig = {
   id: 'meu-site',
   couple: {
-    partner1: { name: 'Kevin' }, // Can be replaced later with actual names
-    partner2: { name: 'Iara' },
+    // playerId is STABLE — never changes even if the display name changes.
+    // These match the existing Firestore document keys (snake_kevin, word_iara, etc.)
+    partner1: { name: 'Kevin', playerId: 'kevin', birthDate: '1998-05-15', gender: 'M' },
+    partner2: { name: 'Iara',  playerId: 'iara',  birthDate: '2000-09-22', gender: 'F' },
   },
   relationship: {
     startDate: '2025-10-27', // Corrected date as confirmed

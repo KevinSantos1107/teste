@@ -55,34 +55,100 @@ export default function ConfigPage() {
             <CardTitle className="text-slate-200">Identidade do Casal</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Nome 1</label>
-              <Input
-                value={formData.couple?.partner1.name || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    couple: { ...formData.couple!, partner1: { name: e.target.value } },
-                  })
-                }
-                className="bg-slate-900 border-slate-700 text-slate-200"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Nome 1</label>
+                <Input
+                  value={formData.couple?.partner1.name || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner1: { ...formData.couple!.partner1, name: e.target.value } },
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200"
+                />
+              </div>
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Aniversário 1</label>
+                <Input
+                  type="date"
+                  value={formData.couple?.partner1.birthDate || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner1: { ...formData.couple!.partner1, birthDate: e.target.value } },
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200"
+                />
+              </div>
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Gênero 1</label>
+                <select
+                  value={formData.couple?.partner1.gender || 'M'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner1: { ...formData.couple!.partner1, gender: e.target.value as 'M'|'F' } },
+                    })
+                  }
+                  className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Nome 2</label>
-              <Input
-                value={formData.couple?.partner2.name || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    couple: { ...formData.couple!, partner2: { name: e.target.value } },
-                  })
-                }
-                className="bg-slate-900 border-slate-700 text-slate-200"
-              />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-700/50 pt-4">
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Nome 2</label>
+                <Input
+                  value={formData.couple?.partner2.name || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner2: { ...formData.couple!.partner2, name: e.target.value } },
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200"
+                />
+              </div>
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Aniversário 2</label>
+                <Input
+                  type="date"
+                  value={formData.couple?.partner2.birthDate || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner2: { ...formData.couple!.partner2, birthDate: e.target.value } },
+                    })
+                  }
+                  className="bg-slate-900 border-slate-700 text-slate-200"
+                />
+              </div>
+              <div className="space-y-2 col-span-1 sm:col-span-1">
+                <label className="text-sm font-medium text-slate-300">Gênero 2</label>
+                <select
+                  value={formData.couple?.partner2.gender || 'F'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      couple: { ...formData.couple!, partner2: { ...formData.couple!.partner2, gender: e.target.value as 'M'|'F' } },
+                    })
+                  }
+                  className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-md text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300">Data de Início</label>
+
+            <div className="space-y-2 border-t border-slate-700/50 pt-4">
+              <label className="text-sm font-medium text-slate-300">Data de Início do Namoro</label>
               <Input
                 type="date"
                 value={formData.relationship?.startDate || ''}

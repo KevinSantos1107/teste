@@ -2,12 +2,24 @@ export interface SiteConfig {
   id: string;
   couple: {
     partner1: {
+      /** Display name shown in UI — can change freely */
       name: string;
+      /**
+       * Stable internal ID used as Firestore document key.
+       * Set ONCE when the site is created; NEVER change afterwards.
+       * Existing sites: 'kevin'. New sites default to 'partner1'.
+       */
+      playerId: string;
       photoUrl?: string;
+      birthDate?: string;
+      gender?: 'M' | 'F';
     };
     partner2: {
       name: string;
+      playerId: string;
       photoUrl?: string;
+      birthDate?: string;
+      gender?: 'M' | 'F';
     };
   };
   relationship: {

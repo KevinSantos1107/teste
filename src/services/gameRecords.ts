@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './firebase/config';
 
 export type GameId = 'snake' | 'word' | 'quiz';
-type PlayerName = 'kevin' | 'iara';
+type PlayerName = string;
 
 // Estrutura do recorde do jogo de palavras (acumulativo)
 export interface WordRecord {
@@ -244,47 +244,57 @@ export async function saveWordGameResult(
   }
 }
 
+import { useSiteConfigStore } from '../store/siteConfigStore';
+import { getPlayerIds } from '../features/auth/playerIds';
+
+function getConfigPlayerIds() {
+  const config = useSiteConfigStore.getState().config;
+  return getPlayerIds(config);
+}
+
+/**
+ * Ranking return shape — keys are always 'p1'/'p2', never hardcoded names.
+ */
+export interface RankingResult<T> {
+  p1: T | null;
+  p2: T | null;
+}
+
 /**
  * Lê os recordes de ambos os jogadores para um jogo simples (snake, quiz).
- * Retorna { kevin: number | null, iara: number | null }.
- * Usa 2 leituras fixas, sem orderBy ou limit.
  */
 export async function getRanking(
   game: GameId
-): Promise<{ kevin: number | null; iara: number | null }> {
-  const [kevin, iara] = await Promise.all([
-    getRecord(game, 'kevin'),
-    getRecord(game, 'iara'),
+): Promise<RankingResult<number>> {
+  const { p1Id, p2Id } = getConfigPlayerIds();
+  const [p1, p2] = await Promise.all([
+    getRecord(game, p1Id),
+    getRecord(game, p2Id),
   ]);
-  return { kevin, iara };
+  return { p1, p2 };
 }
 
 /**
  * Lê os recordes completos do jogo da palavra para ambos os jogadores.
- * Usa 2 leituras fixas.
  */
-export async function getWordRanking(): Promise<{
-  kevin: WordRecord | null;
-  iara: WordRecord | null;
-}> {
-  const [kevin, iara] = await Promise.all([
-    getWordRecord('kevin'),
-    getWordRecord('iara'),
+export async function getWordRanking(): Promise<RankingResult<WordRecord>> {
+  const { p1Id, p2Id } = getConfigPlayerIds();
+  const [p1, p2] = await Promise.all([
+    getWordRecord(p1Id),
+    getWordRecord(p2Id),
   ]);
-  return { kevin, iara };
+  return { p1, p2 };
 }
 
 /**
  * Lê os recordes do Quiz para ambos os jogadores.
- * Usa 2 leituras fixas.
  */
-export async function getQuizRanking(): Promise<{
-  kevin: QuizRecord | null;
-  iara: QuizRecord | null;
-}> {
-  const [kevin, iara] = await Promise.all([
-    getQuizRecord('kevin'),
-    getQuizRecord('iara'),
+export async function getQuizRanking(): Promise<RankingResult<QuizRecord>> {
+  const { p1Id, p2Id } = getConfigPlayerIds();
+  const [p1, p2] = await Promise.all([
+    getQuizRecord(p1Id),
+    getQuizRecord(p2Id),
   ]);
-  return { kevin, iara };
+  return { p1, p2 };
 }
+

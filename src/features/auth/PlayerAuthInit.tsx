@@ -3,15 +3,37 @@ import { doc, getDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth } from '../../services/firebase/config';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { useSiteConfigStore } from '../../store/siteConfigStore';
+import { getWelcomeMessage } from './welcomeMessage';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Heart } from 'lucide-react';
+
 
 export function PlayerAuthInit() {
   const { setPlayer, setUid } = usePlayerStore();
+  const { config, isLoading } = useSiteConfigStore();
   const initRef = useRef(false);
   const [welcomeMsg, setWelcomeMsg] = useState<string | null>(null);
+  const [isCelebration, setIsCelebration] = useState(false);
+
+  const partner1Name = config?.couple?.partner1?.name || 'Kevin';
+  const partner2Name = config?.couple?.partner2?.name || 'Iara';
+  const p1Id = partner1Name.toLowerCase();
+  const p2Id = partner2Name.toLowerCase();
+
+  const showGreeting = (msg: string) => {
+    // Detect if this is a special-day message (birthday, anniversary, holiday)
+    const special = /feliz|natal|ano novo|namorados|mulher|mês|aniversário|valentine/i.test(msg);
+    setIsCelebration(special);
+    setWelcomeMsg(msg);
+    sessionStorage.setItem('greeted', 'true');
+    // Show longer for celebrations
+    setTimeout(() => setWelcomeMsg(null), special ? 7000 : 5000);
+  };
 
   useEffect(() => {
+    // Só prossegue quando o config estiver carregado!
+    if (isLoading || !config) return;
+
     // Evita rodar duas vezes no Strict Mode do React
     if (initRef.current) return;
     initRef.current = true;
@@ -39,25 +61,26 @@ export function PlayerAuthInit() {
           
           if (tokenSnap.exists()) {
             const data = tokenSnap.data();
-            if (data.player === 'kevin' || data.player === 'iara') {
+            if (data.player === p1Id || data.player === p2Id || data.player === 'kevin' || data.player === 'iara') {
+              // Mapeia kevin/iara legados para os novos IDs, se necessário, ou apenas os mantém.
+              const currentPlayerId = (data.player === 'iara' && p2Id !== 'iara') ? p2Id : 
+                                      (data.player === 'kevin' && p1Id !== 'kevin') ? p1Id : 
+                                      data.player;
+
               // Grava o vínculo no Firestore usando o token como prova de identidade (Fase 3)
               if (uid) {
                 const { setDoc } = await import('firebase/firestore');
                 await setDoc(doc(db, 'player_links', uid), {
-                  player: data.player,
+                  player: currentPlayerId,
                   tokenId: token
                 });
               }
 
-              setPlayer(data.player);
-              
-              const msg = data.player === 'iara' 
-                ? 'Bem-vinda de volta, Princesa ❤️' 
-                : 'Bem-vindo, Kevin 👑';
-              
-              setWelcomeMsg(msg);
-              sessionStorage.setItem('greeted', 'true');
-              setTimeout(() => setWelcomeMsg(null), 5000);
+              setPlayer(currentPlayerId);
+
+              // Show sync message immediately
+              const syncMsg = getWelcomeMessage(currentPlayerId, config);
+              showGreeting(syncMsg);
             }
           } else {
             console.warn('Token inválido ou expirado.');
@@ -75,36 +98,59 @@ export function PlayerAuthInit() {
         // e se ainda não foi saudado nesta sessão (aba do navegador)
         const currentPlayer = usePlayerStore.getState().player;
         if (currentPlayer !== 'visitante' && !sessionStorage.getItem('greeted')) {
-          const msg = currentPlayer === 'iara' 
-            ? 'Bem-vinda de volta, Princesa ❤️' 
-            : 'Bem-vindo, Kevin 👑';
-          
-          setWelcomeMsg(msg);
-          sessionStorage.setItem('greeted', 'true');
-          setTimeout(() => setWelcomeMsg(null), 5000);
+          const syncMsg = getWelcomeMessage(currentPlayer, config);
+          showGreeting(syncMsg);
         }
       }
     };
 
     initAuth();
-  }, [setPlayer, setUid]);
+  }, [setPlayer, setUid, config, isLoading]);
 
   return (
     <AnimatePresence>
       {welcomeMsg && (
         <motion.div
-          initial={{ opacity: 0, y: -40, scale: 0.95 }}
+          key={welcomeMsg}
+          initial={{ opacity: 0, y: -50, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="fixed top-8 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none"
+          transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none w-max max-w-[90vw]"
         >
-          <div className="flex items-center gap-3 px-6 py-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-[0_0_30px_rgba(236,72,153,0.25)]">
-            <Heart className="w-5 h-5 text-rose-400 fill-rose-400 animate-pulse" />
-            <span className="text-white font-medium tracking-wide font-sans text-sm md:text-base">
+          <div
+            className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${
+              isCelebration
+                ? 'bg-gradient-to-r from-pink-900/80 to-purple-900/80 border-pink-500/40 shadow-[0_0_40px_rgba(236,72,153,0.35)]'
+                : 'bg-white/10 border-white/20 shadow-[0_0_30px_rgba(236,72,153,0.2)]'
+            } backdrop-blur-xl`}
+          >
+            {isCelebration && (
+              <motion.span
+                animate={{ rotate: [0, -15, 15, -10, 10, 0] }}
+                transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 2 }}
+                className="text-xl flex-shrink-0"
+              >
+                🎉
+              </motion.span>
+            )}
+            <span
+              className={`font-medium tracking-wide font-sans text-sm md:text-base ${
+                isCelebration ? 'text-pink-100' : 'text-white'
+              }`}
+            >
               {welcomeMsg}
             </span>
           </div>
+
+          {/* Celebration glow ring */}
+          {isCelebration && (
+            <motion.div
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              animate={{ boxShadow: ['0 0 0px rgba(236,72,153,0)', '0 0 25px rgba(236,72,153,0.5)', '0 0 0px rgba(236,72,153,0)'] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>

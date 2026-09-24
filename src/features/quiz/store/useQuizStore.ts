@@ -3,7 +3,6 @@ import { collection, doc, getDoc, getDocs, query, orderBy } from 'firebase/fires
 import { db } from '../../../services/firebase/config';
 import type { QuizQuestion, QuizConfig } from '../schema';
 import { DEFAULT_QUIZ_CONFIG } from '../schema';
-import { saveRecordIfBetter } from '../../../services/gameRecords';
 import { usePlayerStore } from '../../../store/usePlayerStore';
 
 function shuffleArray<T>(array: T[]): T[] {

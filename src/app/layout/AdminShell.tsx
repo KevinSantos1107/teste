@@ -15,6 +15,8 @@ import {
   X,
   ExternalLink,
   Share2,
+  KeyRound,
+  Sparkles,
 } from 'lucide-react';
 
 export function AdminShell() {
@@ -37,13 +39,14 @@ export function AdminShell() {
   const navItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { label: 'Configurações', icon: Settings, path: '/admin/config' },
-    { label: 'Retrospectiva', icon: Settings, path: '/admin/retrospective' },
+    { label: 'Retrospectiva', icon: Sparkles, path: '/admin/retrospective' },
     { label: 'Álbum', icon: ImageIcon, path: '/admin/album' },
     { label: 'História', icon: History, path: '/admin/timeline' },
     { label: 'Músicas', icon: Music, path: '/admin/playlist' },
     { label: 'Roleta', icon: LayoutDashboard, path: '/admin/roulette' },
     { label: 'Mapa de Estrelas', icon: LayoutDashboard, path: '/admin/starmap' },
     { label: 'Quiz do Casal', icon: Settings, path: '/admin/quiz' },
+    { label: 'Acessos (Links)', icon: KeyRound, path: '/admin/tokens' },
     { label: 'Compartilhar', icon: Share2, path: '/admin/share' },
   ];
 
@@ -109,15 +112,13 @@ export function AdminShell() {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 mb-4 px-2">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 text-slate-400 text-sm font-bold uppercase">
-              {user?.email?.charAt(0)}
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 text-white text-sm font-bold uppercase shadow-lg">
+              {user?.email?.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-medium text-white truncate">{user?.email}</p>
-              <p className="text-xs text-slate-500 truncate">
-                {user?.role === 'super_admin'
-                  ? 'Super Admin'
-                  : `Site: ${user?.siteId || 'indefinido'}`}
+              <p className="text-xs text-indigo-400 truncate font-medium">
+                {user?.role === 'super_admin' ? '⭐ Super Admin' : '🔑 Administrador'}
               </p>
             </div>
           </div>

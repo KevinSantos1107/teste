@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type PlayerType = 'kevin' | 'iara' | 'visitante';
+type PlayerType = string;
 
 interface PlayerState {
   player: PlayerType;

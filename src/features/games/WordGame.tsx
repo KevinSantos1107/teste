@@ -5,6 +5,7 @@ import { cn } from '../../shared/utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { saveWordGameResult } from '../../services/gameRecords';
 import { usePlayerStore } from '../../store/usePlayerStore';
+import { useSiteConfigStore } from '../../store/siteConfigStore';
 import { RankingModal } from './ranking/RankingModal';
 import {
   Heart,
@@ -119,23 +120,6 @@ function evaluateGuess(guess: string, answer: string): LetterState[] {
 }
 
 // ─── LocalStorage helpers ─────────────────────────────────────────────────────
-function loadStats(): GameStats {
-  try {
-    const saved = JSON.parse(localStorage.getItem('wg_stats_v3') || 'null');
-    if (saved) {
-      return { winsByAttempt: [0,0,0,0,0,0], ...saved };
-    }
-    // Migrate from v2
-    const v2 = JSON.parse(localStorage.getItem('wg_stats_v2') || 'null');
-    if (v2) return { ...v2, winsByAttempt: [0,0,0,0,0,0] };
-    return { gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] };
-  } catch {
-    return { gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] };
-  }
-}
-function saveStats(s: GameStats) {
-  localStorage.setItem('wg_stats_v3', JSON.stringify(s));
-}
 function getDeviceId(): string {
   let id = localStorage.getItem('wg_device_id');
   if (!id) {
@@ -316,10 +300,14 @@ export function WordGame() {
   const player = usePlayerStore((s) => s.player);
   const playerRef = useRef(player);
   useEffect(() => { playerRef.current = player; }, [player]);
+  
+  const { config } = useSiteConfigStore();
 
   // Sync stats from Firestore instead of localStorage
   useEffect(() => {
-    if (player === 'kevin' || player === 'iara') {
+    import('../auth/playerIds').then(({ getPlayerIds }) => {
+      const { p1Id, p2Id } = getPlayerIds(config);
+      if (player === p1Id || player === p2Id || player === 'kevin' || player === 'iara') {
       import('../../services/gameRecords').then(({ getWordRecord }) => {
         getWordRecord(player).then(record => {
           if (record) {
@@ -333,10 +321,11 @@ export function WordGame() {
           }
         });
       });
-    } else {
-      // Visitante usa estado vazio / sem persistência
-      setStats({ gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] });
-    }
+      } else {
+        // Visitante usa estado vazio / sem persistência
+        setStats({ gamesPlayed: 0, wins: 0, currentStreak: 0, bestStreak: 0, winsByAttempt: [0,0,0,0,0,0] });
+      }
+    });
   }, [player]);
 
   // ── Load Dictionary ────────────────────────────────────────────────────────
@@ -627,16 +616,19 @@ export function WordGame() {
             // Pontuação: quanto menos tentativas, mais pontos (1ª tentativa = 6pts, 6ª = 1pt)
             const wordScore = MAX_ATTEMPTS - attemptIdx;
             const currentPlayer = playerRef.current;
-            if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
-              saveWordGameResult(
-                currentPlayer,
-                wordScore,
-                true, // isWin
-                newStats.currentStreak,
-                newStats.bestStreak,
-                newWinsByAttempt
-              );
-            }
+            import('../auth/playerIds').then(({ getPlayerIds }) => {
+              const { p1Id, p2Id } = getPlayerIds(config);
+              if (currentPlayer === p1Id || currentPlayer === p2Id || currentPlayer === 'kevin' || currentPlayer === 'iara') {
+                saveWordGameResult(
+                  currentPlayer,
+                  wordScore,
+                  true, // isWin
+                  newStats.currentStreak,
+                  newStats.bestStreak,
+                  newWinsByAttempt
+                );
+              }
+            });
             
             setTimeout(() => {
               setWon(true);
@@ -654,16 +646,19 @@ export function WordGame() {
             setStats(newStats);
             
             const currentPlayer = playerRef.current;
-            if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
-              saveWordGameResult(
-                currentPlayer,
-                0, // roundScore
-                false, // isWin
-                0, // currentStreak is broken
-                newStats.bestStreak,
-                newStats.winsByAttempt
-              );
-            }
+            import('../auth/playerIds').then(({ getPlayerIds }) => {
+              const { p1Id, p2Id } = getPlayerIds(config);
+              if (currentPlayer === p1Id || currentPlayer === p2Id || currentPlayer === 'kevin' || currentPlayer === 'iara') {
+                saveWordGameResult(
+                  currentPlayer,
+                  0, // roundScore
+                  false, // isWin
+                  0, // currentStreak is broken
+                  newStats.bestStreak,
+                  newStats.winsByAttempt
+                );
+              }
+            });
             setWon(false);
             setGameOver(true);
             clearActiveGame();

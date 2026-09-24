@@ -30,7 +30,7 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-400">
               {user?.role === 'super_admin'
                 ? 'Você pode gerenciar todos os sites do sistema.'
-                : `Gerenciando o site: ${user?.siteId}`}
+                : 'Painel administrativo do seu site romântico.'}
             </p>
           </CardContent>
         </Card>

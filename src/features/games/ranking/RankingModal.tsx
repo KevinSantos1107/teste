@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Trophy, Crown, Heart } from 'lucide-react';
 import {
   getRanking,
@@ -8,6 +8,7 @@ import {
   getQuizRanking,
 } from '../../../services/gameRecords';
 import type { WordRecord, QuizRecord } from '../../../services/gameRecords';
+import { useSiteConfigStore } from '../../../store/siteConfigStore';
 
 export type RankingGame = 'snake' | 'word' | 'quiz';
 
@@ -85,7 +86,10 @@ function LoadingRow() {
 // ── Tab Content ───────────────────────────────────────────────────────────────
 
 function SnakeTab() {
-  const [data, setData] = useState<{ kevin: number | null; iara: number | null } | null>(null);
+  const [data, setData] = useState<{ p1: number | null; p2: number | null } | null>(null);
+  const { config } = useSiteConfigStore();
+  const partner1Name = config?.couple?.partner1?.name || 'Kevin';
+  const partner2Name = config?.couple?.partner2?.name || 'Iara';
 
   useEffect(() => {
     getRanking('snake').then(setData);
@@ -93,19 +97,19 @@ function SnakeTab() {
 
   if (!data) return <LoadingRow />;
 
-  const kevinScore = data.kevin ?? 0;
-  const iaraScore = data.iara ?? 0;
-  const kevinWins = kevinScore > iaraScore;
-  const iaraWins = iaraScore > kevinScore;
+  const p1Score = data.p1 ?? 0;
+  const p2Score = data.p2 ?? 0;
+  const p1Wins = p1Score > p2Score;
+  const p2Wins = p2Score > p1Score;
 
   return (
     <div className="flex gap-2 sm:gap-3">
       <PlayerColumn
-        name="Kevin"
-        isWinner={kevinWins}
+        name={partner1Name}
+        isWinner={p1Wins}
         avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
       >
-        <StatRow label="Recorde" value={kevinScore} />
+        <StatRow label="Recorde" value={p1Score} />
       </PlayerColumn>
 
       <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
@@ -113,18 +117,21 @@ function SnakeTab() {
       </div>
 
       <PlayerColumn
-        name="Iara"
-        isWinner={iaraWins}
+        name={partner2Name}
+        isWinner={p2Wins}
         avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
       >
-        <StatRow label="Recorde" value={iaraScore} />
+        <StatRow label="Recorde" value={p2Score} />
       </PlayerColumn>
     </div>
   );
 }
 
 function WordTab() {
-  const [data, setData] = useState<{ kevin: WordRecord | null; iara: WordRecord | null } | null>(null);
+  const [data, setData] = useState<{ p1: WordRecord | null; p2: WordRecord | null } | null>(null);
+  const { config } = useSiteConfigStore();
+  const partner1Name = config?.couple?.partner1?.name || 'Kevin';
+  const partner2Name = config?.couple?.partner2?.name || 'Iara';
 
   useEffect(() => {
     getWordRanking().then(setData);
@@ -132,26 +139,26 @@ function WordTab() {
 
   if (!data) return <LoadingRow />;
 
-  const k = data.kevin;
-  const i = data.iara;
-  const kevinScore = k?.score ?? 0;
-  const iaraScore = i?.score ?? 0;
-  const kevinWins = kevinScore > iaraScore;
-  const iaraWins = iaraScore > kevinScore;
+  const p1 = data.p1;
+  const p2 = data.p2;
+  const p1Score = p1?.score ?? 0;
+  const p2Score = p2?.score ?? 0;
+  const p1Wins = p1Score > p2Score;
+  const p2Wins = p2Score > p1Score;
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       <div className="flex gap-2 sm:gap-3">
         <PlayerColumn
-          name="Kevin"
-          isWinner={kevinWins}
+          name={partner1Name}
+          isWinner={p1Wins}
           avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
         >
-          <StatRow label="Pontuação" value={kevinScore} />
+          <StatRow label="Pontuação" value={p1Score} />
           <Divider label="detalhes" />
-          <StatRow label="Vitórias" value={k?.wins ?? 0} />
-          <StatRow label="Sequência" value={`🔥 ${k?.streak ?? 0}`} />
-          <StatRow label="Melhor Seq." value={k?.bestStreak ?? 0} />
+          <StatRow label="Vitórias" value={p1?.wins ?? 0} />
+          <StatRow label="Sequência" value={`🔥 ${p1?.streak ?? 0}`} />
+          <StatRow label="Melhor Seq." value={p1?.bestStreak ?? 0} />
         </PlayerColumn>
 
         <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
@@ -159,47 +166,47 @@ function WordTab() {
         </div>
 
         <PlayerColumn
-          name="Iara"
-          isWinner={iaraWins}
+          name={partner2Name}
+          isWinner={p2Wins}
           avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
         >
-          <StatRow label="Pontuação" value={iaraScore} />
+          <StatRow label="Pontuação" value={p2Score} />
           <Divider label="detalhes" />
-          <StatRow label="Vitórias" value={i?.wins ?? 0} />
-          <StatRow label="Sequência" value={`🔥 ${i?.streak ?? 0}`} />
-          <StatRow label="Melhor Seq." value={i?.bestStreak ?? 0} />
+          <StatRow label="Vitórias" value={p2?.wins ?? 0} />
+          <StatRow label="Sequência" value={`🔥 ${p2?.streak ?? 0}`} />
+          <StatRow label="Melhor Seq." value={p2?.bestStreak ?? 0} />
         </PlayerColumn>
       </div>
 
       {/* Distribuição de tentativas */}
-      {(k?.winsByAttempt || i?.winsByAttempt) && (
+      {(p1?.winsByAttempt || p2?.winsByAttempt) && (
         <div className="bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4">
           <p className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest text-center mb-2 sm:mb-3">Distribuição de Vitórias</p>
           <div className="flex flex-col gap-1 sm:gap-1.5">
             {[1, 2, 3, 4, 5, 6].map((n, idx) => {
-              const kv = k?.winsByAttempt?.[idx] ?? 0;
-              const iv = i?.winsByAttempt?.[idx] ?? 0;
-              const maxVal = Math.max(kv, iv, 1);
+              const p1v = p1?.winsByAttempt?.[idx] ?? 0;
+              const p2v = p2?.winsByAttempt?.[idx] ?? 0;
+              const maxVal = Math.max(p1v, p2v, 1);
               return (
                 <div key={n} className="flex items-center gap-1.5 sm:gap-2 text-xs">
                   <span className="text-white/40 w-3 sm:w-4 text-right shrink-0">{n}</span>
-                  {/* Kevin bar (left) */}
+                  {/* P1 bar (left) */}
                   <div className="flex-1 flex justify-end">
                     <div
                       className="h-3.5 sm:h-4 rounded bg-purple-500/60 transition-all duration-500 flex items-center justify-end pr-1"
-                      style={{ width: `${(kv / maxVal) * 100}%`, minWidth: kv > 0 ? '1.25rem' : '0' }}
+                      style={{ width: `${(p1v / maxVal) * 100}%`, minWidth: p1v > 0 ? '1.25rem' : '0' }}
                     >
-                      {kv > 0 && <span className="text-white text-[9px] font-bold">{kv}</span>}
+                      {p1v > 0 && <span className="text-white text-[9px] font-bold">{p1v}</span>}
                     </div>
                   </div>
                   <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/20 flex-shrink-0" />
-                  {/* Iara bar (right) */}
+                  {/* P2 bar (right) */}
                   <div className="flex-1">
                     <div
                       className="h-3.5 sm:h-4 rounded bg-pink-500/60 transition-all duration-500 flex items-center pl-1"
-                      style={{ width: `${(iv / maxVal) * 100}%`, minWidth: iv > 0 ? '1.25rem' : '0' }}
+                      style={{ width: `${(p2v / maxVal) * 100}%`, minWidth: p2v > 0 ? '1.25rem' : '0' }}
                     >
-                      {iv > 0 && <span className="text-white text-[9px] font-bold">{iv}</span>}
+                      {p2v > 0 && <span className="text-white text-[9px] font-bold">{p2v}</span>}
                     </div>
                   </div>
                 </div>
@@ -207,8 +214,8 @@ function WordTab() {
             })}
           </div>
           <div className="flex justify-between mt-2 text-[9px] sm:text-[10px]">
-            <span className="text-purple-400">■ Kevin</span>
-            <span className="text-pink-400">■ Iara</span>
+            <span className="text-purple-400">■ {partner1Name}</span>
+            <span className="text-pink-400">■ {partner2Name}</span>
           </div>
         </div>
       )}
@@ -217,7 +224,10 @@ function WordTab() {
 }
 
 function QuizTab() {
-  const [data, setData] = useState<{ kevin: QuizRecord | null; iara: QuizRecord | null } | null>(null);
+  const [data, setData] = useState<{ p1: QuizRecord | null; p2: QuizRecord | null } | null>(null);
+  const { config } = useSiteConfigStore();
+  const partner1Name = config?.couple?.partner1?.name || 'Kevin';
+  const partner2Name = config?.couple?.partner2?.name || 'Iara';
 
   useEffect(() => {
     getQuizRanking().then(setData);
@@ -225,23 +235,23 @@ function QuizTab() {
 
   if (!data) return <LoadingRow />;
 
-  const k = data.kevin;
-  const i = data.iara;
-  const kevinScore = k?.score ?? 0;
-  const iaraScore = i?.score ?? 0;
-  const kevinWins = kevinScore > iaraScore;
-  const iaraWins = iaraScore > kevinScore;
+  const p1 = data.p1;
+  const p2 = data.p2;
+  const p1Score = p1?.score ?? 0;
+  const p2Score = p2?.score ?? 0;
+  const p1Wins = p1Score > p2Score;
+  const p2Wins = p2Score > p1Score;
 
   return (
     <div className="flex gap-2 sm:gap-3">
       <PlayerColumn
-        name="Kevin"
-        isWinner={kevinWins}
+        name={partner1Name}
+        isWinner={p1Wins}
         avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
       >
-        <StatRow label="Recorde" value={kevinScore} />
+        <StatRow label="Recorde" value={p1Score} />
         <Divider label="combo" />
-        <StatRow label="Maior Combo" value={`x${k?.highestCombo ?? 0}`} />
+        <StatRow label="Maior Combo" value={`x${p1?.highestCombo ?? 0}`} />
       </PlayerColumn>
 
       <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
@@ -249,13 +259,13 @@ function QuizTab() {
       </div>
 
       <PlayerColumn
-        name="Iara"
-        isWinner={iaraWins}
+        name={partner2Name}
+        isWinner={p2Wins}
         avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
       >
-        <StatRow label="Recorde" value={iaraScore} />
+        <StatRow label="Recorde" value={p2Score} />
         <Divider label="combo" />
-        <StatRow label="Maior Combo" value={`x${i?.highestCombo ?? 0}`} />
+        <StatRow label="Maior Combo" value={`x${p2?.highestCombo ?? 0}`} />
       </PlayerColumn>
     </div>
   );
@@ -342,21 +352,23 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
           ))}
         </div>
 
-        {/* Tab Content — scrollable */}
-        <div className="px-4 sm:px-5 pb-5 sm:pb-6 overflow-y-auto overscroll-contain flex-1 min-h-0">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.15 }}
-            >
-              {activeTab === 'snake' && <SnakeTab />}
-              {activeTab === 'word'  && <WordTab />}
-              {activeTab === 'quiz'  && <QuizTab />}
+        {/* Tab Content — scrollable with a fixed min height so it doesn't jump */}
+        <div className="px-4 sm:px-5 pb-5 sm:pb-6 overflow-y-auto overscroll-contain flex-1 min-h-[350px]">
+          {activeTab === 'snake' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <SnakeTab />
             </motion.div>
-          </AnimatePresence>
+          )}
+          {activeTab === 'word' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <WordTab />
+            </motion.div>
+          )}
+          {activeTab === 'quiz' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <QuizTab />
+            </motion.div>
+          )}
         </div>
       </motion.div>
     </div>,

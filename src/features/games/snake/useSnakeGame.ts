@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { saveRecordIfBetter } from '../../../services/gameRecords';
 import { usePlayerStore } from '../../../store/usePlayerStore';
+import { useSiteConfigStore } from '../../../store/siteConfigStore';
 
 export const COLS = 17;
 export const ROWS = 15;
@@ -81,16 +82,21 @@ export function useSnakeGame() {
   useEffect(() => {
     const p = usePlayerStore.getState().player;
     playerRef.current = p;
-    if (p === 'kevin' || p === 'iara') {
-      import('../../../services/gameRecords').then(({ getRecord }) => {
-        getRecord('snake', p).then(score => {
-          if (score !== null) {
-            setHighScoreState(score);
-            g.current.highScore = score;
-          }
+    const config = useSiteConfigStore.getState().config;
+    
+    import('../../../features/auth/playerIds').then(({ getPlayerIds }) => {
+      const { p1Id, p2Id } = getPlayerIds(config);
+      if (p === p1Id || p === p2Id || p === 'kevin' || p === 'iara') {
+        import('../../../services/gameRecords').then(({ getRecord }) => {
+          getRecord('snake', p).then(score => {
+            if (score !== null) {
+              setHighScoreState(score);
+              g.current.highScore = score;
+            }
+          });
         });
-      });
-    }
+      }
+    });
   }, []);
 
   // Single source of truth for the engine loop
@@ -228,9 +234,13 @@ export function useSnakeGame() {
         try { localStorage.setItem('snake2-hs', String(s.highScore)); } catch {}
         // Persiste no Firestore só para jogadores identificados
         const player = playerRef.current;
-        if (player === 'kevin' || player === 'iara') {
-          saveRecordIfBetter('snake', player, s.highScore);
-        }
+        const config = useSiteConfigStore.getState().config;
+        import('../../../features/auth/playerIds').then(({ getPlayerIds }) => {
+          const { p1Id, p2Id } = getPlayerIds(config);
+          if (player === p1Id || player === p2Id || player === 'kevin' || player === 'iara') {
+            saveRecordIfBetter('snake', player, s.highScore);
+          }
+        });
       }
       s.food = randomFood(s.snake);
       s.spawnedParticlesForThisEat = false;

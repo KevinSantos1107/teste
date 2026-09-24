@@ -19,7 +19,7 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     );
   }
 
-  if (!user) {
+  if (!user || !user.email) {
     // Redireciona para o login passando a rota que o usuário tentou acessar
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }

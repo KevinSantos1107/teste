@@ -26,8 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // Obtém os Custom Claims definidos no backend
-          const tokenResult = await getIdTokenResult(firebaseUser, true);
+          // Usa o token em cache; só busca novamente se expirado
+          const tokenResult = await getIdTokenResult(firebaseUser, false);
           const claims = tokenResult.claims;
 
           setUser({

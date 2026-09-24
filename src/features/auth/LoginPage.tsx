@@ -23,7 +23,7 @@ export default function LoginPage() {
   // Redireciona automaticamente quando o contexto de auth for atualizado
   // Isso evita a "race condition" de redirecionar antes do AuthContext ler os claims
   useEffect(() => {
-    if (user) {
+    if (user && user.email) {
       navigate(from, { replace: true });
     }
   }, [user, navigate, from]);
