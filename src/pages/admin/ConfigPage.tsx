@@ -9,6 +9,8 @@ import type { SiteConfig } from '../../config/siteConfig.schema';
 
 import { useToast } from '../../shared/ui/ToastProvider';
 
+const AVATAR_OPTIONS = Array.from({ length: 48 }, (_, i) => `/avatars/avatar_${i + 1}.webp`);
+
 export default function ConfigPage() {
   const { config, updateConfig } = useSiteConfigStore();
   const { user } = useAuth();
@@ -55,7 +57,7 @@ export default function ConfigPage() {
             <CardTitle className="text-slate-200">Identidade do Casal</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-2 col-span-1 sm:col-span-1">
                 <label className="text-sm font-medium text-slate-300">Nome 1</label>
                 <Input
@@ -99,9 +101,31 @@ export default function ConfigPage() {
                   <option value="F">Feminino</option>
                 </select>
               </div>
+              <div className="space-y-2 col-span-1 sm:col-span-4 mt-2">
+                <label className="text-sm font-medium text-slate-300">Avatar 1</label>
+                <div className="flex gap-2 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                  {AVATAR_OPTIONS.map(a => (
+                    <img
+                      key={a}
+                      src={a}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          couple: { ...formData.couple!, partner1: { ...formData.couple!.partner1, avatar: a } },
+                        })
+                      }
+                      className={`w-12 h-12 rounded-full cursor-pointer border-2 flex-shrink-0 object-cover transition-all ${
+                        formData.couple?.partner1.avatar === a
+                          ? 'border-indigo-500 scale-110 shadow-lg'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-700/50 pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 border-t border-slate-700/50 pt-4">
               <div className="space-y-2 col-span-1 sm:col-span-1">
                 <label className="text-sm font-medium text-slate-300">Nome 2</label>
                 <Input
@@ -144,6 +168,28 @@ export default function ConfigPage() {
                   <option value="M">Masculino</option>
                   <option value="F">Feminino</option>
                 </select>
+              </div>
+              <div className="space-y-2 col-span-1 sm:col-span-4 mt-2">
+                <label className="text-sm font-medium text-slate-300">Avatar 2</label>
+                <div className="flex gap-2 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                  {AVATAR_OPTIONS.map(a => (
+                    <img
+                      key={a}
+                      src={a}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          couple: { ...formData.couple!, partner2: { ...formData.couple!.partner2, avatar: a } },
+                        })
+                      }
+                      className={`w-12 h-12 rounded-full cursor-pointer border-2 flex-shrink-0 object-cover transition-all ${
+                        formData.couple?.partner2.avatar === a
+                          ? 'border-indigo-500 scale-110 shadow-lg'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 

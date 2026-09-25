@@ -12,6 +12,13 @@ import { useSiteConfigStore } from '../../../store/siteConfigStore';
 
 export type RankingGame = 'snake' | 'word' | 'quiz';
 
+function renderAvatar(avatarStr: string) {
+  if (avatarStr.includes('.')) {
+    return <img src={avatarStr} alt="avatar" className="w-full h-full object-cover rounded-full" />;
+  }
+  return avatarStr;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -91,6 +98,9 @@ function SnakeTab() {
   const partner1Name = config?.couple?.partner1?.name || 'Kevin';
   const partner2Name = config?.couple?.partner2?.name || 'Iara';
 
+  const partner1Avatar = config?.couple?.partner1?.avatar || '👦';
+  const partner2Avatar = config?.couple?.partner2?.avatar || '👩';
+
   useEffect(() => {
     getRanking('snake').then(setData);
   }, []);
@@ -107,7 +117,7 @@ function SnakeTab() {
       <PlayerColumn
         name={partner1Name}
         isWinner={p1Wins}
-        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner1Avatar)}</div>}
       >
         <StatRow label="Recorde" value={p1Score} />
       </PlayerColumn>
@@ -119,7 +129,7 @@ function SnakeTab() {
       <PlayerColumn
         name={partner2Name}
         isWinner={p2Wins}
-        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner2Avatar)}</div>}
       >
         <StatRow label="Recorde" value={p2Score} />
       </PlayerColumn>
@@ -132,6 +142,9 @@ function WordTab() {
   const { config } = useSiteConfigStore();
   const partner1Name = config?.couple?.partner1?.name || 'Kevin';
   const partner2Name = config?.couple?.partner2?.name || 'Iara';
+
+  const partner1Avatar = config?.couple?.partner1?.avatar || '👦';
+  const partner2Avatar = config?.couple?.partner2?.avatar || '👩';
 
   useEffect(() => {
     getWordRanking().then(setData);
@@ -152,7 +165,7 @@ function WordTab() {
         <PlayerColumn
           name={partner1Name}
           isWinner={p1Wins}
-          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
+          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner1Avatar)}</div>}
         >
           <StatRow label="Pontuação" value={p1Score} />
           <Divider label="detalhes" />
@@ -168,7 +181,7 @@ function WordTab() {
         <PlayerColumn
           name={partner2Name}
           isWinner={p2Wins}
-          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
+          avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner2Avatar)}</div>}
         >
           <StatRow label="Pontuação" value={p2Score} />
           <Divider label="detalhes" />
@@ -229,6 +242,9 @@ function QuizTab() {
   const partner1Name = config?.couple?.partner1?.name || 'Kevin';
   const partner2Name = config?.couple?.partner2?.name || 'Iara';
 
+  const partner1Avatar = config?.couple?.partner1?.avatar || '👦';
+  const partner2Avatar = config?.couple?.partner2?.avatar || '👩';
+
   useEffect(() => {
     getQuizRanking().then(setData);
   }, []);
@@ -247,7 +263,7 @@ function QuizTab() {
       <PlayerColumn
         name={partner1Name}
         isWinner={p1Wins}
-        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">👑</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner1Avatar)}</div>}
       >
         <StatRow label="Recorde" value={p1Score} />
         <Divider label="combo" />
@@ -261,7 +277,7 @@ function QuizTab() {
       <PlayerColumn
         name={partner2Name}
         isWinner={p2Wins}
-        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">🌸</div>}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner2Avatar)}</div>}
       >
         <StatRow label="Recorde" value={p2Score} />
         <Divider label="combo" />

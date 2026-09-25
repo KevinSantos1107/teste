@@ -13,6 +13,7 @@ export interface SiteConfig {
       photoUrl?: string;
       birthDate?: string;
       gender?: 'M' | 'F';
+      avatar?: string;
     };
     partner2: {
       name: string;
@@ -20,6 +21,7 @@ export interface SiteConfig {
       photoUrl?: string;
       birthDate?: string;
       gender?: 'M' | 'F';
+      avatar?: string;
     };
   };
   relationship: {

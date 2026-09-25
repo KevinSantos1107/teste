@@ -5,8 +5,8 @@ export const meuSiteConfig: SiteConfig = {
   couple: {
     // playerId is STABLE — never changes even if the display name changes.
     // These match the existing Firestore document keys (snake_kevin, word_iara, etc.)
-    partner1: { name: 'Kevin', playerId: 'kevin', birthDate: '1998-05-15', gender: 'M' },
-    partner2: { name: 'Iara',  playerId: 'iara',  birthDate: '2000-09-22', gender: 'F' },
+    partner1: { name: 'Kevin', playerId: 'kevin', birthDate: '1998-05-15', gender: 'M', avatar: '/avatars/avatar_1.webp' },
+    partner2: { name: 'Iara',  playerId: 'iara',  birthDate: '2000-09-22', gender: 'F', avatar: '/avatars/avatar_2.webp' },
   },
   relationship: {
     startDate: '2025-10-27', // Corrected date as confirmed
