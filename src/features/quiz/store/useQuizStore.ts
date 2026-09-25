@@ -6,7 +6,7 @@ import { DEFAULT_QUIZ_CONFIG } from '../schema';
 import { usePlayerStore } from '../../../store/usePlayerStore';
 import { useSiteConfigStore } from '../../../store/siteConfigStore';
 import { getPlayerIds } from '../../auth/playerIds';
-import { fetchAiQuestions, pickRandom } from '../services/aiQuizService';
+import { fetchAiQuestions } from '../services/aiQuizService';
 
 // ─────────────────────────────────────────────
 // Configuração de montagem do quiz
@@ -18,12 +18,7 @@ import { fetchAiQuestions, pickRandom } from '../services/aiQuizService';
  */
 const TARGET_QUESTIONS = 15;
 
-/**
- * Fração máxima de perguntas de IA numa partida (0–1).
- * Se tivermos muitas manuais elegíveis, não enchemos tudo de IA.
- * Exemplo: 0.6 = no máximo 60% de IA.
- */
-const MAX_AI_FRACTION = 0.6;
+
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -38,15 +33,6 @@ function shuffleArray<T>(array: T[]): T[] {
   return newArr;
 }
 
-/**
- * Monta o pool final de perguntas para uma partida, misturando manuais elegíveis e IA.
- *
- * Regras:
- * - Remove perguntas manuais cujo `createdBy === currentPlayerId`.
- * - Sorteia aleatoriamente das manuais elegíveis.
- * - Complementa com perguntas de IA até atingir TARGET_QUESTIONS.
- * - Mantém a proporção: nunca mais que MAX_AI_FRACTION de perguntas de IA.
- */
 function buildQuizPool(
   manualQuestions: QuizQuestion[],
   aiQuestions: QuizQuestion[],
@@ -54,23 +40,20 @@ function buildQuizPool(
   config: QuizConfig
 ): QuizQuestion[] {
   // 1. Filtra manuais elegíveis (ativas + não criadas pelo player atual)
-  const eligible = manualQuestions.filter(
+  const eligibleManual = manualQuestions.filter(
     (q) => q.active && (!q.createdBy || q.createdBy !== currentPlayerId)
   );
 
-  // 2. Calcula quantas de cada tipo
-  const maxAi = Math.floor(TARGET_QUESTIONS * MAX_AI_FRACTION);
-  const maxManual = TARGET_QUESTIONS - Math.min(aiQuestions.length, maxAi);
+  // 2. Junta TODAS as perguntas disponíveis (manuais elegíveis + IA)
+  const allEligible = [...eligibleManual, ...aiQuestions];
 
-  // Sorteia manuais e IA
-  const pickedManual = pickRandom(eligible, maxManual);
-  const aiNeeded = Math.min(TARGET_QUESTIONS - pickedManual.length, maxAi, aiQuestions.length);
-  const pickedAi = pickRandom(aiQuestions, aiNeeded);
+  // 3. Embaralha tudo junto para garantir aleatoriedade máxima
+  let combined = shuffleArray(allEligible);
 
-  // 3. Junta e embaralha
-  let combined = shuffleArray([...pickedManual, ...pickedAi]);
+  // 4. Pega exatamente TARGET_QUESTIONS (ex: 15), ou todas se tiver menos
+  combined = combined.slice(0, TARGET_QUESTIONS);
 
-  // 4. Aplica embaralhar alternativas se configurado
+  // 5. Aplica embaralhar alternativas se configurado
   if (config.shuffleOptions) {
     combined = combined.map((q) => ({ ...q, options: shuffleArray(q.options) }));
   }

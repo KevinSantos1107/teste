@@ -40,13 +40,28 @@ function randomFood(snake: Point[]): Point {
   return p;
 }
 
+let audioCtx: AudioContext | null = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
 // Simple Web Audio API beep generator
 function playBeep(freq: number, type: OscillatorType, duration: number, audioEnabled: boolean) {
   if (!audioEnabled) return;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     

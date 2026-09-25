@@ -61,7 +61,7 @@ function getDailyMessage(name: string, isCreator: boolean, gender: 'M' | 'F' | s
       ];
     } else if (hour >= 12 && hour < 18) {
       msgs = [
-        "Boa tarde, {name}! 🌻",
+        "Boa tarde, {name}! 😎",
         "Como está indo o dia, {name}? 💼",
         "Pausa para um café, {name}? ☕",
         "Boa tarde! ☀️"
@@ -86,10 +86,10 @@ function getDailyMessage(name: string, isCreator: boolean, gender: 'M' | 'F' | s
       ];
     } else if (hour >= 12 && hour < 18) {
       msgs = [
-        "Boa tarde, {name}! 🌻",
+        isFemale ? "Boa tarde, {name}! 🌻" : "Boa tarde, {name}! 😎",
         "Pensando em você, {name}... 💭",
         isFemale ? "Boa tarde, minha linda! 💖" : "Boa tarde, meu lindo! 💖",
-        isFemale ? "Espero que seu dia esteja sendo ótimo, maravilhosa! 🍃" : "Espero que seu dia esteja sendo ótimo, gatão! 🍃"
+        isFemale ? "Espero que seu dia esteja sendo ótimo, maravilhosa! 🍃" : "Espero que seu dia esteja sendo ótimo, gatão! 😎"
       ];
     } else {
       msgs = [
