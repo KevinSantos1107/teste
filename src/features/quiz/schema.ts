@@ -13,6 +13,30 @@ export interface QuizQuestion {
   explanation?: string;
   active: boolean;
   order: number;
+  /**
+   * ID do jogador que criou esta pergunta (playerId do config).
+   * Perguntas criadas por um jogador nunca são exibidas para ele mesmo.
+   * Se omitido, a pergunta aparece para todos.
+   */
+  createdBy?: string;
+}
+
+/**
+ * Pergunta gerada por IA — salva em collection separada (ai_quiz_questions).
+ * NUNCA deve ser exposta em nenhuma rota do admin.
+ * Aparece igualmente para ambos os jogadores.
+ */
+export interface AiQuizQuestion {
+  id: string;
+  siteId: string;
+  question: string;
+  options: QuizOption[];
+  correctOptionId: string;
+  points: number;
+  /** Timestamp da geração (Firestore Timestamp serializado como number em ms) */
+  generatedAt: number;
+  /** ID único da geração (ex: "2024-12-01T10:30") para controle de batches */
+  batchId: string;
 }
 
 export interface QuizConfig {

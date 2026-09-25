@@ -4,6 +4,30 @@ import { db } from '../../../services/firebase/config';
 import type { QuizQuestion, QuizConfig } from '../schema';
 import { DEFAULT_QUIZ_CONFIG } from '../schema';
 import { usePlayerStore } from '../../../store/usePlayerStore';
+import { useSiteConfigStore } from '../../../store/siteConfigStore';
+import { getPlayerIds } from '../../auth/playerIds';
+import { fetchAiQuestions, pickRandom } from '../services/aiQuizService';
+
+// ─────────────────────────────────────────────
+// Configuração de montagem do quiz
+// ─────────────────────────────────────────────
+
+/**
+ * Tamanho alvo de uma partida.
+ * O motor tenta chegar nesse número, mas adapta se faltar perguntas.
+ */
+const TARGET_QUESTIONS = 15;
+
+/**
+ * Fração máxima de perguntas de IA numa partida (0–1).
+ * Se tivermos muitas manuais elegíveis, não enchemos tudo de IA.
+ * Exemplo: 0.6 = no máximo 60% de IA.
+ */
+const MAX_AI_FRACTION = 0.6;
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 
 function shuffleArray<T>(array: T[]): T[] {
   const newArr = [...array];
@@ -13,6 +37,50 @@ function shuffleArray<T>(array: T[]): T[] {
   }
   return newArr;
 }
+
+/**
+ * Monta o pool final de perguntas para uma partida, misturando manuais elegíveis e IA.
+ *
+ * Regras:
+ * - Remove perguntas manuais cujo `createdBy === currentPlayerId`.
+ * - Sorteia aleatoriamente das manuais elegíveis.
+ * - Complementa com perguntas de IA até atingir TARGET_QUESTIONS.
+ * - Mantém a proporção: nunca mais que MAX_AI_FRACTION de perguntas de IA.
+ */
+function buildQuizPool(
+  manualQuestions: QuizQuestion[],
+  aiQuestions: QuizQuestion[],
+  currentPlayerId: string,
+  config: QuizConfig
+): QuizQuestion[] {
+  // 1. Filtra manuais elegíveis (ativas + não criadas pelo player atual)
+  const eligible = manualQuestions.filter(
+    (q) => q.active && (!q.createdBy || q.createdBy !== currentPlayerId)
+  );
+
+  // 2. Calcula quantas de cada tipo
+  const maxAi = Math.floor(TARGET_QUESTIONS * MAX_AI_FRACTION);
+  const maxManual = TARGET_QUESTIONS - Math.min(aiQuestions.length, maxAi);
+
+  // Sorteia manuais e IA
+  const pickedManual = pickRandom(eligible, maxManual);
+  const aiNeeded = Math.min(TARGET_QUESTIONS - pickedManual.length, maxAi, aiQuestions.length);
+  const pickedAi = pickRandom(aiQuestions, aiNeeded);
+
+  // 3. Junta e embaralha
+  let combined = shuffleArray([...pickedManual, ...pickedAi]);
+
+  // 4. Aplica embaralhar alternativas se configurado
+  if (config.shuffleOptions) {
+    combined = combined.map((q) => ({ ...q, options: shuffleArray(q.options) }));
+  }
+
+  return combined;
+}
+
+// ─────────────────────────────────────────────
+// Store
+// ─────────────────────────────────────────────
 
 interface QuizState {
   config: QuizConfig;
@@ -105,7 +173,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         return;
       }
 
-      // Fetch config
+      // ── Busca config ──────────────────────────────────────────────────
       const configRef = doc(db, 'sites', siteId, 'quiz_config', 'main');
       const configSnap = await getDoc(configRef);
       let loadedConfig = DEFAULT_QUIZ_CONFIG;
@@ -113,21 +181,62 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         loadedConfig = { ...DEFAULT_QUIZ_CONFIG, ...configSnap.data() } as QuizConfig;
       }
 
-      // Fetch active questions — filter active client-side to avoid needing a composite Firestore index
+      // ── Identifica o jogador atual ────────────────────────────────────
+      const currentPlayer = usePlayerStore.getState().player;
+      const siteConfig = useSiteConfigStore.getState().config;
+      const { p1Id, p2Id } = getPlayerIds(siteConfig);
+      const isKnownPlayer = currentPlayer === p1Id || currentPlayer === p2Id;
+
+      // ── Busca perguntas manuais ───────────────────────────────────────
       const qRef = collection(db, 'sites', siteId, 'quiz_questions');
       const qQuery = query(qRef, orderBy('order', 'asc'));
       const qSnap = await getDocs(qQuery);
+      const manualQuestions = qSnap.docs.map((d) => ({ id: d.id, ...d.data() } as QuizQuestion));
 
-      let loadedQuestions = qSnap.docs.map(d => ({ id: d.id, ...d.data() } as QuizQuestion));
+      // ── Busca perguntas de IA ─────────────────────────────────────────
+      // fetchAiQuestions retorna AiQuizQuestion[], que tem o mesmo shape que QuizQuestion
+      // para fins de exibição no quiz (question, options, correctOptionId, points).
+      let aiQuestions: QuizQuestion[] = [];
+      try {
+        const rawAi = await fetchAiQuestions(siteId);
+        // Mapeia AiQuizQuestion para QuizQuestion (sem createdBy, sempre elegível)
+        aiQuestions = rawAi.map((q) => ({
+          id: q.id,
+          siteId: q.siteId,
+          question: q.question,
+          options: q.options,
+          correctOptionId: q.correctOptionId,
+          points: q.points,
+          active: true,
+          order: 0,
+          // createdBy omitido → elegível para todos
+        } as QuizQuestion));
+      } catch (aiErr) {
+        // Falha silenciosa: usa só manuais se as perguntas de IA não carregarem
+        console.warn('Não foi possível carregar perguntas de IA:', aiErr);
+      }
 
+      // ── Monta o pool final ────────────────────────────────────────────
+      let loadedQuestions: QuizQuestion[];
+
+      if (isKnownPlayer) {
+        // Jogador identificado: aplica filtro de createdBy + mistura com IA
+        loadedQuestions = buildQuizPool(
+          manualQuestions,
+          aiQuestions,
+          currentPlayer,
+          loadedConfig
+        );
+      } else {
+        // Visitante: mostra todas as manuais ativas + IA (sem filtro de createdBy)
+        const allEligible = manualQuestions.filter((q) => q.active);
+        loadedQuestions = buildQuizPool(allEligible, aiQuestions, '', loadedConfig);
+      }
+
+      // Embaralha perguntas (se configurado) — o buildQuizPool já embaralha,
+      // mas respeitamos a flag do config para o comportamento de reset também.
       if (loadedConfig.shuffleQuestions) {
         loadedQuestions = shuffleArray(loadedQuestions);
-      }
-      if (loadedConfig.shuffleOptions) {
-        loadedQuestions = loadedQuestions.map(q => ({
-          ...q,
-          options: shuffleArray(q.options),
-        }));
       }
 
       set({ config: loadedConfig, questions: loadedQuestions, isLoading: false, isReady: true });
@@ -198,7 +307,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
       // Persiste no Firestore só para jogadores identificados
       const currentPlayer = usePlayerStore.getState().player;
-      if (currentPlayer === 'kevin' || currentPlayer === 'iara') {
+      const siteConfig = useSiteConfigStore.getState().config;
+      const { p1Id, p2Id } = getPlayerIds(siteConfig);
+      if (currentPlayer === p1Id || currentPlayer === p2Id) {
         import('../../../services/gameRecords').then(({ saveQuizRecordIfBetter }) => {
           saveQuizRecordIfBetter(currentPlayer, newPersonalBest, newHighestCombo);
         });
@@ -222,7 +333,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
       resetQuestions = shuffleArray(resetQuestions);
     }
     if (state.config.shuffleOptions) {
-      resetQuestions = resetQuestions.map(q => ({
+      resetQuestions = resetQuestions.map((q) => ({
         ...q,
         options: shuffleArray(q.options),
       }));
@@ -241,7 +352,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   syncQuizStats: async () => {
     const player = usePlayerStore.getState().player;
-    if (player === 'kevin' || player === 'iara') {
+    const siteConfig = useSiteConfigStore.getState().config;
+    const { p1Id, p2Id } = getPlayerIds(siteConfig);
+    if (player === p1Id || player === p2Id) {
       try {
         const { getQuizRecord } = await import('../../../services/gameRecords');
         const record = await getQuizRecord(player);
