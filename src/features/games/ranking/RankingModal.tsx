@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { X, Trophy, Crown, Heart } from 'lucide-react';
+import { X, Trophy, Crown, Heart, Worm, Gamepad2, MessageCircleHeart, Layers } from 'lucide-react';
 import {
   getRanking,
   getWordRanking,
@@ -404,11 +404,11 @@ function MemoryTab() {
 
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
-const TABS: { id: RankingGame; label: string; emoji: string }[] = [
-  { id: 'snake', label: 'Cobrinha', emoji: '🐍' },
-  { id: 'word',  label: 'Palavra',  emoji: '📝' },
-  { id: 'quiz',  label: 'Quiz',     emoji: '🎯' },
-  { id: 'memory', label: 'Memória', emoji: '🧩' },
+const TABS: { id: RankingGame; label: string; Icon: React.ElementType }[] = [
+  { id: 'snake',  label: 'Cobrinha', Icon: Worm },
+  { id: 'word',   label: 'Palavra',  Icon: Gamepad2 },
+  { id: 'quiz',   label: 'Quiz',     Icon: MessageCircleHeart },
+  { id: 'memory', label: 'Memória',  Icon: Layers },
 ];
 
 export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) {
@@ -437,17 +437,21 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
         onClick={onClose}
       />
 
-      {/* Panel — drawer on mobile, centered card on sm+ */}
+      {/* Panel — fixed height so it NEVER resizes on tab change */}
       <motion.div
         initial={{ opacity: 0, y: 80 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 80 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
         className="relative z-10 w-full sm:max-w-lg bg-[#0d0d1a] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"
-        style={{ maxHeight: 'calc(92dvh)' }}
+        style={{
+          // Fixed height: 480px mobile, 560px tablet+
+          height: 'clamp(480px, 78dvh, 560px)',
+          maxHeight: '95dvh',
+        }}
       >
         {/* Mobile drag handle */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
+        <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
 
@@ -466,7 +470,7 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
           </button>
         </div>
 
-        {/* Tabs — always show label, not hidden on mobile */}
+        {/* Tabs */}
         <div className="flex gap-1 px-4 sm:px-5 pb-2 sm:pb-3 shrink-0">
           {TABS.map(tab => (
             <button
@@ -479,31 +483,31 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
                   : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
             >
-              <span aria-hidden>{tab.emoji}</span>
+              <tab.Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Tab Content — scrollable with a fixed min height so it doesn't jump */}
-        <div className="min-h-[260px] flex-1 overflow-y-auto overscroll-contain px-4 pb-5 sm:min-h-[350px] sm:px-5 sm:pb-6">
+        {/* Tab Content — fills remaining fixed space, scrolls internally */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-5 sm:pb-6">
           {activeTab === 'snake' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+            <motion.div key="snake" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <SnakeTab />
             </motion.div>
           )}
           {activeTab === 'word' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+            <motion.div key="word" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <WordTab />
             </motion.div>
           )}
           {activeTab === 'quiz' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+            <motion.div key="quiz" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <QuizTab />
             </motion.div>
           )}
           {activeTab === 'memory' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+            <motion.div key="memory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <MemoryTab />
             </motion.div>
           )}

@@ -52,6 +52,7 @@ export async function getRecord(
   game: GameId,
   player: PlayerName
 ): Promise<number | null> {
+  if (!player) return null; // guard: never call Firestore with undefined/empty player
   try {
     const ref = doc(db, 'game_records', recordDocId(game, player));
     const snap = await getDoc(ref);
@@ -72,6 +73,7 @@ export async function getRecord(
 export async function getWordRecord(
   player: PlayerName
 ): Promise<WordRecord | null> {
+  if (!player) return null;
   try {
     const ref = doc(db, 'game_records', recordDocId('word', player));
     const snap = await getDoc(ref);
@@ -104,6 +106,7 @@ export interface QuizRecord {
 export async function getQuizRecord(
   player: PlayerName
 ): Promise<QuizRecord | null> {
+  if (!player) return null;
   try {
     const ref = doc(db, 'game_records', recordDocId('quiz', player));
     const snap = await getDoc(ref);
@@ -323,6 +326,7 @@ export interface MemoryRecord {
 export async function getMemoryRecord(
   player: PlayerName
 ): Promise<MemoryRecord | null> {
+  if (!player) return null;
   try {
     const ref = doc(db, 'game_records', `memory_${player}`);
     const snap = await getDoc(ref);
