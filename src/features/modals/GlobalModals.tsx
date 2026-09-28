@@ -6,6 +6,7 @@ const SnakeModal = lazy(() => import('./SnakeModal').then(module => ({ default: 
 const StarMapModal = lazy(() => import('./StarMapModal').then(module => ({ default: module.StarMapModal })));
 const TimelineModalWrapper = lazy(() => import('./TimelineModalWrapper').then(module => ({ default: module.TimelineModalWrapper })));
 const CoupleQuizModal = lazy(() => import('../quiz/components/CoupleQuizModal').then(module => ({ default: module.CoupleQuizModal })));
+const MemoryGameModal = lazy(() => import('./MemoryGameModal').then(module => ({ default: module.MemoryGameModal })));
 
 export function GlobalModals() {
   const { activeModal, closeModal } = useModalsStore();
@@ -17,6 +18,7 @@ export function GlobalModals() {
       {activeModal === 'snake' && <SnakeModal isOpen={true} onClose={closeModal} />}
       {activeModal === 'star-map' && <StarMapModal isOpen={true} onClose={closeModal} />}
       {activeModal === 'couple-quiz' && <CoupleQuizModal isOpen={true} onClose={closeModal} />}
+      {activeModal === 'memory-game' && <MemoryGameModal isOpen={true} onClose={closeModal} />}
     </Suspense>
   );
 }

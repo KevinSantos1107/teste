@@ -6,6 +6,7 @@ export type ModalType =
   | 'star-map'
   | 'timeline'
   | 'couple-quiz'
+  | 'memory-game'
   | null;
 
 interface ModalsState {

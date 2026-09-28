@@ -107,6 +107,7 @@ export function useSnakeGame() {
             if (score !== null) {
               setHighScoreState(score);
               g.current.highScore = score;
+              try { localStorage.setItem('snake2-hs', String(score)); } catch {}
             }
           });
         });

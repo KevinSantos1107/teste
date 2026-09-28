@@ -6,11 +6,12 @@ import {
   getRanking,
   getWordRanking,
   getQuizRanking,
+  getMemoryRanking,
 } from '../../../services/gameRecords';
-import type { WordRecord, QuizRecord } from '../../../services/gameRecords';
+import type { WordRecord, QuizRecord, MemoryRecord } from '../../../services/gameRecords';
 import { useSiteConfigStore } from '../../../store/siteConfigStore';
 
-export type RankingGame = 'snake' | 'word' | 'quiz';
+export type RankingGame = 'snake' | 'word' | 'quiz' | 'memory';
 
 function renderAvatar(avatarStr: string) {
   if (avatarStr.includes('.')) {
@@ -40,7 +41,7 @@ function PlayerColumn({
 }) {
   return (
     <div
-      className={`flex-1 min-w-0 rounded-2xl p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 transition-all ${
+      className={`flex-1 basis-0 min-w-0 overflow-hidden rounded-2xl p-3 sm:p-4 flex flex-col items-center gap-2 sm:gap-3 transition-all ${
         isWinner
           ? 'bg-white/10 border border-yellow-400/40 shadow-[0_0_20px_rgba(250,204,21,0.15)]'
           : 'bg-white/5 border border-white/10'
@@ -55,7 +56,7 @@ function PlayerColumn({
           />
         )}
       </div>
-      <span className="text-xs sm:text-sm font-semibold text-white/80 tracking-wide">{name}</span>
+      <span className="w-full min-w-0 truncate text-center text-xs sm:text-sm font-semibold text-white/80 tracking-wide">{name}</span>
       {children}
     </div>
   );
@@ -64,8 +65,8 @@ function PlayerColumn({
 function StatRow({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="w-full text-center">
-      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest mb-0.5">{label}</div>
-      <div className="text-xl sm:text-2xl font-bold text-white">{value}</div>
+      <div className="text-white/40 text-[9px] sm:text-[10px] uppercase tracking-widest leading-tight mb-0.5 break-words">{label}</div>
+      <div className="max-w-full truncate text-xl sm:text-2xl font-bold text-white">{value}</div>
     </div>
   );
 }
@@ -82,12 +83,75 @@ function Divider({ label }: { label: string }) {
 
 function LoadingRow() {
   return (
-    <div className="flex gap-3">
+    <div className="flex min-w-0 gap-2 sm:gap-3">
       {[0, 1].map(i => (
         <div key={i} className="flex-1 h-24 sm:h-28 rounded-2xl bg-white/5 animate-pulse" />
       ))}
     </div>
   );
+}
+
+const MEMORY_LEVELS: { key: 'easy' | 'medium' | 'hard'; label: string; timeLabel: string }[] = [
+  { key: 'easy',   label: 'Fácil',   timeLabel: 'Tempo fácil' },
+  { key: 'medium', label: 'Médio',   timeLabel: 'Tempo médio' },
+  { key: 'hard',   label: 'Difícil', timeLabel: 'Tempo difícil' },
+];
+
+function formatMemoryTime(s: number | undefined) {
+  if (!s || s === 99999) return '--:--';
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+/** Pontuação, tempo e rótulo vêm sempre do nível em que a melhor pontuação foi feita. */
+function resolveBestMemoryRun(record: MemoryRecord | null) {
+  if (!record) {
+    return { score: 0, time: undefined as number | undefined, timeLabel: 'Tempo', levelLabel: '' };
+  }
+
+  const levels = MEMORY_LEVELS
+    .map((l) => ({ ...l, data: record[l.key] }))
+    .filter((l) => (l.data?.score ?? 0) > 0);
+
+  if (levels.length === 0) {
+    const fallback = MEMORY_LEVELS.find((l) => l.key === record.bestScoreLevel);
+    return {
+      score: record.score ?? 0,
+      time: record.bestTime,
+      timeLabel: fallback?.timeLabel ?? 'Tempo',
+      levelLabel: fallback?.label ?? '',
+    };
+  }
+
+  let best = levels[0];
+  for (const level of levels) {
+    const score = level.data!.score;
+    const time = level.data!.bestTime ?? 99999;
+    const bestScore = best.data!.score;
+    const bestTime = best.data!.bestTime ?? 99999;
+    if (score > bestScore || (score === bestScore && time < bestTime)) {
+      best = level;
+    }
+  }
+
+  const pinned = MEMORY_LEVELS.find((l) => l.key === record.bestScoreLevel);
+  if (pinned && (record.score ?? 0) >= (best.data?.score ?? 0) && (record.score ?? 0) > 0) {
+    const pinnedData = record[pinned.key];
+    return {
+      score: record.score,
+      time: pinnedData?.bestTime ?? record.bestTime,
+      timeLabel: pinned.timeLabel,
+      levelLabel: pinned.label,
+    };
+  }
+
+  return {
+    score: best.data!.score,
+    time: best.data!.bestTime,
+    timeLabel: best.timeLabel,
+    levelLabel: best.label,
+  };
 }
 
 // ── Tab Content ───────────────────────────────────────────────────────────────
@@ -113,7 +177,7 @@ function SnakeTab() {
   const p2Wins = p2Score > p1Score;
 
   return (
-    <div className="flex gap-2 sm:gap-3">
+    <div className="flex min-w-0 items-stretch gap-2 sm:gap-3">
       <PlayerColumn
         name={partner1Name}
         isWinner={p1Wins}
@@ -122,7 +186,7 @@ function SnakeTab() {
         <StatRow label="Recorde" value={p1Score} />
       </PlayerColumn>
 
-      <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-0.5 text-white/30 sm:px-1">
         <span className="text-xs font-bold">VS</span>
       </div>
 
@@ -161,7 +225,7 @@ function WordTab() {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-stretch gap-2 sm:gap-3">
         <PlayerColumn
           name={partner1Name}
           isWinner={p1Wins}
@@ -174,7 +238,7 @@ function WordTab() {
           <StatRow label="Melhor Seq." value={p1?.bestStreak ?? 0} />
         </PlayerColumn>
 
-        <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
+        <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-0.5 text-white/30 sm:px-1">
           <span className="text-xs font-bold">VS</span>
         </div>
 
@@ -227,8 +291,8 @@ function WordTab() {
             })}
           </div>
           <div className="flex justify-between mt-2 text-[9px] sm:text-[10px]">
-            <span className="text-purple-400">■ {partner1Name}</span>
-            <span className="text-pink-400">■ {partner2Name}</span>
+            <span className="max-w-[48%] truncate text-purple-400">■ {partner1Name}</span>
+            <span className="max-w-[48%] truncate text-pink-400">■ {partner2Name}</span>
           </div>
         </div>
       )}
@@ -259,7 +323,7 @@ function QuizTab() {
   const p2Wins = p2Score > p1Score;
 
   return (
-    <div className="flex gap-2 sm:gap-3">
+    <div className="flex min-w-0 items-stretch gap-2 sm:gap-3">
       <PlayerColumn
         name={partner1Name}
         isWinner={p1Wins}
@@ -270,7 +334,7 @@ function QuizTab() {
         <StatRow label="Maior Combo" value={`x${p1?.highestCombo ?? 0}`} />
       </PlayerColumn>
 
-      <div className="flex flex-col items-center justify-center gap-1 text-white/30 px-1">
+      <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-0.5 text-white/30 sm:px-1">
         <span className="text-xs font-bold">VS</span>
       </div>
 
@@ -287,12 +351,64 @@ function QuizTab() {
   );
 }
 
+function MemoryTab() {
+  const [data, setData] = useState<{ p1: MemoryRecord | null; p2: MemoryRecord | null } | null>(null);
+  const { config } = useSiteConfigStore();
+  const partner1Name = config?.couple?.partner1?.name || 'Kevin';
+  const partner2Name = config?.couple?.partner2?.name || 'Iara';
+
+  const partner1Avatar = config?.couple?.partner1?.avatar || '👦';
+  const partner2Avatar = config?.couple?.partner2?.avatar || '👩';
+
+  useEffect(() => {
+    getMemoryRanking().then(setData);
+  }, []);
+
+  if (!data) return <LoadingRow />;
+
+  const p1Best = resolveBestMemoryRun(data.p1);
+  const p2Best = resolveBestMemoryRun(data.p2);
+  const p1Wins = p1Best.score > p2Best.score;
+  const p2Wins = p2Best.score > p1Best.score;
+
+  return (
+    <div className="flex min-w-0 items-stretch gap-2 sm:gap-3">
+      <PlayerColumn
+        name={partner1Name}
+        isWinner={p1Wins}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner1Avatar)}</div>}
+      >
+        <StatRow label={p1Best.levelLabel ? `Pontuação · ${p1Best.levelLabel}` : 'Pontuação'} value={p1Best.score} />
+        <Divider label="detalhes" />
+        <StatRow label="Maior Combo" value={`x${data.p1?.bestCombo ?? 0}`} />
+        <StatRow label={p1Best.timeLabel} value={formatMemoryTime(p1Best.time)} />
+      </PlayerColumn>
+
+      <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-0.5 text-white/30 sm:px-1">
+        <span className="text-xs font-bold">VS</span>
+      </div>
+
+      <PlayerColumn
+        name={partner2Name}
+        isWinner={p2Wins}
+        avatar={<div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-xl sm:text-2xl">{renderAvatar(partner2Avatar)}</div>}
+      >
+        <StatRow label={p2Best.levelLabel ? `Pontuação · ${p2Best.levelLabel}` : 'Pontuação'} value={p2Best.score} />
+        <Divider label="detalhes" />
+        <StatRow label="Maior Combo" value={`x${data.p2?.bestCombo ?? 0}`} />
+        <StatRow label={p2Best.timeLabel} value={formatMemoryTime(p2Best.time)} />
+      </PlayerColumn>
+    </div>
+  );
+}
+
 // ── Main Modal ────────────────────────────────────────────────────────────────
 
 const TABS: { id: RankingGame; label: string; emoji: string }[] = [
   { id: 'snake', label: 'Cobrinha', emoji: '🐍' },
   { id: 'word',  label: 'Palavra',  emoji: '📝' },
   { id: 'quiz',  label: 'Quiz',     emoji: '🎯' },
+  { id: 'memory', label: 'Memória', emoji: '🧩' },
 ];
 
 export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) {
@@ -327,7 +443,7 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 80 }}
         transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        className="relative z-10 w-full sm:max-w-md bg-[#0d0d1a] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"
+        className="relative z-10 w-full sm:max-w-lg bg-[#0d0d1a] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col"
         style={{ maxHeight: 'calc(92dvh)' }}
       >
         {/* Mobile drag handle */}
@@ -356,20 +472,21 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
               className={`flex-1 py-2 px-1 sm:px-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                 activeTab === tab.id
                   ? 'bg-white/15 text-white shadow-inner'
                   : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
             >
-              <span>{tab.emoji}</span>
-              <span>{tab.label}</span>
+              <span aria-hidden>{tab.emoji}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
 
         {/* Tab Content — scrollable with a fixed min height so it doesn't jump */}
-        <div className="px-4 sm:px-5 pb-5 sm:pb-6 overflow-y-auto overscroll-contain flex-1 min-h-[350px]">
+        <div className="min-h-[260px] flex-1 overflow-y-auto overscroll-contain px-4 pb-5 sm:min-h-[350px] sm:px-5 sm:pb-6">
           {activeTab === 'snake' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <SnakeTab />
@@ -383,6 +500,11 @@ export function RankingModal({ isOpen, onClose, initialGame = 'snake' }: Props) 
           {activeTab === 'quiz' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
               <QuizTab />
+            </motion.div>
+          )}
+          {activeTab === 'memory' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+              <MemoryTab />
             </motion.div>
           )}
         </div>

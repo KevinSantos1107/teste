@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Menu, X, Home, Clock, Palette, PlayCircle, ChevronDown,
   Heart, Timer, Music, Images, Stars, Gamepad2,
-  Rocket, Snowflake, Waves, Mail, Worm, MessageCircleHeart, SpellCheck2
+  Rocket, Snowflake, Waves, Mail, Worm, MessageCircleHeart, SpellCheck2, Layers
 } from 'lucide-react';
 import { cn } from '../../shared/utils/cn';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -76,10 +76,11 @@ const INTERACTIVE_ITEMS: {
   modal: ModalType;
   Icon: React.ElementType;
 }[] = [
-  { modal: 'word-game',   label: 'Jogo de Palavras', Icon: Gamepad2 },
-  { modal: 'snake',       label: 'Cobrinha',          Icon: Worm },
-  { modal: 'star-map',    label: 'Mapa das Estrelas', Icon: Stars },
-  { modal: 'couple-quiz', label: 'Quiz do Casal',     Icon: MessageCircleHeart },
+  { modal: 'word-game',    label: 'Jogo de Palavras', Icon: Gamepad2 },
+  { modal: 'snake',        label: 'Cobrinha',          Icon: Worm },
+  { modal: 'star-map',     label: 'Mapa das Estrelas', Icon: Stars },
+  { modal: 'couple-quiz',  label: 'Quiz do Casal',     Icon: MessageCircleHeart },
+  { modal: 'memory-game',  label: 'Jogo da Memória',   Icon: Layers },
 ];
 
 export function HamburgerMenu() {
