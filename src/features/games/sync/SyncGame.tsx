@@ -250,6 +250,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             roundNumber={room.roundNumber}
             synonymProposal={room.synonymProposal}
             isReady={room.ready?.[player] ?? false}
+          partnerReady={room.ready?.[partnerId] ?? false}
             onNext={nextRound}
             onProposeSynonym={proposeSynonym}
             onAcceptSynonym={acceptSynonym}
@@ -265,6 +266,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             onClose={onClose}
             partnerName={partnerName}
             isReady={room.ready?.[player] ?? false}
+          
           />
         );
       default:
@@ -286,5 +288,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+
 
 
