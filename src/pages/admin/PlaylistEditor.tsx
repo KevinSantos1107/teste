@@ -17,6 +17,7 @@ import { uploadImage, uploadAudio, cloudinaryUrl } from '../../services/cloudina
 import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
+import { Modal } from '../../shared/ui/Modal';
 import { cn } from '../../shared/utils/cn';
 import {
   DndContext,
@@ -244,6 +245,22 @@ export default function PlaylistEditor() {
   const [loading, setLoading] = useState(true);
   const [activePlaylist, setActivePlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
+
+  // confirmation dialog
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
 
   // Playlist creation
@@ -473,8 +490,20 @@ export default function PlaylistEditor() {
   };
 
   // ─── Delete Playlist ──────────────────────────────────────────────────────
-  const handleDeletePlaylist = async (playlist: Playlist) => {
-    if (!confirm(`Deletar a playlist "${playlist.name}"?`)) return;
+  const handleDeletePlaylist = (playlist: Playlist) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Deletar Playlist',
+      message: `Tem certeza que deseja deletar a playlist "${playlist.name}"? Todas as músicas dentro dela serão apagadas. Esta ação não pode ser desfeita.`,
+      confirmText: 'Deletar Playlist',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      onConfirm: () => executeDeletePlaylist(playlist),
+    });
+  };
+
+  const executeDeletePlaylist = async (playlist: Playlist) => {
+    setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
     try {
       // 1. Deletar todas as tracks da playlist em batch ANTES de deletar a playlist
       const tSnap = await getDocs(
@@ -496,6 +525,7 @@ export default function PlaylistEditor() {
       show('Erro ao deletar: ' + e.message, 'err');
     }
   };
+
 
   // ─── Multi-slot audio handlers ────────────────────────────────────────────
   const parseFilename = (filename: string) => {
@@ -650,9 +680,21 @@ export default function PlaylistEditor() {
   };
 
   // ─── Delete Track ─────────────────────────────────────────────────────────
-  const handleDeleteTrack = async (track: Track) => {
+  const handleDeleteTrack = (track: Track) => {
     if (!activePlaylist) return;
-    if (!confirm(`Deletar a música "${track.title}"?`)) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Deletar Música',
+      message: `Tem certeza que deseja deletar "${track.title}"? Esta ação não pode ser desfeita.`,
+      confirmText: 'Deletar',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      onConfirm: () => executeDeleteTrack(track),
+    });
+  };
+
+  const executeDeleteTrack = async (track: Track) => {
+    setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
     try {
       if (track.id) {
         // Deleção direta pelo ID do documento
@@ -660,7 +702,7 @@ export default function PlaylistEditor() {
       } else {
         // Fallback para o formato antigo (array aninhado) — usa for...of para aguardar cada await
         const tSnap = await getDocs(
-          query(collection(db, 'playlist_tracks'), where('playlistId', '==', activePlaylist.id))
+          query(collection(db, 'playlist_tracks'), where('playlistId', '==', activePlaylist!.id))
         );
         for (const d of tSnap.docs) {
           if (d.data().tracks) {
@@ -677,6 +719,7 @@ export default function PlaylistEditor() {
       show('Erro: ' + e.message, 'err');
     }
   };
+
 
   // ─── RENDER: Track view (inside a playlist) ───────────────────────────────
   if (activePlaylist) {
@@ -1003,6 +1046,35 @@ export default function PlaylistEditor() {
             </SortableContext>
           </DndContext>
         )}
+
+        {/* Confirmation Dialog */}
+        <Modal
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+          title={confirmDialog.title}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400 leading-relaxed">{confirmDialog.message}</p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+                className="bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm py-1.5 px-3"
+              >
+                {confirmDialog.cancelText || 'Cancelar'}
+              </Button>
+              <Button
+                onClick={confirmDialog.onConfirm}
+                className={cn(
+                  'text-white text-sm py-1.5 px-3',
+                  confirmDialog.isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                )}
+              >
+                {confirmDialog.confirmText || 'Confirmar'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   }
@@ -1266,6 +1338,35 @@ export default function PlaylistEditor() {
           </DndContext>
         </>
       )}
+
+      {/* Confirmation Dialog */}
+      <Modal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+        title={confirmDialog.title}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400 leading-relaxed">{confirmDialog.message}</p>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+              className="bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm py-1.5 px-3"
+            >
+              {confirmDialog.cancelText || 'Cancelar'}
+            </Button>
+            <Button
+              onClick={confirmDialog.onConfirm}
+              className={cn(
+                'text-white text-sm py-1.5 px-3',
+                confirmDialog.isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+              )}
+            >
+              {confirmDialog.confirmText || 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

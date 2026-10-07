@@ -18,6 +18,7 @@ import { Button } from '../../shared/ui/Button';
 import { Input } from '../../shared/ui/Input';
 import { Spinner } from '../../shared/ui/Spinner';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { Modal } from '../../shared/ui/Modal';
 import { SideSheet } from '../../shared/ui/SideSheet';
 import { useToast } from '../../shared/ui/ToastProvider';
 import { cn } from '../../shared/utils/cn';
@@ -138,6 +139,7 @@ export default function AlbumEditor() {
   const [loading, setLoading] = useState(true);
   const [activeAlbum, setActiveAlbum] = useState<Album | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 
   // new album form
   const [creating, setCreating] = useState(false);
@@ -158,6 +160,22 @@ export default function AlbumEditor() {
   const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
+  
+  // confirmation dialog
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const siteId = config?.id || 'meu-site';
 
@@ -314,8 +332,20 @@ export default function AlbumEditor() {
   };
 
   // ─ Delete album (cascade) ─
-  const handleDeleteAlbum = async (album: Album) => {
-    if (!confirm(`Deletar o álbum "${album.title}"? Esta ação não pode ser desfeita.`)) return;
+  const handleDeleteAlbum = (album: Album) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Deletar Álbum',
+      message: `Tem certeza que deseja deletar o álbum "${album.title}"? Todas as fotos dentro dele serão apagadas. Esta ação não pode ser desfeita.`,
+      confirmText: 'Deletar Álbum',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      onConfirm: () => executeDeleteAlbum(album),
+    });
+  };
+
+  const executeDeleteAlbum = async (album: Album) => {
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
     try {
       // 1. Deletar todos os docs de album_photos em batch ANTES do álbum e enfileirar fotos para deleção
       const pSnap = await getDocs(
@@ -470,8 +500,22 @@ export default function AlbumEditor() {
   };
 
   // ─ Delete photo ─
-  const handleDeletePhoto = async (photo: Photo) => {
-    if (!activeAlbum || !confirm('Deletar esta foto?')) return;
+  const handleDeletePhoto = (photo: Photo) => {
+    if (!activeAlbum) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Deletar Foto',
+      message: 'Tem certeza que deseja deletar esta foto? Esta ação não pode ser desfeita.',
+      confirmText: 'Deletar',
+      cancelText: 'Cancelar',
+      isDestructive: true,
+      onConfirm: () => executeDeletePhoto(photo),
+    });
+  };
+
+  const executeDeletePhoto = async (photo: Photo) => {
+    if (!activeAlbum) return;
+    setConfirmDialog({ ...confirmDialog, isOpen: false });
     try {
       if (photo.publicId) {
         await addDoc(collection(db, 'cloudinary_deletions_queue'), {
@@ -622,12 +666,14 @@ export default function AlbumEditor() {
                   const pId = photo.publicId || photo.url || photo.src || String(idx);
                   return (
                     <SortableItem key={pId} id={pId}>
-                      {({ isDragging, setNodeRef, style, handleProps, handleStyle }) => (
+                      {({ isDragging, setNodeRef, style, handleProps }) => (
                         <div
                           ref={setNodeRef}
-                          style={style}
+                          style={{ ...style, touchAction: 'pan-y' }}
+                          {...handleProps}
+                          onClick={() => setActivePhotoId(activePhotoId === pId ? null : pId)}
                           className={cn(
-                            "group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border border-slate-700",
+                            "group relative aspect-square rounded-xl overflow-hidden bg-slate-800 border border-slate-700 cursor-grab active:cursor-grabbing",
                             isDragging ? "shadow-2xl shadow-rose-500/20 ring-2 ring-rose-500 z-10" : ""
                           )}
                         >
@@ -635,33 +681,38 @@ export default function AlbumEditor() {
                             <img
                               src={cloudinaryUrl(photo.publicId, { w: 400, q: 70 })}
                               alt=""
-                              className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 pointer-events-none"
+                              className="w-full h-full object-cover transition-transform lg:group-hover:scale-105 duration-300 pointer-events-none"
                             />
                           ) : photo.url || photo.src ? (
                             <img
                               src={photo.url || photo.src}
                               alt=""
-                              className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 pointer-events-none"
+                              className="w-full h-full object-cover transition-transform lg:group-hover:scale-105 duration-300 pointer-events-none"
                             />
                           ) : (
-                            <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                            <div className="w-full h-full bg-slate-700 flex items-center justify-center pointer-events-none">
                               <ImageIcon className="w-8 h-8 text-slate-500" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className={cn(
+                            "absolute inset-0 transition-all duration-200 flex items-center justify-center z-10",
+                            activePhotoId === pId ? "bg-black/40 opacity-100" : "bg-black/0 opacity-0 lg:group-hover:bg-black/40 lg:group-hover:opacity-100"
+                          )}>
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo); }}
-                              className="p-2 bg-red-500/80 rounded-full text-white hover:bg-red-600 transition-colors z-20"
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeletePhoto(photo); }}
+                              className="p-3 bg-red-500/90 rounded-full text-white hover:bg-red-600 transition-transform hover:scale-105 shadow-lg"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-5 h-5" />
                             </button>
                           </div>
                           <div 
-                            {...handleProps} 
-                            style={handleStyle}
-                            className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-black/40 rounded cursor-grab active:cursor-grabbing hover:bg-rose-500/80 z-20"
+                            className={cn(
+                              "absolute top-2 left-2 transition-opacity p-1.5 bg-black/50 rounded text-white z-20 pointer-events-none",
+                              activePhotoId === pId ? "opacity-100" : "opacity-0 lg:group-hover:opacity-100"
+                            )}
                           >
-                            <GripVertical className="w-4 h-4 text-white drop-shadow" />
+                            <GripVertical className="w-4 h-4 drop-shadow" />
                           </div>
                         </div>
                       )}
@@ -672,6 +723,35 @@ export default function AlbumEditor() {
             </SortableContext>
           </DndContext>
         )}
+
+        {/* Confirmation Dialog for Photo View */}
+        <Modal
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          title={confirmDialog.title}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-400 leading-relaxed">{confirmDialog.message}</p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+                className="bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm py-1.5 px-3"
+              >
+                {confirmDialog.cancelText || 'Cancelar'}
+              </Button>
+              <Button
+                onClick={confirmDialog.onConfirm}
+                className={cn(
+                  "text-white text-sm py-1.5 px-3",
+                  confirmDialog.isDestructive ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+                )}
+              >
+                {confirmDialog.confirmText || 'Confirmar'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   }
@@ -945,6 +1025,35 @@ export default function AlbumEditor() {
           </DndContext>
         </>
       )}
+
+      {/* Confirmation Dialog */}
+      <Modal
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        title={confirmDialog.title}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-400 leading-relaxed">{confirmDialog.message}</p>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+              className="bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm py-1.5 px-3"
+            >
+              {confirmDialog.cancelText || 'Cancelar'}
+            </Button>
+            <Button
+              onClick={confirmDialog.onConfirm}
+              className={cn(
+                "text-white text-sm py-1.5 px-3",
+                confirmDialog.isDestructive ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+              )}
+            >
+              {confirmDialog.confirmText || 'Confirmar'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
