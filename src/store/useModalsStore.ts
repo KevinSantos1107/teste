@@ -7,6 +7,7 @@ export type ModalType =
   | 'timeline'
   | 'couple-quiz'
   | 'memory-game'
+  | 'sync'
   | null;
 
 interface ModalsState {

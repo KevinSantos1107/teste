@@ -81,6 +81,7 @@ const INTERACTIVE_ITEMS: {
   { modal: 'star-map',     label: 'Mapa das Estrelas', Icon: Stars },
   { modal: 'couple-quiz',  label: 'Quiz do Casal',     Icon: MessageCircleHeart },
   { modal: 'memory-game',  label: 'Jogo da Memória',   Icon: Layers },
+  { modal: 'sync',         label: 'Sincronia',         Icon: Heart },
 ];
 
 export function HamburgerMenu() {
@@ -205,7 +206,7 @@ export function HamburgerMenu() {
                       onClick={() => handleScrollTo(sec.id)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/8 hover:text-white transition-colors text-sm w-full text-left"
                     >
-                      <sec.Icon className="w-4 h-4 opacity-70" />
+                      <sec.Icon className="w-4 h-4 opacity-70" style={{ shapeRendering: 'geometricPrecision' }} />
                       {sec.label}
                     </button>
                   ))}
@@ -236,7 +237,7 @@ export function HamburgerMenu() {
                       onClick={() => handleOpenModal(item.modal)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/8 hover:text-white transition-colors text-sm w-full text-left"
                     >
-                      <item.Icon className="w-4 h-4 opacity-70" />
+                      <item.Icon className="w-4 h-4 opacity-70" style={{ shapeRendering: 'geometricPrecision' }} />
                       {item.label}
                     </button>
                   ))}
@@ -285,7 +286,7 @@ export function HamburgerMenu() {
                         )}
                         style={isActive ? { boxShadow: `0 0 16px ${theme.color}50` } : {}}
                       >
-                        <theme.Icon className="w-5 h-5" style={{ color: isActive ? '#fff' : theme.color }} />
+                        <theme.Icon className="w-5 h-5" style={{ color: isActive ? '#fff' : theme.color, shapeRendering: 'geometricPrecision' }} />
                       </button>
                     );
                   })}
