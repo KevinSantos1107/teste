@@ -181,7 +181,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
   const endGameButton = room && room.status !== 'lobby' && room.status !== 'sessionDone' && !room.endGameProposal ? (
     <button
       onClick={proposeEndGame}
-      className="absolute top-4 right-14 p-2 rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors z-40"
+      className="sticky top-2 self-end mr-2 p-2 rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors z-40"
       title="Finalizar partida"
     >
       <LogOut className="w-5 h-5" />
@@ -192,7 +192,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
 
   if (!room || !room.status || room.status === 'lobby') {
     return (
-      <div className="relative flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col">
         {offlineBanner}
         {errorBanner}
         <Lobby
@@ -250,7 +250,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             roundNumber={room.roundNumber}
             synonymProposal={room.synonymProposal}
             isReady={room.ready?.[player] ?? false}
-          partnerReady={room.ready?.[partnerId] ?? false}
+            partnerReady={room.ready?.[partnerId] ?? false}
             onNext={nextRound}
             onProposeSynonym={proposeSynonym}
             onAcceptSynonym={acceptSynonym}
@@ -266,7 +266,6 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             onClose={onClose}
             partnerName={partnerName}
             isReady={room.ready?.[player] ?? false}
-          
           />
         );
       default:
@@ -275,16 +274,14 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="relative flex-1 flex flex-col h-full overflow-hidden">
+    <div className="relative flex-1 flex flex-col">
       {offlineBanner}
       {errorBanner}
       {endGameButton}
       <AnimatePresence>
         {endGameOverlay}
       </AnimatePresence>
-      <div className="flex-1 overflow-y-auto">
-        {renderView()}
-      </div>
+      {renderView()}
     </div>
   );
 }

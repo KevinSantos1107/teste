@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Heart } from 'lucide-react';
+import { useSiteConfigStore } from '../../../../store/siteConfigStore';
 
 interface LobbyProps {
   playerName: string;
@@ -18,6 +19,9 @@ export function Lobby({
   onStartTurbo,
 }: LobbyProps) {
   const [starting, setStarting] = useState(false);
+  const config = useSiteConfigStore((s) => s.config);
+  const p1Avatar = config?.couple?.partner1?.avatar;
+  const p2Avatar = config?.couple?.partner2?.avatar;
 
   const handleStart = async (turbo: boolean) => {
     setStarting(true);
@@ -30,7 +34,7 @@ export function Lobby({
   };
 
   return (
-    <div className="relative w-full min-h-[60vh] flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden">
+    <div className="w-full flex flex-col items-center justify-center p-4 md:p-8">
       {/* Background Orbs */}
       <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[var(--theme-primary)] opacity-20 rounded-full blur-[100px] -z-10 mix-blend-screen animate-pulse" />
       <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-[var(--theme-accent)] opacity-20 rounded-full blur-[80px] -z-10 mix-blend-screen animate-pulse delay-1000" />
@@ -38,10 +42,10 @@ export function Lobby({
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-2xl flex flex-col items-center gap-8 md:gap-12"
+        className="w-full max-w-2xl flex flex-col items-center gap-6 md:gap-10"
       >
         {/* Header Hero */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -50,7 +54,7 @@ export function Lobby({
           >
             <span className="text-white/80 text-xs font-medium tracking-widest uppercase">Pronto para jogar</span>
           </motion.div>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70">
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/70">
             Sincronia
           </h2>
           <p className="text-white/60 text-sm md:text-base max-w-md mx-auto">
@@ -59,22 +63,22 @@ export function Lobby({
         </div>
 
         {/* Players Area */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
-          <PlayerBadge name={playerName} online={true} />
+        <div className="flex flex-row items-center justify-center gap-6 md:gap-10 w-full p-6 md:p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
+          <PlayerBadge name={playerName} online={true} avatarUrl={p1Avatar} />
           
           <motion.div 
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-white/5"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 shrink-0"
           >
-            <Heart className="w-5 h-5 text-[var(--theme-primary)] fill-[var(--theme-primary)] opacity-80" />
+            <Heart className="w-4 h-4 text-[var(--theme-primary)] fill-[var(--theme-primary)] opacity-80" />
           </motion.div>
 
-          <PlayerBadge name={partnerName} online={isPartnerOnline} />
+          <PlayerBadge name={partnerName} online={isPartnerOnline} avatarUrl={p2Avatar} />
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col gap-4 w-full max-w-sm">
+        <div className="flex flex-col gap-3 w-full max-w-sm">
           <button
             onClick={() => handleStart(false)}
             disabled={!isPartnerOnline || starting}
@@ -91,7 +95,7 @@ export function Lobby({
           <button
             onClick={() => handleStart(true)}
             disabled={!isPartnerOnline || starting}
-            className="group w-full py-3.5 rounded-2xl font-medium text-sm text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 backdrop-blur-sm"
+            className="group w-full py-3 rounded-2xl font-medium text-sm text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 backdrop-blur-sm"
             aria-label="Modo turbo"
           >
             <Zap className="w-4 h-4 text-yellow-400 group-hover:scale-110 transition-transform" />
@@ -116,26 +120,30 @@ export function Lobby({
   );
 }
 
-function PlayerBadge({ name, online }: { name: string; online: boolean }) {
+function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolean; avatarUrl?: string }) {
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-2">
       <div className="relative">
         <motion.div
           animate={online ? { boxShadow: ['0 0 0px var(--theme-primary)', '0 0 20px var(--theme-primary)', '0 0 0px var(--theme-primary)'] } : {}}
           transition={{ repeat: Infinity, duration: 2 }}
-          className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-3xl font-serif font-bold border-2 backdrop-blur-md"
+          className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-serif font-bold border-2 backdrop-blur-md overflow-hidden"
           style={{
             borderColor: online ? 'var(--theme-primary)' : 'rgba(255,255,255,0.1)',
             background: online ? 'rgba(var(--theme-primary-rgb), 0.15)' : 'rgba(255,255,255,0.02)',
             color: online ? 'var(--theme-primary)' : 'rgba(255,255,255,0.3)',
           }}
         >
-          {name.charAt(0).toUpperCase()}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+          ) : (
+            name.charAt(0).toUpperCase()
+          )}
         </motion.div>
         
         {/* Status indicator */}
-        <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#121212] flex items-center justify-center">
-          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${online ? 'bg-green-500' : 'bg-gray-500'}`}>
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#121212] flex items-center justify-center">
+          <div className={`w-3 h-3 rounded-full flex items-center justify-center ${online ? 'bg-green-500' : 'bg-gray-500'}`}>
             {online && (
               <motion.div
                 animate={{ scale: [1, 2], opacity: [0.5, 0] }}
@@ -148,7 +156,7 @@ function PlayerBadge({ name, online }: { name: string; online: boolean }) {
       </div>
 
       <div className="text-center">
-        <span className="text-base font-medium text-white/90 truncate max-w-[100px] block">{name}</span>
+        <span className="text-sm font-medium text-white/90 truncate max-w-[80px] block">{name}</span>
         <span className={`text-xs ${online ? 'text-green-400' : 'text-white/30'}`}>
           {online ? 'Online' : 'Offline'}
         </span>
