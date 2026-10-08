@@ -524,10 +524,10 @@ export function useSyncRoom() {
         const snap = await t.get(getRef());
         if (!snap.exists()) return;
         const data = snap.data() as SyncRoom;
-        // Idempotent: only fire if still on the expected round and deadline passed
+        // Idempotent: only fire if still on the expected round and deadline passed (with 2s tolerance for clock skew)
         if (data.status !== 'playing') return;
         if (data.roundNumber !== expectedRound) return;
-        if (!data.deadline || Date.now() < data.deadline) return;
+        if (!data.deadline || Date.now() < data.deadline - 2000) return;
 
         const newWords = { ...data.words };
         if (!data.locked[p1Id]) newWords[p1Id] = '';

@@ -32,7 +32,6 @@ export function WordInput({
   const [error, setError] = useState<string | null>(null);
   const [locking, setLocking] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const [initialDeadline] = useState(deadline);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input on mount
@@ -41,6 +40,8 @@ export function WordInput({
       inputRef.current?.focus();
     }
   }, [isLocked, roundNumber]);
+
+  const turboFiredRef = useRef<number | null>(null);
 
   // Timer for turbo mode
   useEffect(() => {
@@ -52,7 +53,8 @@ export function WordInput({
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
       setTimeLeft(remaining);
-      if (remaining <= 0) {
+      if (remaining <= 0 && turboFiredRef.current !== roundNumber) {
+        turboFiredRef.current = roundNumber;
         onTurboOut(roundNumber);
       }
     };
@@ -82,8 +84,8 @@ export function WordInput({
   const lastRound = history.length > 0 ? history[history.length - 1] : null;
 
   // Calculate timer progress
-  const totalDuration = initialDeadline ? Math.max(1, Math.ceil((initialDeadline - (initialDeadline - 30000)) / 1000)) : 30; // approx 30s max for circle
-  const progress = timeLeft !== null ? (timeLeft / totalDuration) * 100 : 100;
+  const TURBO_SECONDS = 30;
+  const progress = timeLeft !== null ? (timeLeft / TURBO_SECONDS) * 100 : 100;
   const isUrgent = timeLeft !== null && timeLeft <= 10;
 
   return (

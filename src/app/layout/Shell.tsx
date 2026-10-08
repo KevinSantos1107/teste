@@ -10,6 +10,7 @@ import { PlayerAuthInit } from '../../features/auth/PlayerAuthInit';
 
 const RetroShell = lazy(() => import('../../features/retrospective-v2/components/RetroShell').then(m => ({ default: m.RetroShell })));
 const AudioEngine = lazy(() => import('../../features/player/AudioEngine').then(m => ({ default: m.AudioEngine })));
+const ReturnToGameToast = lazy(() => import('../../features/games/sync/components/ReturnToGameToast').then(m => ({ default: m.ReturnToGameToast })));
 
 export function Shell() {
   const [showSplash, setShowSplash] = useState(true);
@@ -69,6 +70,9 @@ export function Shell() {
             <AudioEngine />
           </Suspense>
           <GlobalModals />
+          <Suspense fallback={null}>
+            <ReturnToGameToast />
+          </Suspense>
         </div>
       )}
     </div>

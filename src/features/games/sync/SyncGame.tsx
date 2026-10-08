@@ -45,6 +45,33 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
   } = useSyncRoom();
 
   const [previousBest, setPreviousBest] = useState<number | null>(null);
+  const [partnerLeftTimeout, setPartnerLeftTimeout] = useState(30);
+
+  useEffect(() => {
+    if (room?.leftBy !== partnerId) {
+      setPartnerLeftTimeout(30);
+      return;
+    }
+    const interval = setInterval(() => {
+      setPartnerLeftTimeout((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          forceEndGame();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [room?.leftBy, partnerId, forceEndGame]);
+
+  // If WE left, and we are mounting the modal, we automatically clear it!
+  // This satisfies "ReturnToGameToast clicked -> opens modal -> returns to game"
+  useEffect(() => {
+    if (room?.leftBy === player) {
+      returnToGame();
+    }
+  }, [room?.leftBy, player, returnToGame]);
 
   // Load previous best on mount
   useEffect(() => {
@@ -176,33 +203,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     </div>
   ) : null;
 
-  const [partnerLeftTimeout, setPartnerLeftTimeout] = useState(30);
 
-  useEffect(() => {
-    if (room?.leftBy !== partnerId) {
-      setPartnerLeftTimeout(30);
-      return;
-    }
-    const interval = setInterval(() => {
-      setPartnerLeftTimeout((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          forceEndGame();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [room?.leftBy, partnerId, forceEndGame]);
-
-  // If WE left, and we are mounting the modal, we automatically clear it!
-  // This satisfies "ReturnToGameToast clicked -> opens modal -> returns to game"
-  useEffect(() => {
-    if (room?.leftBy === player) {
-      returnToGame();
-    }
-  }, [room?.leftBy, player, returnToGame]);
 
   const partnerLeftBanner = room?.leftBy === partnerId ? (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
