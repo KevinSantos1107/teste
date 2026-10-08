@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, HandHelping, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { WaitingFor } from './WaitingFor';
 
 interface RevealProps {
   words: Record<string, string>;
@@ -15,6 +16,8 @@ interface RevealProps {
   synonymProposal: { by: string } | null;
   isReady: boolean;
   partnerReady: boolean;
+  waitingItems: { id: string; name: string; avatarUrl?: string; done: boolean }[];
+  autoAdvanceMs?: number | null;
   onNext: () => Promise<void>;
   onProposeSynonym: () => Promise<void>;
   onAcceptSynonym: () => Promise<void>;
@@ -34,6 +37,8 @@ export function Reveal({
   synonymProposal,
   isReady,
   partnerReady,
+  waitingItems,
+  autoAdvanceMs,
   onNext,
   onProposeSynonym,
   onAcceptSynonym,
@@ -206,26 +211,39 @@ export function Reveal({
           </motion.div>
         )}
 
-        {/* Continue button */}
-        <motion.button
-          whileTap={isReady ? {} : { scale: 0.96 }}
-          onClick={onNext}
-          disabled={isReady}
-          className="w-full py-4 rounded-2xl font-bold text-base text-white transition-all disabled:opacity-60 overflow-hidden relative group shadow-lg"
-          style={{ 
-            background: isReady && !partnerReady ? 'var(--theme-card-border)' : 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent, var(--theme-primary)) 100%)' 
-          }}
-          aria-label={isReady ? (partnerReady ? 'Avançando' : `Esperando ${partnerName}`) : 'Continuar para a próxima etapa'}
-        >
-          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          <span className="relative">
-            {isReady
-              ? partnerReady
-                ? 'Avançando...'
-                : `Esperando ${partnerName}...`
-              : 'Continuar'}
-          </span>
-        </motion.button>
+        {/* Continue button & Waiting For */}
+        <div className="w-full flex flex-col items-center gap-4">
+          <motion.button
+            whileTap={isReady ? {} : { scale: 0.96 }}
+            onClick={onNext}
+            disabled={isReady}
+            className="w-full py-4 rounded-2xl font-bold text-base text-white transition-all disabled:opacity-60 overflow-hidden relative group shadow-lg"
+            style={{ 
+              background: isReady && !partnerReady ? 'var(--theme-card-border)' : 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent, var(--theme-primary)) 100%)' 
+            }}
+            aria-label={isReady ? (partnerReady ? 'Avançando' : `Esperando ${partnerName}`) : 'Continuar para a próxima etapa'}
+          >
+            {/* Auto-advance progress bar inside button */}
+            {autoAdvanceMs !== null && autoAdvanceMs !== undefined && !isReady && (
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: autoAdvanceMs / 1000, ease: "linear" }}
+                className="absolute inset-0 bg-black/20"
+              />
+            )}
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            <span className="relative">
+              {isReady
+                ? partnerReady
+                  ? 'Avançando...'
+                  : `Pronto`
+                : 'Continuar'}
+            </span>
+          </motion.button>
+          
+          <WaitingFor items={waitingItems} label="Continuar" />
+        </div>
       </div>
     </motion.div>
   );

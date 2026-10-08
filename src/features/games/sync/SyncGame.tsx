@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut } from 'lucide-react';
 import { useSyncRoom } from './useSyncRoom';
@@ -21,8 +21,11 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     partnerId,
     partnerName,
     playerName,
+    playerAvatar,
+    partnerAvatar,
     p1Id,
     p2Id,
+    now,
     isPartnerOnline,
     startNewSession,
     startNewSessionTurbo,
@@ -57,7 +60,6 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     const total = room.results.reduce((sum, r) => sum + r.rounds, 0);
     const bestPart = Math.min(...room.results.map((r) => r.rounds));
 
-    // Count consecutive parts with <= 2 rounds
     let maxStreak = 0;
     let currentStreak = 0;
     for (const r of room.results) {
@@ -96,11 +98,56 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     if (!room || room.status !== 'sessionDone' || !room.playAgainDeadline) return;
     const interval = setInterval(() => {
       if (Date.now() > room.playAgainDeadline!) {
-        acceptEndGame(); // acceptEndGame forces status back to lobby and clears states
+        acceptEndGame();
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [room?.status, room?.playAgainDeadline, acceptEndGame]);
+
+  // ── Auto-advance on non-synced revealed rounds (2.3) ──────────────────────
+  const autoAdvanceRef = useRef(false);
+  useEffect(() => {
+    autoAdvanceRef.current = false;
+  }, [room?.roundNumber, room?.status]);
+
+  useEffect(() => {
+    if (!room || room.status !== 'revealed') return;
+    // Only auto-advance on non-synced rounds 1–5
+    if (room.lastRoundSynced) return;
+    if (room.roundNumber >= 6) return;
+    // Pause if synonym proposal pending
+    if (room.synonymProposal) return;
+    if (!room.nextAt) return;
+
+    const remaining = Math.max(0, room.nextAt - now);
+    if (remaining <= 0 && !autoAdvanceRef.current) {
+      autoAdvanceRef.current = true;
+      nextRound();
+    }
+  }, [room?.status, room?.roundNumber, room?.lastRoundSynced, room?.synonymProposal, room?.nextAt, now, nextRound]);
+
+  // ── Vibrate when partner locks ─────────────────────────────────────────────
+  const partnerLockedRef = useRef(false);
+  useEffect(() => {
+    if (!room || room.status !== 'playing') {
+      partnerLockedRef.current = false;
+      return;
+    }
+    const partnerNowLocked = room.locked?.[partnerId] ?? false;
+    if (partnerNowLocked && !partnerLockedRef.current) {
+      navigator.vibrate?.(30);
+    }
+    partnerLockedRef.current = partnerNowLocked;
+  }, [room?.status, room?.locked, partnerId]);
+
+  // ── WaitingFor items builder ───────────────────────────────────────────────
+  const buildWaitingItems = useCallback(
+    (playerDone: boolean, partnerDone: boolean) => [
+      { id: player, name: playerName, avatarUrl: playerAvatar, done: playerDone },
+      { id: partnerId, name: partnerName, avatarUrl: partnerAvatar, done: partnerDone },
+    ],
+    [player, partnerId, playerName, partnerName, playerAvatar, partnerAvatar],
+  );
 
   // ── Loading / error states ────────────────────────────────────────────────
 
@@ -183,6 +230,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
       onClick={proposeEndGame}
       className="sticky top-2 self-end mr-2 p-2 rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors z-40"
       title="Finalizar partida"
+      aria-label="Sair da partida"
     >
       <LogOut className="w-5 h-5" />
     </button>
@@ -220,6 +268,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             categoryIndex={room.categoryIndex}
             onChoose={chooseCategory}
             onSkip={skipCategory}
+            waitingItems={buildWaitingItems(room.hostId === player, room.hostId === partnerId)}
           />
         );
       case 'playing':
@@ -229,14 +278,20 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             roundNumber={room.roundNumber}
             isLocked={room.locked?.[player] ?? false}
             partnerLocked={room.locked?.[partnerId] ?? false}
-            partnerName={partnerName}
             history={room.history || []}
             deadline={room.deadline}
             onLock={lockWord}
             onTurboOut={triggerTurboOut}
+            waitingItems={buildWaitingItems(
+              room.locked?.[player] ?? false,
+              room.locked?.[partnerId] ?? false,
+            )}
           />
         );
-      case 'revealed':
+      case 'revealed': {
+        const autoAdvanceMs = room.nextAt && !room.lastRoundSynced && room.roundNumber < 6 && !room.synonymProposal
+          ? Math.max(0, room.nextAt - now)
+          : null;
         return (
           <Reveal
             words={room.words || {}}
@@ -255,8 +310,14 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             onProposeSynonym={proposeSynonym}
             onAcceptSynonym={acceptSynonym}
             onRejectSynonym={rejectSynonym}
+            waitingItems={buildWaitingItems(
+              room.ready?.[player] ?? false,
+              room.ready?.[partnerId] ?? false,
+            )}
+            autoAdvanceMs={autoAdvanceMs}
           />
         );
+      }
       case 'sessionDone':
         return (
           <SessionResult
@@ -264,8 +325,11 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
             previousBest={previousBest}
             onPlayAgain={playAgain}
             onClose={onClose}
-            partnerName={partnerName}
             isReady={room.ready?.[player] ?? false}
+            waitingItems={buildWaitingItems(
+              room.ready?.[player] ?? false,
+              room.ready?.[partnerId] ?? false,
+            )}
           />
         );
       default:
@@ -285,7 +349,3 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-
-
-

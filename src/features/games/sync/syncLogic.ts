@@ -1,50 +1,35 @@
-export function normalizeWord(word: string): string {
+export function normalizeForCompare(word: string): string {
   let w = word.toLowerCase().trim();
+  // Remove accents
   w = w.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Remove punctuation
+  w = w.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '');
+  // Collapse spaces
   w = w.replace(/\s+/g, ' ');
-  return w;
+  // Remove initial articles
+  w = w.replace(/^(o|a|os|as|um|uma|uns|umas)\s+/g, '');
+  return w.trim();
 }
 
-export function levenshteinDistance(a: string, b: string): number {
-  const matrix = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
-  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
+export function singularize(word: string): string {
+  if (word.length > 4 && word.endsWith('es')) {
+    return word.slice(0, -2);
   }
-  return matrix[a.length][b.length];
-}
-
-export function removePlural(w: string): string {
-  if (w.length > 3 && w.endsWith('s')) {
-    return w.slice(0, -1);
+  if (word.length > 3 && word.endsWith('s')) {
+    return word.slice(0, -1);
   }
-  return w;
+  return word;
 }
 
 export function isSameWord(w1: string, w2: string): boolean {
-  let n1 = normalizeWord(w1);
-  let n2 = normalizeWord(w2);
+  const n1 = normalizeForCompare(w1);
+  const n2 = normalizeForCompare(w2);
   if (n1 === n2) return true;
 
-  n1 = removePlural(n1);
-  n2 = removePlural(n2);
-  if (n1 === n2) return true;
+  const s1 = singularize(n1);
+  const s2 = singularize(n2);
+  if (s1 === s2) return true;
 
-  if (n1.length >= 4 && n2.length >= 4) {
-    return levenshteinDistance(n1, n2) <= 1;
-  }
   return false;
 }
 
@@ -58,7 +43,7 @@ export function validateWord(word: string, history: Array<{ round: number; words
   
   for (const h of history) {
     for (const pId in h.words) {
-      if (h.words[pId] && isSameWord(h.words[pId], trimmed)) {
+      if (h.words[pId] && isSameWord(h.words[pId], word)) {
         return { valid: false, error: 'Esta palavra já foi usada na partida.' };
       }
     }
@@ -68,7 +53,7 @@ export function validateWord(word: string, history: Array<{ round: number; words
 }
 
 export function getRoundTitle(round: number, isSynced: boolean): string {
-  if (!isSynced && round > 6) return '🌀 Cada um no seu mundo';
+  if (!isSynced) return '🌀 Cada um no seu mundo';
   if (round === 1) return '🔮 Telepatia';
   if (round === 2) return '💞 Almas gêmeas';
   if (round === 3 || round === 4) return '🤝 Em sintonia';

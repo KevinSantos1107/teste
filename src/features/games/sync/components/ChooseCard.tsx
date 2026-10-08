@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shuffle, PenLine, Sparkles, ChevronRight } from 'lucide-react';
 
+import { WaitingFor } from './WaitingFor';
+
 interface ChooseCardProps {
   cards: string[];
   isHost: boolean;
   hostName: string;
   canSkip: boolean;
   categoryIndex: number;
+  waitingItems: { id: string; name: string; avatarUrl?: string; done: boolean }[];
   onChoose: (category: string) => Promise<void>;
   onSkip: () => Promise<void>;
 }
@@ -20,6 +23,7 @@ export function ChooseCard({
   hostName,
   canSkip,
   categoryIndex,
+  waitingItems,
   onChoose,
   onSkip,
 }: ChooseCardProps) {
@@ -60,10 +64,11 @@ export function ChooseCard({
           />
           <Sparkles className="w-8 h-8 text-[var(--theme-primary)] animate-pulse" />
         </div>
-        <div className="text-center space-y-2">
+        <div className="text-center flex flex-col items-center space-y-4">
           <p className="text-white/90 text-lg font-medium" aria-live="polite">
             {hostName} está escolhendo a categoria
           </p>
+          <WaitingFor items={waitingItems} label="" />
           <span className="inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 text-xs tracking-wider">
             RODADA {categoryIndex + 1}/5
           </span>

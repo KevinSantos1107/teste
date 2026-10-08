@@ -1,44 +1,59 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeWord, levenshteinDistance, isSameWord, validateWord, getRoundTitle } from './syncLogic';
+import { isSameWord, validateWord, getRoundTitle } from './syncLogic';
 
 describe('syncLogic', () => {
-  describe('normalizeWord', () => {
-    it('removes accents and lowercases', () => {
-      expect(normalizeWord('Coração')).toBe('coracao');
-      expect(normalizeWord('  Açúcar  ')).toBe('acucar');
+  describe('isSameWord (strict rules)', () => {
+    it.each([
+      // Acentos e maiúsculas
+      ['mamão', 'mamao', true],
+      ['Maçã', 'maca', true],
+      // Espaços extras e pontuação
+      [' casa ', 'casa', true],
+      ['olá, mundo!', 'ola mundo', true],
+      // Artigos iniciais
+      ['o gato', 'gato', true],
+      ['uma pizza', 'pizza', true],
+      ['os cachorros', 'cachorro', true],
+      // Plural simples (s)
+      ['carro', 'carros', true],
+      ['livro', 'livros', true],
+      // Plural composto (es)
+      ['animal', 'animais', false], // Not supported by simple rule, should be false
+      ['cor', 'cores', true],
+      ['luz', 'luzes', true],
+      // Palavras curtas
+      ['sol', 'sal', false], // Different words
+      ['o', 'os', false], // Articles are stripped, empty strings aren't equal
+      ['ol', 'ols', false], // "s" removal only if len > 3
+      // Palavras diferentes que antes davam true com Levenshtein
+      ['gato', 'pato', false],
+      ['casa', 'cama', false],
+      ['amor', 'amar', false],
+      ['abacaxi', 'abacxi', false],
+    ])('isSameWord("%s", "%s") -> %s', (w1, w2, expected) => {
+      expect(isSameWord(w1, w2)).toBe(expected);
     });
-    it('normalizes spaces', () => {
-      expect(normalizeWord('duas   palavras')).toBe('duas palavras');
-    });
-  });
 
-  describe('levenshteinDistance', () => {
-    it('calculates distance correctly', () => {
-      expect(levenshteinDistance('gato', 'mato')).toBe(1);
-      expect(levenshteinDistance('amor', 'amar')).toBe(1);
-      expect(levenshteinDistance('teste', 'test')).toBe(1);
-      expect(levenshteinDistance('abacaxi', 'abacate')).toBe(2);
+    it('is always true for the same string', () => {
+      const words = ['gato', 'cachorro', 'amor', 'amar', 'sol', 'sal', 'cor', 'cores', 'carro', 'carros', 'uma pizza', 'o gato'];
+      for (const w of words) {
+        expect(isSameWord(w, w)).toBe(true);
+      }
     });
-  });
 
-  describe('isSameWord', () => {
-    it('identifies exact matches', () => {
-      expect(isSameWord('carro', 'Carro ')).toBe(true);
-    });
-    it('identifies plurals', () => {
-      expect(isSameWord('carro', 'carros')).toBe(true);
-      expect(isSameWord('carros', 'carro')).toBe(true);
-    });
-    it('identifies typos within dist 1 for length >= 4', () => {
-      expect(isSameWord('livro', 'ivro')).toBe(true);
-      expect(isSameWord('amor', 'amar')).toBe(true); // distance 1, len 4 -> true
-      expect(isSameWord('sol', 'sal')).toBe(false); // length < 4 -> false
+    it('is symmetric', () => {
+      const words = ['gato', 'cachorro', 'amor', 'amar', 'sol', 'sal', 'cor', 'cores', 'carro', 'carros', 'uma pizza', 'o gato'];
+      for (let i = 0; i < words.length; i++) {
+        for (let j = 0; j < words.length; j++) {
+          expect(isSameWord(words[i], words[j])).toBe(isSameWord(words[j], words[i]));
+        }
+      }
     });
   });
 
   describe('validateWord', () => {
     const history = [
-      { round: 1, words: { p1: 'sol', p2: 'lua' } },
+      { round: 1, words: { p1: 'gato', p2: 'lua' } },
       { round: 2, words: { p1: 'estrela', p2: 'mar' } }
     ];
 
@@ -55,25 +70,33 @@ describe('syncLogic', () => {
       expect(validateWord(longWord, history).valid).toBe(false);
     });
 
-    it('rejects words already used', () => {
-      expect(validateWord('Sol', history).valid).toBe(false);
-      expect(validateWord('luas', history).valid).toBe(false); // Same word by logic
+    it('rejects words already used exactly by rule', () => {
+      expect(validateWord('gato', history).valid).toBe(false);
+      expect(validateWord('Gatos', history).valid).toBe(false);
+      expect(validateWord('o gato', history).valid).toBe(false);
       expect(validateWord('estrelas', history).valid).toBe(false);
     });
 
-    it('accepts valid new words', () => {
-      expect(validateWord('planeta', history).valid).toBe(true);
-      expect(validateWord('céu azul', history).valid).toBe(true);
+    it('accepts different words that are close', () => {
+      expect(validateWord('pato', history).valid).toBe(true); // pato is allowed after gato
+      expect(validateWord('lua nova', history).valid).toBe(true);
     });
   });
 
   describe('getRoundTitle', () => {
-    it('returns correct titles', () => {
+    it('returns correct titles for synced rounds', () => {
       expect(getRoundTitle(1, true)).toBe('🔮 Telepatia');
       expect(getRoundTitle(2, true)).toBe('💞 Almas gêmeas');
+      expect(getRoundTitle(3, true)).toBe('🤝 Em sintonia');
       expect(getRoundTitle(4, true)).toBe('🤝 Em sintonia');
+      expect(getRoundTitle(5, true)).toBe('😅 Quase lá');
       expect(getRoundTitle(6, true)).toBe('😅 Quase lá');
+    });
+
+    it('returns failure title for not synced rounds at any stage', () => {
+      expect(getRoundTitle(6, false)).toBe('🌀 Cada um no seu mundo');
       expect(getRoundTitle(7, false)).toBe('🌀 Cada um no seu mundo');
+      expect(getRoundTitle(1, false)).toBe('🌀 Cada um no seu mundo');
     });
   });
 });

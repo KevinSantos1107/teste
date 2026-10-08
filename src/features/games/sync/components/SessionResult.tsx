@@ -1,23 +1,23 @@
 import { motion } from 'framer-motion';
 import { Trophy, Star, Sparkles, Repeat, X } from 'lucide-react';
+import { WaitingFor } from './WaitingFor';
 import type { SyncRoomResult } from '../useSyncRoom';
 
 interface SessionResultProps {
   results: SyncRoomResult[];
   previousBest: number | null;
+  waitingItems: { id: string; name: string; avatarUrl?: string; done: boolean }[];
   onPlayAgain: () => Promise<void>;
   onClose: () => void;
-  partnerName?: string;
   isReady?: boolean;
-  
 }
 
 export function SessionResult({
   results,
   previousBest,
+  waitingItems,
   onPlayAgain,
   onClose,
-  partnerName = 'Parceiro',
   isReady = false,
 }: SessionResultProps) {
   const total = results.reduce((sum, r) => sum + r.rounds, 0);
@@ -143,17 +143,20 @@ export function SessionResult({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
-        className="flex flex-col sm:flex-row gap-4 w-full max-w-md pb-8"
+        className="flex flex-col items-center gap-6 w-full max-w-md pb-8"
       >
-        <button onClick={onPlayAgain} disabled={isReady} className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-bold text-base transition-all active:scale-95 shadow-lg relative overflow-hidden group ${isReady ? "bg-white/10 text-white/50 cursor-not-allowed" : "text-white"}`} style={!isReady ? { background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent, var(--theme-primary)) 100%)" } : {}} aria-label="Jogar novamente">{!isReady && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />}<span className="relative flex items-center gap-2"><Repeat className={`w-5 h-5 ${isReady ? "animate-spin" : ""}`} />{isReady ? `Aguardando ${partnerName}...` : "Jogar Novamente"}</span></button>
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-semibold text-base text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 sm:w-auto"
-          aria-label="Fechar resultados"
-        >
-          <X className="w-5 h-5" />
-          Fechar
-        </button>
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
+          <button onClick={onPlayAgain} disabled={isReady} className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-bold text-base transition-all active:scale-95 shadow-lg relative overflow-hidden group ${isReady ? "bg-white/10 text-white/50 cursor-not-allowed" : "text-white"}`} style={!isReady ? { background: "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent, var(--theme-primary)) 100%)" } : {}} aria-label="Jogar novamente">{!isReady && <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />}<span className="relative flex items-center gap-2"><Repeat className="w-5 h-5" />Jogar Novamente</span></button>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 py-4 px-6 rounded-2xl font-semibold text-base text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all active:scale-95 sm:w-auto"
+            aria-label="Fechar resultados"
+          >
+            <X className="w-5 h-5" />
+            Sair
+          </button>
+        </div>
+        <WaitingFor items={waitingItems} label="Prontos:" />
       </motion.div>
     </motion.div>
   );

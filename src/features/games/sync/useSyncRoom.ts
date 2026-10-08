@@ -50,12 +50,13 @@ export interface SyncRoom {
   presence: Record<string, number>;
   deadline: number | null;
   playAgainDeadline: number | null;
+  nextAt?: number | null;
   recordSaved: boolean;
   updatedAt: unknown;
 }
 
-const PRESENCE_INTERVAL_MS = 20_000;
-const PRESENCE_ONLINE_THRESHOLD_MS = 45_000;
+const PRESENCE_INTERVAL_MS = 15_000;
+const PRESENCE_ONLINE_THRESHOLD_MS = 35_000;
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,8 @@ export function useSyncRoom() {
 
   const partnerName = getPlayerDisplayName(partnerId, config);
   const playerName = getPlayerDisplayName(player, config);
+  const playerAvatar = player === p1Id ? config?.couple?.partner1?.avatar : config?.couple?.partner2?.avatar;
+  const partnerAvatar = partnerId === p1Id ? config?.couple?.partner1?.avatar : config?.couple?.partner2?.avatar;
 
   // Stable ref for docRef to avoid re-creating on every render
   const docRefStable = useRef(doc(db, 'sync_rooms', roomId));
@@ -83,6 +86,8 @@ export function useSyncRoom() {
     docRefStable.current = doc(db, 'sync_rooms', roomId);
   }, [roomId]);
 
+  const [now, setNow] = useState(Date.now());
+  
   // ── Online/offline tracking ───────────────────────────────────────────────
   useEffect(() => {
     const onOnline = () => setIsOffline(false);
@@ -93,6 +98,14 @@ export function useSyncRoom() {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
+  }, []);
+
+  // ── 5s ticker for online ghost fix ─────────────────────────────────────────
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      if (!document.hidden) setNow(Date.now());
+    }, 5000);
+    return () => clearInterval(ticker);
   }, []);
 
   // ── Snapshot listener + presence heartbeat ────────────────────────────────
@@ -128,15 +141,15 @@ export function useSyncRoom() {
           [`presence.${player}`]: Date.now(),
           updatedAt: serverTimestamp(),
         });
-      } catch (e: any) {
-        if (e.code === 'not-found') {
+      } catch (e: unknown) {
+        if (e && typeof e === 'object' && 'code' in e && e.code === 'not-found') {
           const p1 = player;
           const p2 = p1 === p1Id ? p2Id : p1Id;
           await setDoc(ref, {
             status: 'lobby',
             presence: { [p1]: Date.now(), [p2]: 0 },
             updatedAt: serverTimestamp(),
-          });
+          }, { merge: true });
         }
       }
     };
@@ -144,9 +157,29 @@ export function useSyncRoom() {
     updatePresence();
     const presenceInterval = setInterval(updatePresence, PRESENCE_INTERVAL_MS);
 
+    // Pause heartbeat when hidden, resume when visible
+    const onVisibility = () => {
+      if (!document.hidden) updatePresence();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    // Clear presence on unmount / pagehide (best-effort)
+    const clearPresence = () => {
+      if (navigator.onLine) {
+        updateDoc(ref, {
+          [`presence.${player}`]: 0,
+          updatedAt: serverTimestamp(),
+        }).catch(() => { /* best-effort */ });
+      }
+    };
+    window.addEventListener('pagehide', clearPresence);
+
     return () => {
       unsubSnap();
       clearInterval(presenceInterval);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', clearPresence);
+      clearPresence();
     };
   }, [isPlayer, player, roomId]);
 
@@ -181,9 +214,9 @@ export function useSyncRoom() {
       if (!r) return false;
       const ts = r.presence?.[partnerId];
       if (!ts) return false;
-      return Date.now() - ts < PRESENCE_ONLINE_THRESHOLD_MS;
+      return now - ts < PRESENCE_ONLINE_THRESHOLD_MS;
     },
-    [partnerId],
+    [partnerId, now],
   );
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -197,6 +230,13 @@ export function useSyncRoom() {
       await runTransaction(db, async (t) => {
         const snap = await t.get(getRef());
         const currentPresence = snap.exists() && snap.data().presence ? snap.data().presence : { [p1Id]: Date.now(), [p2Id]: 0 };
+
+        if (snap.exists()) {
+          const status = snap.data().status;
+          if (status && status !== 'lobby' && status !== 'sessionDone') {
+            return;
+          }
+        }
 
         const newRoom: SyncRoom = {
           status: 'choosing',
@@ -275,6 +315,8 @@ export function useSyncRoom() {
       const snap = await t.get(getRef());
       if (!snap.exists()) return;
       const data = snap.data() as SyncRoom;
+      if (data.status !== 'choosing') return;
+      
       const remaining = data.skipsLeft?.[player] ?? 0;
       if (remaining <= 0) return;
 
@@ -326,6 +368,10 @@ export function useSyncRoom() {
 
           updates.lastRoundSynced = synced;
           updates.lastWord = synced ? w1 : null;
+
+          if (!synced && data.roundNumber < 6) {
+            updates.nextAt = Date.now() + (data.turbo ? 5000 : 8000);
+          }
         }
 
         t.update(getRef(), updates);
@@ -346,6 +392,7 @@ export function useSyncRoom() {
 
       t.update(getRef(), {
         synonymProposal: { by: player },
+        nextAt: null,
         updatedAt: serverTimestamp(),
       });
     });
@@ -381,6 +428,7 @@ export function useSyncRoom() {
 
       t.update(getRef(), {
         synonymProposal: null,
+        nextAt: Date.now() + 5000,
         updatedAt: serverTimestamp(),
       });
     });
@@ -626,8 +674,11 @@ export function useSyncRoom() {
     partnerId,
     partnerName,
     playerName,
+    playerAvatar,
+    partnerAvatar,
     p1Id,
     p2Id,
+    now,
     isPartnerOnline,
     startNewSession: wrapAction(() => startNewSession(false)),
     startNewSessionTurbo: wrapAction(() => startNewSession(true)),

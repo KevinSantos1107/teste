@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
 import { validateWord } from '../syncLogic';
+import { WaitingFor } from './WaitingFor';
 import type { SyncRoomHistory } from '../useSyncRoom';
 
 interface WordInputProps {
@@ -9,9 +10,9 @@ interface WordInputProps {
   roundNumber: number;
   isLocked: boolean;
   partnerLocked: boolean;
-  partnerName: string;
   history: SyncRoomHistory[];
   deadline: number | null;
+  waitingItems: { id: string; name: string; avatarUrl?: string; done: boolean }[];
   onLock: (word: string) => Promise<void>;
   onTurboOut: (round: number) => Promise<void>;
 }
@@ -21,9 +22,9 @@ export function WordInput({
   roundNumber,
   isLocked,
   partnerLocked,
-  partnerName,
   history,
   deadline,
+  waitingItems,
   onLock,
   onTurboOut,
 }: WordInputProps) {
@@ -197,6 +198,9 @@ export function WordInput({
                 maxLength={30}
                 autoComplete="off"
                 autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                enterKeyHint="send"
                 className="relative w-full py-4 px-6 rounded-2xl text-lg font-medium text-white text-center bg-white/5 backdrop-blur-xl border border-white/10 focus:border-white/40 focus:bg-white/10 outline-none transition-all placeholder:text-white/30"
                 aria-label="Digite sua palavra"
               />
@@ -251,8 +255,10 @@ export function WordInput({
               className="text-white/60 text-base font-medium text-center" 
               aria-live="polite"
             >
-              {partnerLocked ? 'Ambos travados! Revelando…' : `Aguardando ${partnerName}…`}
+              {partnerLocked ? 'Ambos travados! Revelando…' : `Aguardando…`}
             </motion.p>
+
+            <WaitingFor items={waitingItems} label="Travaram" />
           </motion.div>
         )}
       </div>
