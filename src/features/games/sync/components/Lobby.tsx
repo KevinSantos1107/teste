@@ -3,20 +3,28 @@ import { motion } from 'framer-motion';
 import { Zap, Heart } from 'lucide-react';
 import { useSiteConfigStore } from '../../../../store/siteConfigStore';
 
+import type { SyncPresenceState } from './SyncPresenceBeacon';
+
 interface LobbyProps {
   playerName: string;
   partnerName: string;
   isPartnerOnline: boolean;
+  partnerPresence?: SyncPresenceState;
+  isInviting?: boolean;
   onStart: () => Promise<void>;
   onStartTurbo: () => Promise<void>;
+  onCancelInvite?: () => Promise<void>;
 }
 
 export function Lobby({
   playerName,
   partnerName,
   isPartnerOnline,
+  partnerPresence = 'offline',
+  isInviting = false,
   onStart,
   onStartTurbo,
+  onCancelInvite,
 }: LobbyProps) {
   const [starting, setStarting] = useState(false);
   const config = useSiteConfigStore((s) => s.config);
@@ -64,7 +72,7 @@ export function Lobby({
 
         {/* Players Area */}
         <div className="flex flex-row items-center justify-center gap-6 md:gap-10 w-full p-6 md:p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
-          <PlayerBadge name={playerName} online={true} avatarUrl={p1Avatar} />
+          <PlayerBadge name={playerName} presence="game" avatarUrl={p1Avatar} />
           
           <motion.div 
             animate={{ scale: [1, 1.2, 1] }}
@@ -74,7 +82,7 @@ export function Lobby({
             <Heart className="w-4 h-4 text-[var(--theme-primary)] fill-[var(--theme-primary)] opacity-80" />
           </motion.div>
 
-          <PlayerBadge name={partnerName} online={isPartnerOnline} avatarUrl={p2Avatar} />
+          <PlayerBadge name={partnerName} presence={partnerPresence} avatarUrl={p2Avatar} />
         </div>
 
         {/* Actions */}
@@ -103,13 +111,34 @@ export function Lobby({
           </button>
         </div>
 
-        {/* Waiting Message */}
-        {!isPartnerOnline && (
-          <motion.p 
+        {/* Waiting / Inviting Message */}
+        {isInviting && (
+          <div className="flex flex-col items-center gap-3">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="text-[var(--theme-primary)] font-medium text-sm bg-[var(--theme-primary)]/10 px-6 py-2 rounded-full"
+              aria-live="polite"
+            >
+              Convite enviado para {partnerName}… aguardando resposta
+            </motion.p>
+            {onCancelInvite && (
+              <button
+                onClick={onCancelInvite}
+                className="text-xs text-white/40 hover:text-white/80 transition-colors"
+              >
+                Cancelar convite
+              </button>
+            )}
+          </div>
+        )}
+        {!isInviting && !isPartnerOnline && (
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ repeat: Infinity, duration: 2 }}
-            className="text-[var(--theme-primary)] font-medium text-sm bg-[var(--theme-primary)]/10 px-6 py-2 rounded-full" 
+            className="text-[var(--theme-primary)] font-medium text-sm bg-[var(--theme-primary)]/10 px-6 py-2 rounded-full"
             aria-live="polite"
           >
             Aguardando {partnerName} conectar…
@@ -120,7 +149,11 @@ export function Lobby({
   );
 }
 
-function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolean; avatarUrl?: string }) {
+function PlayerBadge({ name, presence, avatarUrl }: { name: string; presence: SyncPresenceState; avatarUrl?: string }) {
+  const online = presence === 'game' || presence === 'site';
+  const colorClass = presence === 'game' ? 'bg-green-500' : presence === 'site' ? 'bg-yellow-400' : 'bg-gray-500';
+  const label = presence === 'game' ? 'No jogo' : presence === 'site' ? 'No site' : 'Offline';
+
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
@@ -149,12 +182,12 @@ function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolea
         
         {/* Status indicator */}
         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#121212] flex items-center justify-center">
-          <div className={`w-3 h-3 rounded-full flex items-center justify-center ${online ? 'bg-green-500' : 'bg-gray-500'}`}>
+          <div className={`w-3 h-3 rounded-full flex items-center justify-center ${colorClass}`}>
             {online && (
               <motion.div
                 animate={{ scale: [1, 2], opacity: [0.5, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
-                className="absolute w-full h-full rounded-full bg-green-500"
+                className={`absolute w-full h-full rounded-full ${colorClass}`}
               />
             )}
           </div>
@@ -163,8 +196,8 @@ function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolea
 
       <div className="text-center">
         <span className="text-sm font-medium text-white/90 truncate max-w-[80px] block">{name}</span>
-        <span className={`text-xs ${online ? 'text-green-400' : 'text-white/30'}`}>
-          {online ? 'Online' : 'Offline'}
+        <span className={`text-xs ${presence === 'game' ? 'text-green-400' : presence === 'site' ? 'text-yellow-400' : 'text-white/30'}`}>
+          {label}
         </span>
       </div>
     </div>

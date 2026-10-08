@@ -27,8 +27,10 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     p2Id,
     now,
     isPartnerOnline,
+    partnerPresence,
     startNewSession,
     startNewSessionTurbo,
+    cancelInvite,
     chooseCategory,
     skipCategory,
     lockWord,
@@ -249,7 +251,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
 
   // ── No room: Lobby ────────────────────────────────────────────────────────
 
-  if (!room || !room.status || room.status === 'lobby') {
+  if (!room || !room.status || room.status === 'lobby' || room.status === 'inviting') {
     return (
       <div className="flex-1 flex flex-col">
         {offlineBanner}
@@ -258,8 +260,11 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
           playerName={playerName}
           partnerName={partnerName}
           isPartnerOnline={room ? isPartnerOnline(room) : false}
+          partnerPresence={partnerPresence}
+          isInviting={room?.status === 'inviting' && room?.hostId === player}
           onStart={startNewSession}
           onStartTurbo={startNewSessionTurbo}
+          onCancelInvite={cancelInvite}
         />
       </div>
     );

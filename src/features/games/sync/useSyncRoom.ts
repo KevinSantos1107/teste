@@ -13,6 +13,7 @@ import { useSiteConfigStore } from '../../../store/siteConfigStore';
 import { getPlayerIds, getPlayerDisplayName } from '../../auth/playerIds';
 import { generateSessionPlan, getCardsForType, type CategoryType } from './categories';
 import { isSameWord, getRoundTitle } from './syncLogic';
+import type { SyncPresenceState, SyncPresenceDoc } from './components/SyncPresenceBeacon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,8 @@ export interface SyncRoomResult {
 }
 
 export interface SyncRoom {
-  status: 'lobby' | 'choosing' | 'playing' | 'revealed' | 'partDone' | 'sessionDone';
+  status: 'inviting' | 'lobby' | 'choosing' | 'playing' | 'revealed' | 'partDone' | 'sessionDone';
+  inviteExpiresAt?: number | null;
   turbo: boolean;
   categoryIndex: number;
   hostId: string;
@@ -88,7 +90,7 @@ export function useSyncRoom() {
   }, [roomId]);
 
   const [now, setNow] = useState(Date.now());
-  
+  const [partnerPresence, setPartnerPresence] = useState<SyncPresenceState>('offline');
   // ── Online/offline tracking ───────────────────────────────────────────────
   useEffect(() => {
     const onOnline = () => setIsOffline(false);
@@ -135,6 +137,24 @@ export function useSyncRoom() {
       },
     );
 
+    const presenceRef = doc(db, 'sync_presence', roomId);
+    const unsubPresence = onSnapshot(presenceRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as SyncPresenceDoc;
+        const pId = player === p1Id ? p2Id : p1Id;
+        const status = data.presence?.[pId] || 'offline';
+        const lastSeen = data.lastSeen?.[pId] || 0;
+        // Se faz mais de 45s, considera offline (mesmo que a tab esteja aberta)
+        if (Date.now() - lastSeen > 45000) {
+          setPartnerPresence('offline');
+        } else {
+          setPartnerPresence(status);
+        }
+      } else {
+        setPartnerPresence('offline');
+      }
+    });
+
     const updatePresence = async () => {
       if (document.hidden || !navigator.onLine) return;
       try {
@@ -177,6 +197,7 @@ export function useSyncRoom() {
 
     return () => {
       unsubSnap();
+      unsubPresence();
       clearInterval(presenceInterval);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pagehide', clearPresence);
@@ -184,7 +205,26 @@ export function useSyncRoom() {
     };
   }, [isPlayer, player, roomId]);
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Invite auto-expire ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!room || room.status !== 'inviting' || room.hostId !== player) return;
+    if (!room.inviteExpiresAt) return;
+    const ref = docRefStable.current;
+    const delay = room.inviteExpiresAt - Date.now();
+    const expire = () => {
+      runTransaction(db, async (t) => {
+        const snap = await t.get(ref);
+        if (!snap.exists()) return;
+        if (snap.data().status !== 'inviting') return;
+        t.update(ref, { status: 'lobby', inviteExpiresAt: null });
+      }).catch(() => {});
+    };
+    if (delay <= 0) { expire(); return; }
+    const timer = setTimeout(expire, delay);
+    return () => clearTimeout(timer);
+  }, [room?.status, room?.inviteExpiresAt, room?.hostId, player]);
+
+
 
   const assertOnline = useCallback(() => {
     if (!navigator.onLine) {
@@ -239,11 +279,14 @@ export function useSyncRoom() {
           }
         }
 
+        const isInviting = partnerPresence === 'site';
+
         const newRoom: SyncRoom = {
-          status: 'choosing',
+          status: isInviting ? 'inviting' : 'choosing',
+          inviteExpiresAt: isInviting ? Date.now() + 60000 : null,
           turbo,
           categoryIndex: 0,
-          hostId: p1Id,
+          hostId: player,
           sessionPlan: plan,
           cards: initialCards,
           category: null,
@@ -268,8 +311,18 @@ export function useSyncRoom() {
         t.set(getRef(), newRoom);
       });
     },
-    [assertOnline, p1Id, p2Id],
+    [assertOnline, p1Id, p2Id, partnerPresence, player],
   );
+
+  const cancelInvite = useCallback(async () => {
+    assertOnline();
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(getRef());
+      if (!snap.exists()) return;
+      if (snap.data().status !== 'inviting') return;
+      t.update(getRef(), { status: 'lobby', inviteExpiresAt: null });
+    });
+  }, [assertOnline]);
 
 
   const chooseCategory = useCallback(
@@ -691,9 +744,11 @@ export function useSyncRoom() {
     p1Id,
     p2Id,
     now,
+    partnerPresence,
     isPartnerOnline,
     startNewSession: wrapAction(() => startNewSession(false)),
     startNewSessionTurbo: wrapAction(() => startNewSession(true)),
+    cancelInvite: wrapAction(cancelInvite),
     chooseCategory: async (cat: string) => {
       setActionError(null);
       try { await chooseCategory(cat); } catch (e: unknown) {
