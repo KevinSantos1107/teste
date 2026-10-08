@@ -84,7 +84,7 @@ export function ChooseCard({
       className="w-full max-w-4xl mx-auto flex flex-col items-center gap-8 p-4 md:p-8"
     >
       <div className="text-center space-y-3">
-        <span className="inline-block px-3 py-1 rounded-full bg-[var(--theme-primary)] text-[var(--theme-primary)] border border-[var(--theme-primary)] bg-opacity-10 border-opacity-20 text-xs font-semibold uppercase tracking-widest">
+        <span className="inline-block px-3 py-1 rounded-full bg-theme-primary/10 text-theme-primary border border-theme-primary/20 text-xs font-semibold uppercase tracking-widest">
           Rodada {categoryIndex + 1} de 5
         </span>
         <h3 className="text-3xl md:text-4xl font-serif font-bold text-white">
@@ -142,7 +142,7 @@ export function ChooseCard({
               <button
                 onClick={() => setCustomMode(true)}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-medium text-[var(--theme-accent)] bg-[var(--theme-accent)] bg-opacity-10 hover:bg-opacity-20 border border-[var(--theme-accent)] border-opacity-20 transition-all disabled:opacity-40"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-medium text-theme-accent bg-theme-accent/10 hover:bg-theme-accent/20 border border-theme-accent/20 transition-all disabled:opacity-40"
               >
                 <PenLine className="w-4 h-4" />
                 Criar Própria
