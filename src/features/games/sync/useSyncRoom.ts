@@ -44,7 +44,8 @@ export interface SyncRoom {
   lastRoundSynced: boolean;
   lastWord: string | null;
   synonymProposal: { by: string } | null;
-  endGameProposal: { by: string; expiresAt: number } | null;
+  leftBy?: string | null;
+  leftAt?: number | null;
   skipsLeft: Record<string, number>;
   results: SyncRoomResult[];
   presence: Record<string, number>;
@@ -254,7 +255,8 @@ export function useSyncRoom() {
           lastRoundSynced: false,
           lastWord: null,
           synonymProposal: null,
-          endGameProposal: null,
+          leftBy: null,
+          leftAt: null,
           skipsLeft: { [p1Id]: 1, [p2Id]: 1 },
           results: [],
           presence: currentPresence,
@@ -269,17 +271,6 @@ export function useSyncRoom() {
     [assertOnline, p1Id, p2Id],
   );
 
-  const leaveOrPause = useCallback(async () => {
-    assertOnline();
-    await runTransaction(db, async (t) => {
-      const snap = await t.get(getRef());
-      if (!snap.exists()) return;
-      t.update(getRef(), {
-        status: 'lobby',
-        updatedAt: serverTimestamp(),
-      });
-    });
-  }, [assertOnline]);
 
   const chooseCategory = useCallback(
     async (selectedCategory: string) => {
@@ -571,43 +562,64 @@ export function useSyncRoom() {
     });
   }, []);
 
-  const proposeEndGame = useCallback(async () => {
+  const leaveGame = useCallback(async (targetPlayerId?: string) => {
     assertOnline();
+    const leaver = targetPlayerId || player;
     await runTransaction(db, async (t) => {
       const snap = await t.get(getRef());
       if (!snap.exists()) return;
       const data = snap.data() as SyncRoom;
       if (data.status === 'lobby' || data.status === 'sessionDone') {
-        t.update(getRef(), { status: 'lobby', endGameProposal: null, updatedAt: serverTimestamp() });
+        t.update(getRef(), { status: 'lobby', leftBy: null, leftAt: null, updatedAt: serverTimestamp() });
         return;
       }
+      if (data.leftBy) return; // already left
+      
       t.update(getRef(), {
-        endGameProposal: { by: player, expiresAt: Date.now() + 30000 },
+        leftBy: leaver,
+        leftAt: Date.now(),
+        [`presence.${leaver}`]: 0,
         updatedAt: serverTimestamp(),
       });
     });
   }, [assertOnline, player]);
 
-  const acceptEndGame = useCallback(async () => {
+  // Fallback for dead tab: if partner hasn't sent presence in 20s
+  useEffect(() => {
+    if (!room || room.status === 'lobby' || room.status === 'sessionDone' || room.leftBy) return;
+    const partnerTs = room.presence?.[partnerId] || 0;
+    if (partnerTs > 0 && Date.now() - partnerTs > 20000) {
+      // It's possible we just opened the app and the last presence is old, 
+      // but in that case we'd rather be safe and suspend. 
+      // Actually we should use `now` instead of Date.now() so it doesn't trigger wildly in background
+      if (now - partnerTs > 20000) {
+        leaveGame(partnerId).catch(() => {});
+      }
+    }
+  }, [room?.status, room?.leftBy, room?.presence, partnerId, now, leaveGame]);
+
+  const returnToGame = useCallback(async () => {
+    assertOnline();
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(getRef());
+      if (!snap.exists()) return;
+      t.update(getRef(), {
+        leftBy: null,
+        leftAt: null,
+        updatedAt: serverTimestamp(),
+      });
+    });
+  }, [assertOnline]);
+
+  const forceEndGame = useCallback(async () => {
     assertOnline();
     await runTransaction(db, async (t) => {
       const snap = await t.get(getRef());
       if (!snap.exists()) return;
       t.update(getRef(), {
         status: 'lobby',
-        endGameProposal: null,
-        updatedAt: serverTimestamp(),
-      });
-    });
-  }, [assertOnline]);
-
-  const rejectEndGame = useCallback(async () => {
-    assertOnline();
-    await runTransaction(db, async (t) => {
-      const snap = await t.get(getRef());
-      if (!snap.exists()) return;
-      t.update(getRef(), {
-        endGameProposal: null,
+        leftBy: null,
+        leftAt: null,
         updatedAt: serverTimestamp(),
       });
     });
@@ -682,7 +694,6 @@ export function useSyncRoom() {
     isPartnerOnline,
     startNewSession: wrapAction(() => startNewSession(false)),
     startNewSessionTurbo: wrapAction(() => startNewSession(true)),
-    leaveOrPause: wrapAction(leaveOrPause),
     chooseCategory: async (cat: string) => {
       setActionError(null);
       try { await chooseCategory(cat); } catch (e: unknown) {
@@ -707,9 +718,9 @@ export function useSyncRoom() {
       }
     },
     saveRecordFlag,
-    proposeEndGame: wrapAction(proposeEndGame),
-    acceptEndGame: wrapAction(acceptEndGame),
-    rejectEndGame: wrapAction(rejectEndGame),
+    leaveGame: wrapAction(leaveGame),
+    returnToGame: wrapAction(returnToGame),
+    forceEndGame: wrapAction(forceEndGame),
     playAgain: wrapAction(playAgain),
   };
 }

@@ -487,7 +487,7 @@ export async function saveSyncRecordIfBetter(
     const snap = await getDoc(ref);
 
     let updated = false;
-    const dataToSave: any = { game: 'sync', updatedAt: serverTimestamp() };
+    const dataToSave: Record<string, unknown> = { game: 'sync', updatedAt: serverTimestamp() };
 
     if (snap.exists()) {
       const current = snap.data();

@@ -38,9 +38,9 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     nextRound,
     triggerTurboOut,
     saveRecordFlag,
-    proposeEndGame,
-    acceptEndGame,
-    rejectEndGame,
+    leaveGame,
+    returnToGame,
+    forceEndGame,
     playAgain,
   } = useSyncRoom();
 
@@ -82,27 +82,17 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     });
   }, [room, saveRecordFlag]);
 
-  // End game timeout checker
-  useEffect(() => {
-    if (!room || !room.endGameProposal) return;
-    const interval = setInterval(() => {
-      if (Date.now() > room.endGameProposal!.expiresAt) {
-        acceptEndGame();
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [room?.endGameProposal, acceptEndGame]);
 
   // Play again timeout checker
   useEffect(() => {
     if (!room || room.status !== 'sessionDone' || !room.playAgainDeadline) return;
     const interval = setInterval(() => {
       if (Date.now() > room.playAgainDeadline!) {
-        acceptEndGame();
+        forceEndGame();
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [room?.status, room?.playAgainDeadline, acceptEndGame]);
+  }, [room?.status, room?.playAgainDeadline, forceEndGame]);
 
   // ── Auto-advance on non-synced revealed rounds (2.3) ──────────────────────
   const autoAdvanceRef = useRef(false);
@@ -186,50 +176,70 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     </div>
   ) : null;
 
-  const endGameOverlay = room?.endGameProposal ? (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  const [partnerLeftTimeout, setPartnerLeftTimeout] = useState(30);
+
+  useEffect(() => {
+    if (room?.leftBy !== partnerId) {
+      setPartnerLeftTimeout(30);
+      return;
+    }
+    const interval = setInterval(() => {
+      setPartnerLeftTimeout((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          forceEndGame();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [room?.leftBy, partnerId, forceEndGame]);
+
+  // If WE left, and we are mounting the modal, we automatically clear it!
+  // This satisfies "ReturnToGameToast clicked -> opens modal -> returns to game"
+  useEffect(() => {
+    if (room?.leftBy === player) {
+      returnToGame();
+    }
+  }, [room?.leftBy, player, returnToGame]);
+
+  const partnerLeftBanner = room?.leftBy === partnerId ? (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-sm bg-gray-900 border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 text-center"
+        className="w-full max-w-sm bg-gray-900 border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4 text-center"
       >
-        <LogOut className="w-8 h-8 text-white/50 mx-auto" />
-        <h3 className="text-lg font-bold text-white">Finalizar jogo?</h3>
-        {room.endGameProposal.by === player ? (
-          <p className="text-white/60 text-sm">
-            Aguardando {partnerName} confirmar...<br/>
-            <span className="text-xs text-white/40 block mt-2">Encerra automaticamente em breve.</span>
-          </p>
-        ) : (
-          <>
-            <p className="text-white/60 text-sm">
-              {partnerName} quer finalizar a partida. Você concorda?
-            </p>
-            <div className="flex gap-3 mt-2">
-              <button
-                onClick={rejectEndGame}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white/70 bg-white/5 hover:bg-white/10 transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={acceptEndGame}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all bg-red-500/20 hover:bg-red-500/30 text-red-400"
-              >
-                Finalizar
-              </button>
-            </div>
-          </>
-        )}
+        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2">
+          {partnerAvatar ? (
+            <img src={partnerAvatar} alt={partnerName} className="w-full h-full object-cover rounded-full opacity-50 grayscale" />
+          ) : (
+            <span className="text-2xl opacity-50">{partnerName.charAt(0).toUpperCase()}</span>
+          )}
+        </div>
+        <h3 className="text-xl font-bold text-white">{partnerName} saiu.</h3>
+        <p className="text-white/60 text-sm">
+          Aguardando retorno... ({partnerLeftTimeout}s)
+        </p>
+        <button
+          onClick={forceEndGame}
+          className="mt-4 w-full py-3 rounded-xl text-sm font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
+        >
+          Encerrar Partida
+        </button>
       </motion.div>
     </div>
   ) : null;
 
-  const endGameButton = room && room.status !== 'lobby' && room.status !== 'sessionDone' && !room.endGameProposal ? (
+  const endGameButton = room && room.status !== 'lobby' && room.status !== 'sessionDone' && !room.leftBy ? (
     <button
-      onClick={proposeEndGame}
+      onClick={() => {
+        leaveGame();
+        onClose();
+      }}
       className="sticky top-2 self-end mr-2 p-2 rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors z-40"
-      title="Finalizar partida"
+      title="Sair da partida"
       aria-label="Sair da partida"
     >
       <LogOut className="w-5 h-5" />
@@ -343,7 +353,7 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
       {errorBanner}
       {endGameButton}
       <AnimatePresence>
-        {endGameOverlay}
+        {partnerLeftBanner}
       </AnimatePresence>
       {renderView()}
     </div>
