@@ -124,10 +124,16 @@ function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolea
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="relative">
-        <motion.div
-          animate={online ? { boxShadow: ['0 0 0px var(--theme-primary)', '0 0 20px var(--theme-primary)', '0 0 0px var(--theme-primary)'] } : {}}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-serif font-bold border-2 backdrop-blur-md overflow-hidden"
+        {online && (
+          <motion.div
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="absolute inset-0 rounded-full blur-md"
+            style={{ backgroundColor: 'var(--theme-primary)' }}
+          />
+        )}
+        <div
+          className="relative w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl font-serif font-bold border-2 backdrop-blur-md overflow-hidden z-10"
           style={{
             borderColor: online ? 'var(--theme-primary)' : 'rgba(255,255,255,0.1)',
             background: online ? 'rgba(var(--theme-primary-rgb), 0.15)' : 'rgba(255,255,255,0.02)',
@@ -139,7 +145,7 @@ function PlayerBadge({ name, online, avatarUrl }: { name: string; online: boolea
           ) : (
             name.charAt(0).toUpperCase()
           )}
-        </motion.div>
+        </div>
         
         {/* Status indicator */}
         <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#121212] flex items-center justify-center">
