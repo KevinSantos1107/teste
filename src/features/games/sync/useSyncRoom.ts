@@ -46,6 +46,7 @@ export interface SyncRoom {
   lastRoundSynced: boolean;
   lastWord: string | null;
   synonymProposal: { by: string } | null;
+  endGameProposal?: { by: string } | null;
   leftBy?: string | null;
   leftAt?: number | null;
   skipsLeft: Record<string, number>;
@@ -637,6 +638,42 @@ export function useSyncRoom() {
     });
   }, [assertOnline, player]);
 
+  const proposeEndGame = useCallback(async () => {
+    assertOnline();
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(getRef());
+      if (!snap.exists()) return;
+      t.update(getRef(), { endGameProposal: { by: player }, updatedAt: serverTimestamp() });
+    });
+  }, [assertOnline, player]);
+
+  const acceptEndGame = useCallback(async () => {
+    assertOnline();
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(getRef());
+      if (!snap.exists()) return;
+      // Ends the game nicely
+      t.update(getRef(), { 
+        status: 'lobby', 
+        endGameProposal: null,
+        words: { [p1Id]: '', [p2Id]: '' },
+        locked: { [p1Id]: false, [p2Id]: false },
+        ready: { [p1Id]: false, [p2Id]: false },
+        history: [],
+        updatedAt: serverTimestamp() 
+      });
+    });
+  }, [assertOnline, p1Id, p2Id]);
+
+  const rejectEndGame = useCallback(async () => {
+    assertOnline();
+    await runTransaction(db, async (t) => {
+      const snap = await t.get(getRef());
+      if (!snap.exists()) return;
+      t.update(getRef(), { endGameProposal: null, updatedAt: serverTimestamp() });
+    });
+  }, [assertOnline]);
+
   // Fallback for dead tab: if partner hasn't sent presence in 20s
   useEffect(() => {
     if (!room || room.status === 'lobby' || room.status === 'sessionDone' || room.leftBy) return;
@@ -777,5 +814,8 @@ export function useSyncRoom() {
     returnToGame: wrapAction(returnToGame),
     forceEndGame: wrapAction(forceEndGame),
     playAgain: wrapAction(playAgain),
+    proposeEndGame: wrapAction(proposeEndGame),
+    acceptEndGame: wrapAction(acceptEndGame),
+    rejectEndGame: wrapAction(rejectEndGame),
   };
 }

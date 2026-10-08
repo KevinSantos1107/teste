@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Heart } from 'lucide-react';
-import { useSiteConfigStore } from '../../../../store/siteConfigStore';
 
 import type { SyncPresenceState } from './SyncPresenceBeacon';
 
 interface LobbyProps {
   playerName: string;
   partnerName: string;
+  playerAvatar?: string;
+  partnerAvatar?: string;
   isPartnerOnline: boolean;
   partnerPresence?: SyncPresenceState;
   isInviting?: boolean;
@@ -19,6 +20,8 @@ interface LobbyProps {
 export function Lobby({
   playerName,
   partnerName,
+  playerAvatar,
+  partnerAvatar,
   isPartnerOnline,
   partnerPresence = 'offline',
   isInviting = false,
@@ -27,9 +30,6 @@ export function Lobby({
   onCancelInvite,
 }: LobbyProps) {
   const [starting, setStarting] = useState(false);
-  const config = useSiteConfigStore((s) => s.config);
-  const p1Avatar = config?.couple?.partner1?.avatar;
-  const p2Avatar = config?.couple?.partner2?.avatar;
 
   const handleStart = async (turbo: boolean) => {
     setStarting(true);
@@ -72,7 +72,7 @@ export function Lobby({
 
         {/* Players Area */}
         <div className="flex flex-row items-center justify-center gap-6 md:gap-10 w-full p-6 md:p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-2xl">
-          <PlayerBadge name={playerName} presence="game" avatarUrl={p1Avatar} />
+          <PlayerBadge name={playerName} presence="game" avatarUrl={playerAvatar} />
           
           <motion.div 
             animate={{ scale: [1, 1.2, 1] }}
@@ -82,7 +82,7 @@ export function Lobby({
             <Heart className="w-4 h-4 text-[var(--theme-primary)] fill-[var(--theme-primary)] opacity-80" />
           </motion.div>
 
-          <PlayerBadge name={partnerName} presence={partnerPresence} avatarUrl={p2Avatar} />
+          <PlayerBadge name={partnerName} presence={partnerPresence} avatarUrl={partnerAvatar} />
         </div>
 
         {/* Actions */}
