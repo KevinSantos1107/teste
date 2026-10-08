@@ -27,12 +27,14 @@ export function SyncPresenceBeacon() {
     const roomId = `${p1Id}_${p2Id}`;
     const ref = doc(db, 'sync_presence', roomId);
 
+    // IMPORTANT: Use nested objects (not dot-notation keys) so Firestore
+    // merges them as sub-fields, not literal dot-in-key field names.
     const updatePresence = (status: SyncPresenceState) => {
       setDoc(
         ref,
         {
-          [`presence.${player}`]: status,
-          [`lastSeen.${player}`]: Date.now(),
+          presence: { [player]: status },
+          lastSeen: { [player]: Date.now() },
           updatedAt: serverTimestamp(),
         },
         { merge: true },
@@ -49,11 +51,20 @@ export function SyncPresenceBeacon() {
     }, 15000);
 
     const handleHide = () => updatePresence('offline');
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        const status: SyncPresenceState = activeModal === 'sync' ? 'game' : 'site';
+        updatePresence(status);
+      }
+    };
+
     window.addEventListener('pagehide', handleHide);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       clearInterval(ticker);
       window.removeEventListener('pagehide', handleHide);
+      document.removeEventListener('visibilitychange', handleVisibility);
       updatePresence('offline');
     };
   }, [player, config, activeModal]);

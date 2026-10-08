@@ -9,7 +9,7 @@ import { Reveal } from './components/Reveal';
 import { SessionResult } from './components/SessionResult';
 import { getSyncRecord, saveSyncRecordIfBetter } from '../../../services/gameRecords';
 
-export function SyncGame({ onClose }: { onClose: () => void }) {
+export function SyncGame({ onClose, registerLeaveGame }: { onClose: () => void; registerLeaveGame?: (fn: (() => void) | null) => void }) {
   const {
     room,
     loading,
@@ -48,6 +48,19 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
 
   const [previousBest, setPreviousBest] = useState<number | null>(null);
   const [partnerLeftTimeout, setPartnerLeftTimeout] = useState(30);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Register leaveGame with the modal so the X button can trigger it
+  // Only register when in an active game (not lobby/sessionDone)
+  useEffect(() => {
+    if (!registerLeaveGame) return;
+    const isInGame = room && room.status !== 'lobby' && room.status !== 'sessionDone' && room.status !== 'inviting' && !room.leftBy;
+    if (isInGame) {
+      registerLeaveGame(leaveGame);
+    } else {
+      registerLeaveGame(null);
+    }
+  }, [room?.status, room?.leftBy, leaveGame, registerLeaveGame]);
 
   useEffect(() => {
     if (room?.leftBy !== partnerId) {
@@ -235,18 +248,51 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
     </div>
   ) : null;
 
-  const endGameButton = room && room.status !== 'lobby' && room.status !== 'sessionDone' && !room.leftBy ? (
+  // The in-game "leave" button shows a confirmation first.
+  // The X of the modal calls leaveGame directly (registered via registerLeaveGame).
+  const endGameButton = room && room.status !== 'lobby' && room.status !== 'sessionDone' && room.status !== 'inviting' && !room.leftBy ? (
     <button
-      onClick={() => {
-        leaveGame();
-        onClose();
-      }}
+      onClick={() => setShowExitConfirm(true)}
       className="sticky top-2 self-end mr-2 p-2 rounded-full text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors z-40"
       title="Sair da partida"
       aria-label="Sair da partida"
     >
       <LogOut className="w-5 h-5" />
     </button>
+  ) : null;
+
+  // Confirmation overlay for the in-game leave button
+  const exitConfirmOverlay = showExitConfirm ? (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-sm bg-gray-900 border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4 text-center"
+      >
+        <h3 className="text-xl font-bold text-white">Sair da partida?</h3>
+        <p className="text-white/60 text-sm">
+          Isso vai encerrar a rodada para os dois. Tem certeza?
+        </p>
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={() => setShowExitConfirm(false)}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold text-white/70 bg-white/5 hover:bg-white/10 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              setShowExitConfirm(false);
+              leaveGame();
+              onClose();
+            }}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all"
+          >
+            Sair mesmo assim
+          </button>
+        </div>
+      </motion.div>
+    </div>
   ) : null;
 
   // ── No room: Lobby ────────────────────────────────────────────────────────
@@ -360,6 +406,9 @@ export function SyncGame({ onClose }: { onClose: () => void }) {
       {endGameButton}
       <AnimatePresence>
         {partnerLeftBanner}
+      </AnimatePresence>
+      <AnimatePresence>
+        {exitConfirmOverlay}
       </AnimatePresence>
       {renderView()}
     </div>
