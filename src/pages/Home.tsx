@@ -96,6 +96,21 @@ export default function Home() {
     return new Date(config.relationship.startDate + 'T00:00:00').getTime();
   }, [config?.relationship.startDate]);
 
+  // Preload dinâmico da imagem da capa apenas quando a Home é montada
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = '/capa_principal.jpg';
+    document.head.appendChild(link);
+
+    return () => {
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const THEMES = {
       meteors: {
