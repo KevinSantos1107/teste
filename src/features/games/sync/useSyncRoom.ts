@@ -90,7 +90,7 @@ export function useSyncRoom() {
     docRefStable.current = siteDoc('sync_rooms', roomId);
   }, [roomId]);
 
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [partnerPresence, setPartnerPresence] = useState<SyncPresenceState>('offline');
   // ── Online/offline tracking ───────────────────────────────────────────────
   useEffect(() => {

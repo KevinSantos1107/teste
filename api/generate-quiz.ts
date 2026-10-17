@@ -274,6 +274,74 @@ Responda SOMENTE com um array JSON válido, sem markdown, sem explicações, sem
 }
 
 // ─────────────────────────────────────────────
+// Recuperação e Validação de JSON Truncado
+// ─────────────────────────────────────────────
+
+/**
+ * Tenta fazer o parse de um JSON contendo array de perguntas geradas.
+ * Se o JSON tiver sido truncado (ex: pelo limite de tokens da IA),
+ * tenta aproveitar todos os objetos completos já recebidos antes de falhar.
+ */
+export function parseAndRecoverQuestions(rawText: string): RawGeneratedQuestion[] | null {
+  const cleaned = rawText
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim();
+
+  // 1. Parse direto padrão
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (Array.isArray(parsed)) {
+      const valid = parsed.filter(isValidRawQuestion);
+      if (valid.length > 0) return valid;
+    }
+  } catch {
+    // Falha normal se cortado, prossegue para recuperação
+  }
+
+  // 2. Recuperação de JSON truncado cortando no último objeto completo '}'
+  const lastBraceIndex = cleaned.lastIndexOf('}');
+  if (lastBraceIndex !== -1) {
+    try {
+      const arrayStart = cleaned.indexOf('[');
+      if (arrayStart !== -1 && arrayStart < lastBraceIndex) {
+        const candidate = cleaned.slice(arrayStart, lastBraceIndex + 1) + ']';
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(isValidRawQuestion);
+          if (valid.length > 0) return valid;
+        }
+      }
+    } catch {
+      // Ignora erro e tenta extração regex
+    }
+  }
+
+  // 3. Recuperação por regex de objetos individuais se a estrutura do array estiver danificada
+  try {
+    const objectMatches = cleaned.match(/\{[^{}]*"question"[^{}]*"options"[^{}]*\}/gs);
+    if (objectMatches && objectMatches.length > 0) {
+      const recovered: RawGeneratedQuestion[] = [];
+      for (const objStr of objectMatches) {
+        try {
+          const obj = JSON.parse(objStr);
+          if (isValidRawQuestion(obj)) {
+            recovered.push(obj);
+          }
+        } catch {
+          // ignora objeto quebrado
+        }
+      }
+      if (recovered.length > 0) return recovered;
+    }
+  } catch {
+    // ignora
+  }
+
+  return null;
+}
+
+// ─────────────────────────────────────────────
 // Handler Principal (Vercel Serverless Function)
 // ─────────────────────────────────────────────
 
@@ -312,12 +380,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // 4. Validação criptográfica do Firebase ID Token contra o JWKS público do Google
+  // 4. Validação criptográfica do Firebase ID Token contra o JWKS público do Google (RS256)
   let payload: Record<string, unknown>;
   try {
     const verified = await jwtVerify(token, JWKS, {
       issuer: `https://securetoken.google.com/${projectId}`,
       audience: projectId,
+      algorithms: ['RS256'],
     });
     payload = verified.payload as Record<string, unknown>;
   } catch {
@@ -340,20 +409,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // 7. Rate limiting por UID
-  const uid = typeof payload.sub === 'string' ? payload.sub : '';
-  if (!uid) {
-    res.status(401).json({ error: 'Não autorizado.' });
-    return;
-  }
-
-  const rateCheck = checkRateLimit(uid);
-  if (!rateCheck.allowed) {
-    res.status(429).json({ error: rateCheck.reason || 'Limite de requisições excedido.' });
-    return;
-  }
-
-  // 8. Validação e sanitização do payload de entrada
+  // 7. Validação e sanitização do payload de entrada ANTES do rate limit
+  // para que requisições com dados inválidos não consumam a cota do usuário.
   let parsedBody = req.body;
   if (typeof parsedBody === 'string') {
     try {
@@ -367,6 +424,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const validation = validateStoryData(parsedBody);
   if (!validation.valid) {
     res.status(400).json({ error: validation.error });
+    return;
+  }
+
+  // 8. Rate limiting por UID (executado apenas se a requisição for válida)
+  const uid = typeof payload.sub === 'string' ? payload.sub : '';
+  if (!uid) {
+    res.status(401).json({ error: 'Não autorizado.' });
+    return;
+  }
+
+  const rateCheck = checkRateLimit(uid);
+  if (!rateCheck.allowed) {
+    res.status(429).json({ error: rateCheck.reason || 'Limite de requisições excedido.' });
     return;
   }
 
@@ -384,7 +454,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.9,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 16384,
+          responseMimeType: 'application/json',
         },
       }),
     });
@@ -410,26 +481,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const cleaned = rawText
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/, '')
-      .trim();
-
-    let parsedQuestions: unknown;
-    try {
-      parsedQuestions = JSON.parse(cleaned);
-    } catch {
-      res.status(502).json({ error: 'A IA retornou um formato JSON inválido. Tente novamente.' });
-      return;
-    }
-
-    if (!Array.isArray(parsedQuestions)) {
-      res.status(502).json({ error: 'A IA não retornou uma lista de perguntas.' });
-      return;
-    }
-
-    const validQuestions = parsedQuestions.filter(isValidRawQuestion);
-    if (validQuestions.length === 0) {
+    // Tenta fazer o parse e aproveita perguntas completas recebidas mesmo se o JSON estiver truncado
+    const validQuestions = parseAndRecoverQuestions(rawText);
+    if (!validQuestions || validQuestions.length === 0) {
       res.status(502).json({ error: 'Nenhuma pergunta válida foi gerada. Tente novamente com mais detalhes.' });
       return;
     }

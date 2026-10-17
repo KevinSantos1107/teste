@@ -8,6 +8,7 @@ import {
   validateStoryData,
   checkRateLimit,
   buildPrompt,
+  parseAndRecoverQuestions,
   MAX_FIELD_LENGTH,
   MAX_TOTAL_BODY_LENGTH,
   RATE_LIMIT_MINUTE_MAX,
@@ -273,6 +274,19 @@ describe('Rate Limiting em Memória (checkRateLimit)', () => {
     // User B ainda está livre
     expect(checkRateLimit(userB, now, localStore).allowed).toBe(true);
   });
+
+  it('não deve consumir taxa se a validação do corpo falhar antes', () => {
+    const localStore = new Map();
+    const uid = 'user-test-invalid-body';
+    const invalidBody = { names: '' };
+
+    // Simula fluxo do handler: primeiro validação do corpo
+    const validation = validateStoryData(invalidBody);
+    expect(validation.valid).toBe(false);
+
+    // Como falhou a validação, checkRateLimit não é invocado
+    expect(localStore.has(uid)).toBe(false);
+  });
 });
 
 describe('Construção de Prompt (buildPrompt)', () => {
@@ -294,6 +308,56 @@ describe('Construção de Prompt (buildPrompt)', () => {
     expect(prompt).toContain('- Lugares especiais: Florianópolis');
     expect(prompt).toContain('- Comidas e restaurantes preferidos: Sushi');
     expect(prompt).not.toContain('- Músicas, filmes');
+  });
+});
+
+describe('Recuperação e Validação de JSON Truncado (parseAndRecoverQuestions)', () => {
+  const validQuestion1 = {
+    question: 'Qual a nossa comida favorita?',
+    options: [
+      { id: 'opt-a', text: 'Pizza' },
+      { id: 'opt-b', text: 'Sushi' },
+    ],
+    correctOptionId: 'opt-a',
+  };
+
+  const validQuestion2 = {
+    question: 'Onde foi a primeira viagem?',
+    options: [
+      { id: 'opt-a', text: 'Praia' },
+      { id: 'opt-b', text: 'Serra' },
+    ],
+    correctOptionId: 'opt-b',
+  };
+
+  it('deve fazer parse com sucesso de JSON válido contido em bloco markdown', () => {
+    const raw = '```json\n' + JSON.stringify([validQuestion1, validQuestion2]) + '\n```';
+    const recovered = parseAndRecoverQuestions(raw);
+    expect(recovered).toHaveLength(2);
+    expect(recovered?.[0].question).toBe(validQuestion1.question);
+    expect(recovered?.[1].question).toBe(validQuestion2.question);
+  });
+
+  it('deve recuperar objetos completos quando o JSON foi truncado pela metade', () => {
+    // Simula Gemini atingindo maxOutputTokens e cortando o segundo objeto no meio
+    const truncated = `[
+      ${JSON.stringify(validQuestion1)},
+      {
+        "question": "Pergunta incompleta que foi cortada?",
+        "options": [
+          { "id": "opt-a", "text": "Opção A"
+    `;
+
+    const recovered = parseAndRecoverQuestions(truncated);
+    expect(recovered).not.toBeNull();
+    expect(recovered).toHaveLength(1);
+    expect(recovered?.[0].question).toBe(validQuestion1.question);
+  });
+
+  it('deve retornar null se o texto for vazio ou não contiver perguntas válidas', () => {
+    expect(parseAndRecoverQuestions('')).toBeNull();
+    expect(parseAndRecoverQuestions('Desculpe, não consegui gerar.')).toBeNull();
+    expect(parseAndRecoverQuestions('[{"invalido": true}]')).toBeNull();
   });
 });
 

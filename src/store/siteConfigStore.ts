@@ -52,6 +52,8 @@ try {
   if (cached) applyThemeVars(JSON.parse(cached) as SiteConfig['theme']['colors']);
 } catch {}
 
+let currentLoadId = 0;
+
 export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
   // Inicia sem config e com isLoading=true para que nenhum dado de 'meu-site'
   // vaze para outros sites antes do Firestore responder.
@@ -60,8 +62,10 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
   error: null,
 
   loadConfig: async (siteId: string) => {
+    const loadId = ++currentLoadId;
+
     // Em modo mock/dev usa a config local imediatamente, sem Firestore
-    if (import.meta.env.VITE_USE_MOCK_DATA === 'true' || import.meta.env.DEV) {
+    if (import.meta.env.VITE_USE_MOCK_DATA === 'true' || (import.meta.env.DEV && import.meta.env.MODE !== 'test')) {
       applyThemeVars(meuSiteConfig.theme.colors);
       saveConfigCache(meuSiteConfig);
       set({ config: meuSiteConfig, isLoading: false, error: null });
@@ -73,25 +77,22 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
     if (cached) {
       if (cached.theme?.colors) applyThemeVars(cached.theme.colors);
       // Mantém isLoading=true: o Firestore ainda vai confirmar/atualizar
-      set({ config: cached });
+      set({ config: cached, error: null });
     }
 
-    // Timeout de segurança para nunca ficar em splash infinito
-    let settled = false;
+    // Timeout de segurança para nunca ficar em splash infinito: libera a UI (isLoading=false)
     const timeoutId = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        const { config } = get();
-        if (!config) {
-          // Sem cache e sem Firestore → mostrar erro
-          set({
-            isLoading: false,
-            error: 'Tempo esgotado ao carregar configurações. Verifique sua conexão.',
-          });
-        } else {
-          // Tem cache → usa e segue; Firestore demorou mas o site funciona
-          set({ isLoading: false });
-        }
+      if (loadId !== currentLoadId) return;
+      const { config } = get();
+      if (!config) {
+        // Sem cache e sem Firestore ainda → libera UI com mensagem de erro
+        set({
+          isLoading: false,
+          error: 'Tempo esgotado ao carregar configurações. Verifique sua conexão.',
+        });
+      } else {
+        // Tem cache → libera UI mantendo a navegação ativa
+        set({ isLoading: false });
       }
     }, LOAD_TIMEOUT_MS);
 
@@ -99,43 +100,51 @@ export const useSiteConfigStore = create<SiteConfigState>((set, get) => ({
       const docRef = doc(db, 'sites', siteId);
       const docSnap = await getDoc(docRef);
 
-      if (!settled) {
-        settled = true;
+      // Se uma nova chamada a loadConfig foi iniciada nesse meio tempo, ignora esta
+      if (loadId !== currentLoadId) {
         clearTimeout(timeoutId);
+        return;
+      }
 
-        if (docSnap.exists()) {
-          const data = docSnap.data() as SiteConfig;
-          if (data.theme?.colors) applyThemeVars(data.theme.colors);
-          saveConfigCache(data);
-          set({ config: data, isLoading: false, error: null });
+      clearTimeout(timeoutId);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data() as SiteConfig;
+        if (data.theme?.colors) applyThemeVars(data.theme.colors);
+        saveConfigCache(data);
+        // Atualiza a config com dados frescos do servidor, limpa qualquer erro e mantém isLoading=false
+        set({ config: data, isLoading: false, error: null });
+      } else {
+        // Documento não existe: usa cache se disponível, senão erro
+        const currentConfig = get().config;
+        if (currentConfig) {
+          set({ isLoading: false, error: null });
         } else {
-          // Documento não existe: usa cache se disponível, senão erro
-          if (cached) {
-            set({ isLoading: false, error: null });
-          } else {
-            set({
-              isLoading: false,
-              error: 'Configuração do site não encontrada no servidor.',
-            });
-          }
+          set({
+            isLoading: false,
+            error: 'Configuração do site não encontrada no servidor.',
+          });
         }
       }
     } catch (err: unknown) {
-      if (!settled) {
-        settled = true;
+      if (loadId !== currentLoadId) {
         clearTimeout(timeoutId);
-        const msg = err instanceof Error ? err.message : String(err);
-        if (cached) {
-          // Falha de rede mas tem cache: usa o cache em silêncio
-          console.warn('siteConfigStore: Firestore indisponível, usando cache local.', msg);
-          set({ isLoading: false, error: null });
-        } else {
-          // Sem cache e sem Firestore: mostra erro
-          set({
-            isLoading: false,
-            error: 'Erro ao carregar configurações: ' + msg,
-          });
-        }
+        return;
+      }
+
+      clearTimeout(timeoutId);
+      const msg = err instanceof Error ? err.message : String(err);
+      const currentConfig = get().config;
+      if (currentConfig) {
+        // Falha de rede mas tem cache: usa o cache em silêncio
+        console.warn('siteConfigStore: Firestore indisponível, usando cache local.', msg);
+        set({ isLoading: false, error: null });
+      } else {
+        // Sem cache e sem Firestore: mostra erro
+        set({
+          isLoading: false,
+          error: 'Erro ao carregar configurações: ' + msg,
+        });
       }
     }
   },

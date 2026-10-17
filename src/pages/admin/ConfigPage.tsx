@@ -9,6 +9,7 @@ import type { SiteConfig } from '../../config/siteConfig.schema';
 import { AvatarPicker } from '../../features/avatar/AvatarPicker';
 
 import { useToast } from '../../shared/ui/ToastProvider';
+import { Spinner } from '../../shared/ui/Spinner';
 
 const AVATAR_OPTIONS = Array.from({ length: 48 }, (_, i) => `/avatars/avatar_${i + 1}.webp`);
 
@@ -65,7 +66,13 @@ export default function ConfigPage() {
     }
   }, [config]);
 
-  if (!config) return null;
+  if (!config) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Spinner size="lg" className="text-indigo-400" />
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     setIsSaving(true);

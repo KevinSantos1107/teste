@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, loadEnv } from 'vite'
 import type { Plugin, HtmlTagDescriptor } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -107,6 +108,16 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3000',
           changeOrigin: true,
         },
+      },
+    },
+    test: {
+      env: {
+        VITE_FIREBASE_API_KEY: 'mock-firebase-api-key',
+        VITE_FIREBASE_AUTH_DOMAIN: 'mock-project.firebaseapp.com',
+        VITE_FIREBASE_PROJECT_ID: 'mock-project',
+        VITE_FIREBASE_STORAGE_BUCKET: 'mock-project.firebasestorage.app',
+        VITE_FIREBASE_MESSAGING_SENDER_ID: '1234567890',
+        VITE_FIREBASE_APP_ID: '1:1234567890:web:abcdef123456',
       },
     },
     build: {
