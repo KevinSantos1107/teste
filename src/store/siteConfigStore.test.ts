@@ -3,11 +3,35 @@ import { useSiteConfigStore } from './siteConfigStore';
 import { getDoc } from 'firebase/firestore';
 import type { SiteConfig } from '../config/siteConfig.schema';
 
-vi.mock('firebase/firestore', () => ({
-  doc: vi.fn((_db, _coll, id) => ({ id })),
-  getDoc: vi.fn(),
-  updateDoc: vi.fn(),
-}));
+const storage = new Map<string, string>();
+const localStorageMock = {
+  getItem: vi.fn((key: string) => storage.get(key) ?? null),
+  setItem: vi.fn((key: string, val: string) => { storage.set(key, String(val)); }),
+  removeItem: vi.fn((key: string) => { storage.delete(key); }),
+  clear: vi.fn(() => { storage.clear(); }),
+};
+vi.stubGlobal('localStorage', localStorageMock);
+
+if (typeof document === 'undefined') {
+  vi.stubGlobal('document', {
+    documentElement: {
+      style: {
+        setProperty: vi.fn(),
+      },
+    },
+  });
+}
+
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    getFirestore: vi.fn(() => ({})),
+    doc: vi.fn((_db, _coll, id) => ({ id })),
+    getDoc: vi.fn(),
+    updateDoc: vi.fn(),
+  };
+});
 
 describe('siteConfigStore - loadConfig e Resposta Tardia pós-Timeout', () => {
   const mockServerConfig: SiteConfig = {
