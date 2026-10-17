@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuizStore } from '../store/useQuizStore';
 import { Trophy, RefreshCw, Flame } from 'lucide-react';
@@ -13,6 +13,7 @@ interface Particle {
   duration: number;
   delay: number;
   drift: number;
+  repeatDelay: number;
 }
 
 const EMOJIS = ['❤️', '💕', '✨', '💫', '🌟', '💖', '🩷', '💗'];
@@ -26,11 +27,12 @@ function generateParticles(count: number): Particle[] {
     duration: 3 + Math.random() * 3,
     delay: Math.random() * 2,
     drift: (Math.random() - 0.5) * 80,
+    repeatDelay: Math.random() * 2,
   }));
 }
 
 function PerfectCelebration() {
-  const particles = useRef(generateParticles(30)).current;
+  const [particles] = useState(() => generateParticles(30));
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
@@ -55,7 +57,7 @@ function PerfectCelebration() {
             delay: p.delay,
             ease: 'easeOut',
             repeat: Infinity,
-            repeatDelay: Math.random() * 2,
+            repeatDelay: p.repeatDelay,
           }}
         >
           {p.emoji}
